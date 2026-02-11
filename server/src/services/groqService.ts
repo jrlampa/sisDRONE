@@ -12,14 +12,14 @@ export async function analyzeImage(imageBase64: string) {
   }
 
   const prompt = `
-    You are an expert in electrical power distribution infrastructure.
-    Analyze the provided image of a power pole or electrical network.
-    Identify:
-    1. The type of pole (concrete, wood, steel).
-    2. The structures present (transformers, insulators, lightning arresters, bracket types).
-    3. The condition (good, damaged, leaning).
+    Você é um especialista em infraestrutura de rede de distribuição elétrica.
+    Analise a imagem fornecida de um poste ou rede elétrica.
+    Identifique:
+    1. O tipo de poste (concreto, madeira, aço).
+    2. As estruturas presentes (transformadores, isoladores, para-raios, tipos de braçadeiras).
+    3. A condição (boa, danificada, inclinado).
     
-    Respond in JSON format with the following fields:
+    Responda em formato JSON com os seguintes campos (em Português):
     {
       "pole_type": String,
       "structures": [String],
@@ -27,13 +27,14 @@ export async function analyzeImage(imageBase64: string) {
       "confidence": Number (0-1),
       "analysis_summary": String
     }
+    Importante: Todos os valores de texto devem estar em Português do Brasil (PT-BR).
   `;
 
   try {
     const response = await axios.post(
       GROQ_API_URL,
       {
-        model: 'llama-3.2-11b-vision-preview',
+        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
         messages: [
           {
             role: 'user',

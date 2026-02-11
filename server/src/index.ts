@@ -24,6 +24,7 @@ app.get('/api/poles', async (req: Request, res: Response) => {
     const poles = await db.all('SELECT * FROM poles ORDER BY created_at DESC');
     res.json(poles);
   } catch (error) {
+    console.error('Error fetching poles:', error);
     res.status(500).json({ error: 'Failed to fetch poles' });
   }
 });
@@ -39,6 +40,7 @@ app.post('/api/poles', async (req: Request, res: Response) => {
     );
     res.status(201).json({ id: result.lastID, lat, lng, name });
   } catch (error) {
+    console.error('Error creating pole:', error);
     res.status(500).json({ error: 'Failed to create pole' });
   }
 });
@@ -51,15 +53,42 @@ app.post('/api/analyze', async (req: Request, res: Response) => {
     const analysis = JSON.parse(analysisStr as string);
 
     const db = await getDb();
-    await db.run(
+    const result = await db.run(
       'INSERT INTO labels (pole_id, label, confidence, source) VALUES (?, ?, ?, ?)',
       [poleId, analysis.analysis_summary, analysis.confidence, 'ai']
     );
 
-    res.json(analysis);
+    res.json({
+      ...analysis,
+      labelId: result.lastID
+    });
   } catch (error) {
     console.error('Analysis error:', error);
     res.status(500).json({ error: 'Failed to analyze image' });
+  }
+});
+
+// POST feedback
+app.post('/api/feedback', async (req: Request, res: Response) => {
+  const { labelId, poleId, isCorrect, correction } = req.body;
+  try {
+    const db = await getDb();
+
+    if (isCorrect) {
+      // Just mark the AI label as verified (maybe update confidence to 1.0)
+      await db.run('UPDATE labels SET confidence = 1.0, source = "ai_verified" WHERE id = ?', [labelId]);
+    } else {
+      // Add a new label from user
+      await db.run(
+        'INSERT INTO labels (pole_id, label, confidence, source) VALUES (?, ?, ?, ?)',
+        [poleId, correction || 'Correção do usuário', 1.0, 'user']
+      );
+    }
+
+    res.json({ status: 'success' });
+  } catch (error) {
+    console.error('Feedback error:', error);
+    res.status(500).json({ error: 'Failed to save feedback' });
   }
 });
 
