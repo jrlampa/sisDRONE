@@ -71,6 +71,10 @@ router.get('/:id/history', async (req: Request, res: Response) => {
 // POST feedback
 router.post('/feedback', async (req: Request, res: Response) => {
   const { labelId, poleId, isCorrect, correction } = req.body;
+
+  if (labelId === undefined || poleId === undefined || isCorrect === undefined) {
+    return res.status(400).json({ error: 'labelId, poleId, and isCorrect are required' });
+  }
   try {
     const db = await getDb();
     await db.run(

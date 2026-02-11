@@ -21,6 +21,8 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
+app.get('/health', (req, res) => res.json({ status: 'ok' }));
+
 // Routes
 app.use('/api/poles', polesRouter);
 app.use('/api', inspectionsRouter);

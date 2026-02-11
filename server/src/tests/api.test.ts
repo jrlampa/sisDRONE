@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 import request from 'supertest';
-import { app } from '../index.js';
+import app from '../app';
 
 // Set test environment
 process.env.NODE_ENV = 'test';

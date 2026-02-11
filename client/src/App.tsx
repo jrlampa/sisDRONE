@@ -307,7 +307,15 @@ const App: React.FC = () => {
             <Zap size={16} className="text-primary" /><span>{notification}</span>
           </div>
         )}
-        <Map poles={filteredPoles} onMapClick={handleMapClick} onMarkerClick={handleMarkerClick} />
+        <Map
+          poles={filteredPoles}
+          onMapClick={handleMapClick}
+          onMarkerClick={handleMarkerClick}
+          selectedPole={selectedPole}
+          isMeasuring={isMeasuring}
+          activeSpan={activeSpan}
+          userRole={currentUser?.role || 'VIEWER'}
+        />
       </div>
     </div>
   );
