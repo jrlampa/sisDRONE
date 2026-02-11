@@ -215,16 +215,7 @@ const App: React.FC = () => {
         tension={tension}
         setTension={setTension}
         apiBase={API_BASE}
-      >
-        <input
-          type="file"
-          ref={gisInputRef}
-          className="hidden-input"
-          accept=".geojson,.json"
-          onChange={handleImportGeoJSON}
-          title="Importar GeoJSON"
-        />
-      </Sidebar>
+      />
 
       <div className="map-container glass-panel">
         {notification && (
