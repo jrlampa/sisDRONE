@@ -17,6 +17,26 @@ app.get('/health', (req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// GET statistics
+app.get('/api/stats', async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    const polesCount = await db.get('SELECT COUNT(*) as count FROM poles');
+    const inspectionsCount = await db.get('SELECT COUNT(*) as count FROM labels');
+    const alertsCount = await db.get('SELECT COUNT(*) as count FROM labels WHERE label LIKE "%danificado%" OR label LIKE "%inclinado%"');
+
+    res.json({
+      totalPoles: polesCount.count,
+      totalInspections: inspectionsCount.count,
+      activeAlerts: alertsCount.count,
+      status: 'Operacional'
+    });
+  } catch (error) {
+    console.error('Stats error:', error);
+    res.status(500).json({ error: 'Failed to fetch statistics' });
+  }
+});
+
 // GET all poles
 app.get('/api/poles', async (req: Request, res: Response) => {
   try {
