@@ -1,7 +1,11 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import axios from 'axios';
 import Map from './components/Map';
-import { MapPin, CheckCircle, AlertTriangle, Upload, LayoutDashboard, Zap, Activity, Ruler, Search, Download, Clock, Image as ImageIcon, ChevronRight, FileJson, Globe, Hammer } from 'lucide-react';
+import {
+  MapPin, CheckCircle, AlertTriangle, Upload, LayoutDashboard,
+  Zap, Activity, Ruler, Search, Download, Clock,
+  Image as ImageIcon, ChevronRight, FileJson, Globe, Hammer
+} from 'lucide-react';
 import { degreesToUtm } from './utils/geo';
 import { calculateDistance } from './utils/math';
 import { calculateSag, COMMON_CABLES } from './utils/eng';
@@ -51,6 +55,7 @@ interface Stats {
 }
 
 const App: React.FC = () => {
+  // --- State ---
   const [poles, setPoles] = useState<Pole[]>([]);
   const [selectedPole, setSelectedPole] = useState<Pole | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
@@ -62,17 +67,18 @@ const App: React.FC = () => {
   const [isMeasuring, setIsMeasuring] = useState(false);
   const [measurementStart, setMeasurementStart] = useState<Pole | null>(null);
   const [activeSpan, setActiveSpan] = useState<Span | null>(null);
-
-  // Engineering Inputs
-  const [conductorWeight, setConductorWeight] = useState(COMMON_CABLES[0].weight);
-  const [tension, setTension] = useState(250); // kgf
-
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCondition, setFilterCondition] = useState<'All' | 'Critical' | 'Warning' | 'Good'>('All');
 
+  // Engineering State
+  const [conductorWeight, setConductorWeight] = useState(COMMON_CABLES[0].weight);
+  const [tension, setTension] = useState(250);
+
+  // Refs
   const fileInputRef = useRef<HTMLInputElement>(null);
   const gisInputRef = useRef<HTMLInputElement>(null);
 
+  // --- Effects ---
   useEffect(() => {
     fetchPoles();
     fetchStats();
@@ -83,8 +89,9 @@ const App: React.FC = () => {
       fetchHistory(selectedPole.id);
       if (activeTab === 'eng' && !activeSpan) setActiveTab('details');
     }
-  }, [selectedPole]);
+  }, [selectedPole, activeSpan, activeTab]);
 
+  // --- Logic ---
   const showNotification = (msg: string) => {
     setNotification(msg);
     setTimeout(() => setNotification(null), 3000);
@@ -158,7 +165,7 @@ const App: React.FC = () => {
       } else {
         const dist = calculateDistance(measurementStart.lat, measurementStart.lng, pole.lat, pole.lng);
         setActiveSpan({ p1: measurementStart, p2: pole, distance: dist });
-        setActiveTab('eng'); // Auto switch to engineering
+        setActiveTab('eng');
         setMeasurementStart(null);
         setIsMeasuring(false);
         showNotification("Vão selecionado para cálculo!");
@@ -236,7 +243,7 @@ const App: React.FC = () => {
       try {
         const res = await axios.post(`${API_BASE}/api/analyze`, {
           poleId: selectedPole.id,
-          image: baseContent
+          image: base64Content
         });
         setAnalysis(res.data);
         fetchStats();
@@ -248,7 +255,7 @@ const App: React.FC = () => {
         setIsCapturing(false);
       }
     };
-    // reader.readAsDataURL(file); // Fixed below
+    reader.readAsDataURL(file);
   };
 
   const handleFeedback = async (isCorrect: boolean) => {
@@ -274,33 +281,6 @@ const App: React.FC = () => {
     }
   };
 
-  // Re-implementing handleFileChange properly without placeholders
-  const onFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || !selectedPole) return;
-    setIsCapturing(true);
-    showNotification("Processando imagem via Llama 4...");
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const base64Content = (reader.result as string).split(',')[1];
-      try {
-        const res = await axios.post(`${API_BASE}/api/analyze`, {
-          poleId: selectedPole.id,
-          image: base64Content
-        });
-        setAnalysis(res.data);
-        fetchStats();
-        fetchHistory(selectedPole.id);
-        showNotification("Análise concluída!");
-      } catch (err) {
-        showNotification("Erro na análise IA.");
-      } finally {
-        setIsCapturing(false);
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-
   return (
     <div className="app-container">
       <div className="sidebar glass-panel">
@@ -309,76 +289,87 @@ const App: React.FC = () => {
           <p className="sidebar-subtitle">SISTEMA DE INSPEÇÃO AUTOMATIZADA</p>
         </header>
 
-        <div className="nav-tools" style={{ marginBottom: '1rem' }}>
-          <div className="search-box" style={{ position: 'relative', marginBottom: '0.75rem' }}>
-            <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-            <input type="text" placeholder="Buscar poste..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="glass-input" style={{ width: '100%', paddingLeft: '40px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '10px 10px 10px 40px', color: 'white', fontSize: '0.9rem' }} />
+        <div className="nav-tools">
+          <div className="search-box">
+            <Search size={16} className="search-icon" />
+            <input
+              type="text"
+              placeholder="Buscar poste por nome ou ID..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="glass-input"
+            />
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
-            <button className={`btn btn-outline ${isMeasuring ? 'active' : ''}`} onClick={() => { setIsMeasuring(!isMeasuring); setMeasurementStart(null); setActiveSpan(null); }} style={{ fontSize: '0.75rem', borderColor: isMeasuring ? 'var(--primary)' : '' }}>
+
+          <div className="tools-grid">
+            <button className={`btn btn-outline ${isMeasuring ? 'active' : ''}`} onClick={() => { setIsMeasuring(!isMeasuring); setMeasurementStart(null); setActiveSpan(null); }}>
               <Ruler size={14} /> Régua UTM
             </button>
-            <button className="btn btn-outline" onClick={handleExportCSV} style={{ fontSize: '0.75rem' }}><Download size={14} /> CSV</button>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-            <button className="btn btn-outline" onClick={() => gisInputRef.current?.click()} style={{ fontSize: '0.75rem' }}><FileJson size={14} /> Importar</button>
-            <button className="btn btn-outline" onClick={handleExportGeoJSON} style={{ fontSize: '0.75rem' }}><Globe size={14} /> Exportar</button>
+            <button className="btn btn-outline" onClick={handleExportCSV}>
+              <Download size={14} /> CSV
+            </button>
+            <button className="btn btn-outline" onClick={() => gisInputRef.current?.click()}>
+              <FileJson size={14} /> Importar
+            </button>
+            <button className="btn btn-outline" onClick={handleExportGeoJSON}>
+              <Globe size={14} /> Exportar
+            </button>
           </div>
           <input type="file" ref={gisInputRef} style={{ display: 'none' }} accept=".geojson,.json" onChange={handleImportGeoJSON} />
         </div>
 
-        <div className="filter-chips" style={{ display: 'flex', gap: '5px', marginBottom: '1.5rem', overflowX: 'auto' }}>
+        <div className="filter-chips">
           {(['All', 'Critical', 'Warning', 'Good'] as const).map(c => (
-            <button key={c} className={`badge ${filterCondition === c ? 'active-chip' : 'inactive-chip'}`} onClick={() => setFilterCondition(c)} style={{ cursor: 'pointer', border: 'none', background: filterCondition === c ? 'var(--primary)' : 'rgba(255,255,255,0.05)', color: filterCondition === c ? 'white' : 'var(--text-muted)' }}>
+            <button
+              key={c}
+              className={`badge ${filterCondition === c ? 'active-chip' : 'inactive-chip'}`}
+              onClick={() => setFilterCondition(c)}
+            >
               {c === 'All' ? 'Todos' : c === 'Critical' ? 'Crítico' : c === 'Warning' ? 'Atenção' : 'Saudável'}
             </button>
           ))}
         </div>
 
         {selectedPole || activeSpan ? (
-          <div className="pole-view animate-fade-in" style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-            <div className="tab-switcher" style={{ display: 'flex', gap: '15px', marginBottom: '1.5rem', borderBottom: '1px solid var(--glass-border)', overflowX: 'auto' }}>
-              <button onClick={() => setActiveTab('details')} style={{ background: 'none', border: 'none', color: activeTab === 'details' ? 'var(--primary)' : 'var(--text-muted)', paddingBottom: '10px', cursor: 'pointer', fontWeight: 600, borderBottom: activeTab === 'details' ? '2px solid var(--primary)' : '2px solid transparent', whiteSpace: 'nowrap' }}>Detalhes</button>
-              <button onClick={() => setActiveTab('history')} style={{ background: 'none', border: 'none', color: activeTab === 'history' ? 'var(--primary)' : 'var(--text-muted)', paddingBottom: '10px', cursor: 'pointer', fontWeight: 600, borderBottom: activeTab === 'history' ? '2px solid var(--primary)' : '2px solid transparent', whiteSpace: 'nowrap' }}>Histórico</button>
+          <div className="pole-view animate-fade-in">
+            <div className="tab-switcher">
+              <button onClick={() => setActiveTab('details')} className={activeTab === 'details' ? 'active' : ''}>Detalhes</button>
+              <button onClick={() => setActiveTab('history')} className={activeTab === 'history' ? 'active' : ''}>Histórico</button>
               {activeSpan && (
-                <button onClick={() => setActiveTab('eng')} style={{ background: 'none', border: 'none', color: activeTab === 'eng' ? 'var(--primary)' : 'var(--text-muted)', paddingBottom: '10px', cursor: 'pointer', fontWeight: 600, borderBottom: activeTab === 'eng' ? '2px solid var(--primary)' : '2px solid transparent', whiteSpace: 'nowrap' }}>Engenharia</button>
+                <button onClick={() => setActiveTab('eng')} className={activeTab === 'eng' ? 'active' : ''}>Engenharia</button>
               )}
             </div>
 
             {activeTab === 'details' && selectedPole && (
               <div className="pole-details animate-fade-in">
                 <div className="card">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1rem' }}>
-                    <MapPin size={20} color="var(--accent)" />
-                    <h2 style={{ fontSize: '1.1rem' }}>{selectedPole.name}</h2>
+                  <div className="card-header">
+                    <MapPin size={20} className="text-accent" />
+                    <h2>{selectedPole.name}</h2>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.85rem' }}>
-                    <div className="stat-item"><span className="stat-label">Latitude</span><span className="stat-value" style={{ fontSize: '1rem' }}>{selectedPole.lat.toFixed(6)}</span></div>
-                    <div className="stat-item"><span className="stat-label">Longitude</span><span className="stat-value" style={{ fontSize: '1rem' }}>{selectedPole.lng.toFixed(6)}</span></div>
+                  <div className="stats-row">
+                    <div className="stat-item"><span className="stat-label">Latitude</span><span className="stat-value">{selectedPole.lat.toFixed(6)}</span></div>
+                    <div className="stat-item"><span className="stat-label">Longitude</span><span className="stat-value">{selectedPole.lng.toFixed(6)}</span></div>
                   </div>
-                  <div style={{ marginTop: '1rem', padding: '10px', borderTop: '1px solid var(--glass-border)', fontSize: '0.85rem', color: 'var(--accent)' }}><strong>UTM:</strong> {selectedPole.utm_x}, {selectedPole.utm_y}</div>
+                  <div className="utm-line"><strong>UTM:</strong> {selectedPole.utm_x}, {selectedPole.utm_y}</div>
                 </div>
-                <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/*" onChange={onFileChange} />
-                <button className="btn btn-primary" onClick={() => fileInputRef.current?.click()} disabled={isCapturing} style={{ width: '100%', marginBottom: '1.5rem' }}>
+                <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/*" onChange={handleFileChange} />
+                <button className="btn btn-primary btn-full" onClick={() => fileInputRef.current?.click()} disabled={isCapturing}>
                   <Upload size={18} /> {isCapturing ? 'Refinando Visão...' : 'Análise IA'}
                 </button>
                 {analysis && (
                   <div className="analysis-result card gradient-border animate-slide-up">
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                      <h3 style={{ fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}><Activity size={16} /> Relatório Vision</h3>
-                      <span className="badge" style={{ backgroundColor: analysis.confidence > 0.8 ? 'var(--success)' : 'var(--warning)' }}>{Math.round(analysis.confidence * 100)}% Conf.</span>
+                    <div className="analysis-header">
+                      <h3><Activity size={16} /> Relatório Vision</h3>
+                      <span className={`badge ${analysis.confidence > 0.8 ? 'badge-success' : 'badge-warning'}`}>{Math.round(analysis.confidence * 100)}% Conf.</span>
                     </div>
-                    {analysis.imageUrl && (
-                      <div style={{ width: '100%', height: '150px', borderRadius: '8px', overflow: 'hidden', marginBottom: '1rem' }}>
-                        <img src={`${API_BASE}${analysis.imageUrl}`} alt="Snapshot" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      </div>
-                    )}
-                    <p style={{ marginBottom: '0.5rem' }}><strong>Tipo:</strong> {analysis.pole_type}</p>
-                    <p style={{ marginBottom: '1rem' }}><strong>Condição:</strong> <span style={{ color: analysis.condition.toLowerCase().includes('boa') ? 'var(--success)' : 'var(--danger)' }}>{analysis.condition}</span></p>
-                    <div style={{ padding: '10px', background: 'rgba(0,0,0,0.2)', borderRadius: '6px', fontSize: '0.85rem', marginBottom: '1rem' }}>{analysis.analysis_summary}</div>
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                      <button className="btn btn-outline" style={{ flex: 1, color: 'var(--success)' }} onClick={() => handleFeedback(true)}><CheckCircle size={16} /> OK</button>
-                      <button className="btn btn-outline" style={{ flex: 1, color: 'var(--danger)' }} onClick={() => handleFeedback(false)}><AlertTriangle size={16} /> Corrigir</button>
+                    {analysis.imageUrl && <div className="analysis-img"><img src={`${API_BASE}${analysis.imageUrl}`} alt="Audit" /></div>}
+                    <p><strong>Tipo:</strong> {analysis.pole_type}</p>
+                    <p><strong>Condição:</strong> <span className={analysis.condition.toLowerCase().includes('boa') ? 'text-success' : 'text-danger'}>{analysis.condition}</span></p>
+                    <div className="analysis-summary">{analysis.analysis_summary}</div>
+                    <div className="feedback-row">
+                      <button className="btn btn-outline btn-success" onClick={() => handleFeedback(true)}><CheckCircle size={16} /> OK</button>
+                      <button className="btn btn-outline btn-danger" onClick={() => handleFeedback(false)}><AlertTriangle size={16} /> Corrigir</button>
                     </div>
                   </div>
                 )}
@@ -386,76 +377,70 @@ const App: React.FC = () => {
             )}
 
             {activeTab === 'history' && (
-              <div className="history-list animate-fade-in" style={{ flex: 1, overflowY: 'auto' }}>
+              <div className="history-list animate-fade-in">
                 {history.length > 0 ? (
                   history.map(item => (
-                    <div key={item.id} className="card history-item" style={{ padding: '12px', marginBottom: '10px', display: 'flex', gap: '15px', alignItems: 'center' }}>
+                    <div key={item.id} className="card history-item">
                       {item.file_path ? (
-                        <div style={{ width: '60px', height: '60px', borderRadius: '6px', overflow: 'hidden', flexShrink: 0 }}>
-                          <img src={`${API_BASE}${item.file_path}`} alt="Past" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        </div>
+                        <div className="history-thumb"><img src={`${API_BASE}${item.file_path}`} alt="Past" /></div>
                       ) : (
-                        <div style={{ width: '60px', height: '60px', borderRadius: '6px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ImageIcon size={20} color="var(--text-muted)" /></div>
+                        <div className="history-thumb-placeholder"><ImageIcon size={20} /></div>
                       )}
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{new Date(item.created_at).toLocaleDateString()}</span>
-                        </div>
-                        <p style={{ fontSize: '0.85rem' }}>{item.label}</p>
+                      <div className="history-info">
+                        <span className="history-date"><Clock size={12} /> {new Date(item.created_at).toLocaleDateString()}</span>
+                        <p>{item.label}</p>
                       </div>
+                      <ChevronRight size={16} className="history-arrow" />
                     </div>
                   ))
                 ) : (
-                  <div style={{ textAlign: 'center', padding: '2rem', opacity: 0.5 }}><Clock size={40} style={{ marginBottom: '1rem' }} /><p>Nenhuma inspeção anterior.</p></div>
+                  <div className="empty-state"><Clock size={40} /><p>Nenhuma inspeção anterior.</p></div>
                 )}
               </div>
             )}
 
             {activeTab === 'eng' && activeSpan && (
               <div className="engineering-module animate-fade-in">
-                <div className="card gradient-border" style={{ marginBottom: '1.5rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1rem' }}>
-                    <Hammer size={20} color="var(--primary)" />
-                    <h2 style={{ fontSize: '1.1rem' }}>Cálculo de Flecha</h2>
-                  </div>
-                  <div className="form-group" style={{ marginBottom: '1rem' }}>
-                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '5px' }}>Condutor</label>
-                    <select className="glass-input" value={conductorWeight} onChange={(e) => setConductorWeight(parseFloat(e.target.value))} style={{ width: '100%', padding: '10px', background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid var(--glass-border)', borderRadius: '6px' }}>
+                <div className="card gradient-border">
+                  <div className="card-header"><Hammer size={20} className="text-primary" /><h2>Cálculo de Flecha</h2></div>
+                  <div className="form-group">
+                    <label>Condutor</label>
+                    <select className="glass-input" value={conductorWeight} onChange={(e) => setConductorWeight(parseFloat(e.target.value))}>
                       {COMMON_CABLES.map(c => <option key={c.name} value={c.weight}>{c.name}</option>)}
                     </select>
                   </div>
-                  <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '5px' }}>Tração (kgf)</label>
-                    <input type="number" value={tension} onChange={(e) => setTension(parseFloat(e.target.value))} className="glass-input" style={{ width: '100%', padding: '10px', background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid var(--glass-border)', borderRadius: '6px' }} />
+                  <div className="form-group">
+                    <label>Tração (kgf)</label>
+                    <input type="number" value={tension} onChange={(e) => setTension(parseFloat(e.target.value))} className="glass-input" />
                   </div>
-                  <div className="stats-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
+                  <div className="stats-grid-compact">
                     <div className="stat-item"><span className="stat-label">Vão</span><span className="stat-value">{activeSpan.distance.toFixed(1)}m</span></div>
-                    <div className="stat-item"><span className="stat-label">Flecha</span><span className="stat-value" style={{ color: currentSag > 2 ? 'var(--danger)' : 'var(--success)' }}>{currentSag.toFixed(2)}m</span></div>
+                    <div className="stat-item"><span className="stat-label">Flecha</span><span className={`stat-value ${currentSag > 2 ? 'text-danger' : 'text-success'}`}>{currentSag.toFixed(2)}m</span></div>
                   </div>
                 </div>
               </div>
             )}
           </div>
         ) : (
-          <div style={{ textAlign: 'center', padding: '3rem 0', opacity: 0.6 }}>
-            <LayoutDashboard size={48} style={{ marginBottom: '1rem' }} />
+          <div className="empty-state-main">
+            <LayoutDashboard size={48} />
             <p>Selecione um ativo no mapa para iniciar inspeção.</p>
           </div>
         )}
 
-        <div style={{ marginTop: 'auto', paddingTop: '2rem' }}>
-          <h3 style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '1rem' }}>Health Monitor</h3>
-          <div className="stats-grid">
-            <div className="card stat-item"><span className="stat-label">Postes</span><span className="stat-value">{stats.totalPoles}</span></div>
-            <div className="card stat-item"><span className="stat-label">Inspeções</span><span className="stat-value">{stats.totalInspections}</span></div>
+        <div className="stats-dashboard">
+          <h3 className="stats-title">Health Monitor</h3>
+          <div className="stats-mini-grid">
+            <div className="card stat-card"><span className="stat-label">Postes</span><span className="stat-value">{stats.totalPoles}</span></div>
+            <div className="card stat-card"><span className="stat-label">Inspeções</span><span className="stat-value">{stats.totalInspections}</span></div>
           </div>
         </div>
       </div>
 
       <div className="map-container glass-panel">
         {notification && (
-          <div className="notification-overlay animate-fade-in" style={{ position: 'absolute', top: '20px', left: '50%', transform: 'translateX(-50%)', zIndex: 2000, background: 'var(--bg-dark)', border: '1px solid var(--primary)', padding: '0.75rem 1.5rem', borderRadius: '50px', display: 'flex', alignItems: 'center', gap: '10px', boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }}>
-            <Zap size={16} color="var(--primary)" /><span style={{ fontSize: '0.9rem', fontWeight: 600 }}>{notification}</span>
+          <div className="notification-overlay animate-fade-in">
+            <Zap size={16} className="text-primary" /><span>{notification}</span>
           </div>
         )}
         <Map poles={filteredPoles} onMapClick={handleMapClick} onMarkerClick={handleMarkerClick} />
