@@ -1,16 +1,29 @@
 import express, { type Request, type Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { getDb } from './db.js';
 import { analyzeImage } from './services/groqService.js';
 
 dotenv.config();
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
 const port = process.env.PORT || 3001;
 
+// Ensure uploads directory exists
+const uploadsDir = path.join(__dirname, '../uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir);
+}
+
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
+app.use('/uploads', express.static(uploadsDir));
 
 // Health check
 app.get('/health', (req: Request, res: Response) => {
@@ -49,6 +62,25 @@ app.get('/api/poles', async (req: Request, res: Response) => {
   }
 });
 
+// GET pole history
+app.get('/api/poles/:id/history', async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    const db = await getDb();
+    const history = await db.all(`
+      SELECT l.*, i.file_path 
+      FROM labels l 
+      LEFT JOIN images i ON l.image_id = i.id 
+      WHERE l.pole_id = ? 
+      ORDER BY l.created_at DESC
+    `, [id]);
+    res.json(history);
+  } catch (error) {
+    console.error('History error:', error);
+    res.status(500).json({ error: 'Failed to fetch history' });
+  }
+});
+
 // POST new pole
 app.post('/api/poles', async (req: Request, res: Response) => {
   const { lat, lng, utm_x, utm_y, name } = req.body;
@@ -79,18 +111,34 @@ app.post('/api/analyze', async (req: Request, res: Response) => {
   }
 
   try {
+    const db = await getDb();
+
+    // 1. Save image to disk
+    const fileName = `pole_${poleId}_${Date.now()}.jpg`;
+    const filePath = path.join(uploadsDir, fileName);
+    fs.writeFileSync(filePath, Buffer.from(image, 'base64'));
+
+    // 2. Save image record
+    const imgResult = await db.run(
+      'INSERT INTO images (pole_id, file_path) VALUES (?, ?)',
+      [poleId, `/uploads/${fileName}`]
+    );
+    const imageId = imgResult.lastID;
+
+    // 3. Analyze image
     const analysisStr = await analyzeImage(image);
     const analysis = JSON.parse(analysisStr as string);
 
-    const db = await getDb();
-    const result = await db.run(
-      'INSERT INTO labels (pole_id, label, confidence, source) VALUES (?, ?, ?, ?)',
-      [poleId, analysis.analysis_summary, analysis.confidence, 'ai']
+    // 4. Save label record linked to image
+    const labelResult = await db.run(
+      'INSERT INTO labels (pole_id, image_id, label, confidence, source) VALUES (?, ?, ?, ?, ?)',
+      [poleId, imageId, analysis.analysis_summary, analysis.confidence, 'ai']
     );
 
     res.json({
       ...analysis,
-      labelId: result.lastID
+      labelId: labelResult.lastID,
+      imageUrl: `/uploads/${fileName}`
     });
   } catch (error) {
     console.error('Analysis error:', error);

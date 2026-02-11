@@ -47,11 +47,13 @@ async function initDb(database: Database) {
     CREATE TABLE IF NOT EXISTS labels (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       pole_id INTEGER,
+      image_id INTEGER,
       label TEXT,
       confidence REAL,
       source TEXT, -- 'ai' or 'user'
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (pole_id) REFERENCES poles(id)
+      FOREIGN KEY (pole_id) REFERENCES poles(id),
+      FOREIGN KEY (image_id) REFERENCES images(id)
     );
 
     CREATE TABLE IF NOT EXISTS images (
