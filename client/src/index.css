@@ -59,6 +59,16 @@ body {
   overflow-y: auto;
 }
 
+.sidebar-header {
+  margin-bottom: 2rem;
+}
+
+.sidebar-subtitle {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  letter-spacing: 1px;
+}
+
 .map-container {
   flex: 1;
   border-radius: var(--radius);
@@ -70,7 +80,7 @@ body {
 h1 {
   font-size: 1.5rem;
   font-weight: 700;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.25rem;
   background: linear-gradient(135deg, #fff 0%, var(--accent) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -134,6 +144,34 @@ h3 {
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
+  transition: var(--transition);
+}
+
+/* Phase 2 UI */
+.glass-input {
+  transition: var(--transition);
+  outline: none;
+}
+
+.glass-input:focus {
+  border-color: var(--primary) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+.badge.active-chip {
+  background: var(--primary) !important;
+  color: white !important;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.badge.inactive-chip {
+  opacity: 0.7;
+}
+
+.badge.inactive-chip:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.1) !important;
 }
 
 /* Scrollbar */
@@ -154,12 +192,6 @@ h3 {
 .leaflet-container {
   height: 100% !important;
   width: 100% !important;
-  background-color: var(--bg-dark);
-}
-
-.leaflet-bar {
-  border: none !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
 }
 
 .leaflet-bar a {
@@ -167,6 +199,7 @@ h3 {
   color: var(--text-main) !important;
   border-bottom: 1px solid var(--glass-border) !important;
   backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 /* Stats Dashboard */
@@ -195,4 +228,56 @@ h3 {
   font-size: 0.7rem;
   color: var(--text-muted);
   text-transform: uppercase;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.gradient-border {
+  position: relative;
+  background: var(--glass-bg);
+  border: 1px solid transparent;
+}
+
+.gradient-border::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
 }
