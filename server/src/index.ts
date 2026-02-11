@@ -32,6 +32,11 @@ app.get('/api/poles', async (req: Request, res: Response) => {
 // POST new pole
 app.post('/api/poles', async (req: Request, res: Response) => {
   const { lat, lng, utm_x, utm_y, name } = req.body;
+
+  if (lat === undefined || lng === undefined) {
+    return res.status(400).json({ error: 'Latitude e Longitude são obrigatórias' });
+  }
+
   try {
     const db = await getDb();
     const result = await db.run(
@@ -48,6 +53,11 @@ app.post('/api/poles', async (req: Request, res: Response) => {
 // POST analyze image
 app.post('/api/analyze', async (req: Request, res: Response) => {
   const { poleId, image } = req.body; // image is base64
+
+  if (!poleId || !image) {
+    return res.status(400).json({ error: 'poleId e image são obrigatórios' });
+  }
+
   try {
     const analysisStr = await analyzeImage(image);
     const analysis = JSON.parse(analysisStr as string);
@@ -71,14 +81,18 @@ app.post('/api/analyze', async (req: Request, res: Response) => {
 // POST feedback
 app.post('/api/feedback', async (req: Request, res: Response) => {
   const { labelId, poleId, isCorrect, correction } = req.body;
+
+  if (poleId === undefined || isCorrect === undefined) {
+    return res.status(400).json({ error: 'poleId e isCorrect são obrigatórios' });
+  }
+
   try {
     const db = await getDb();
 
     if (isCorrect) {
-      // Just mark the AI label as verified (maybe update confidence to 1.0)
+      if (labelId === undefined) return res.status(400).json({ error: 'labelId é obrigatório para feedback positivo' });
       await db.run('UPDATE labels SET confidence = 1.0, source = "ai_verified" WHERE id = ?', [labelId]);
     } else {
-      // Add a new label from user
       await db.run(
         'INSERT INTO labels (pole_id, label, confidence, source) VALUES (?, ?, ?, ?)',
         [poleId, correction || 'Correção do usuário', 1.0, 'user']
@@ -92,6 +106,10 @@ app.post('/api/feedback', async (req: Request, res: Response) => {
   }
 });
 
-app.listen(port, () => {
-  console.log(`sisDRONE backend running on http://localhost:${port}`);
-});
+export { app };
+
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(port, () => {
+    console.log(`sisDRONE backend running on http://localhost:${port}`);
+  });
+}
