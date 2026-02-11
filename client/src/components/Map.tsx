@@ -1,13 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
+import React from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents, Polyline } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import type { Pole, Span } from '../types';
 
 // Fix for default marker icons in Leaflet + React
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 
-let DefaultIcon = L.icon({
+const DefaultIcon = L.icon({
   iconUrl: icon,
   shadowUrl: iconShadow,
   iconSize: [25, 41],
@@ -17,21 +18,29 @@ let DefaultIcon = L.icon({
 L.Marker.prototype.options.icon = DefaultIcon;
 
 interface MapProps {
-  poles: any[];
+  poles: Pole[];
+  selectedPole: Pole | null;
+  onMarkerClick: (pole: Pole) => void;
   onMapClick: (lat: number, lng: number) => void;
-  onMarkerClick: (pole: any) => void;
+  isMeasuring: boolean;
+  activeSpan: Span | null;
+  userRole: 'ADMIN' | 'ENGINEER' | 'VIEWER';
 }
 
-const MapEvents = ({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) => {
-  useMapEvents({
-    click(e) {
-      onMapClick(e.latlng.lat, e.latlng.lng);
-    },
-  });
-  return null;
-};
+const Map: React.FC<MapProps> = ({
+  poles, selectedPole, onMarkerClick, onMapClick, isMeasuring, activeSpan, userRole
+}) => {
+  const MapEvents = () => {
+    useMapEvents({
+      click(e) {
+        if (!isMeasuring && userRole !== 'VIEWER') {
+          onMapClick(e.latlng.lat, e.latlng.lng);
+        }
+      },
+    });
+    return null;
+  };
 
-const Map: React.FC<MapProps> = ({ poles, onMapClick, onMarkerClick }) => {
   return (
     <MapContainer
       center={[-23.5505, -46.6333]}
@@ -42,7 +51,8 @@ const Map: React.FC<MapProps> = ({ poles, onMapClick, onMarkerClick }) => {
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      <MapEvents onMapClick={onMapClick} />
+      <MapEvents />
+
       {poles.map((pole) => (
         <Marker
           key={pole.id}
@@ -50,16 +60,26 @@ const Map: React.FC<MapProps> = ({ poles, onMapClick, onMarkerClick }) => {
           eventHandlers={{
             click: () => onMarkerClick(pole),
           }}
+          opacity={selectedPole?.id === pole.id ? 1 : 0.8}
         >
           <Popup>
-            <div>
-              <strong>{pole.external_id || `Pole ${pole.id}`}</strong>
+            <div className="popup-content">
+              <strong>{pole.name || `Poste ${pole.id}`}</strong>
               <p>Coords: {pole.lat.toFixed(6)}, {pole.lng.toFixed(6)}</p>
-              <p>Status: {pole.status}</p>
+              <p>Status: <span className={`status-badge ${pole.id % 5 === 0 ? 'critical' : 'saudavel'}`}>{pole.id % 5 === 0 ? 'Critical' : 'Healthy'}</span></p>
             </div>
           </Popup>
         </Marker>
       ))}
+
+      {activeSpan && (
+        <Polyline
+          positions={[[activeSpan.p1.lat, activeSpan.p1.lng], [activeSpan.p2.lat, activeSpan.p2.lng]]}
+          color="var(--accent)"
+          weight={3}
+          dashArray="10, 10"
+        />
+      )}
     </MapContainer>
   );
 };

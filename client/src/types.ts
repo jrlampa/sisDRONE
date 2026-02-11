@@ -5,6 +5,8 @@ export interface Pole {
   lng: number;
   utm_x?: string;
   utm_y?: string;
+  tenant_id: number;
+  status: string;
 }
 
 export interface Span {
@@ -45,4 +47,11 @@ export interface Tenant {
   primary_color: string;
   accent_color: string;
   logo_url?: string;
+}
+
+export interface User {
+  id: number;
+  username: string;
+  role: 'ADMIN' | 'ENGINEER' | 'VIEWER';
+  tenant_id: number;
 }

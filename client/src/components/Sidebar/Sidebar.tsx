@@ -31,6 +31,7 @@ interface SidebarProps {
   tension: number;
   setTension: (t: number) => void;
   apiBase: string;
+  userRole: 'ADMIN' | 'ENGINEER' | 'VIEWER';
 }
 
 const Sidebar: React.FC<SidebarProps> = (props) => {
@@ -40,7 +41,7 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
     filterCondition, setFilterCondition, selectedPole, activeSpan,
     activeTab, setActiveTab, isCapturing, onAnalyze, analysis, onFeedback,
     history, stats, conductorWeight, setConductorWeight, tension, setTension,
-    apiBase
+    apiBase, userRole
   } = props;
 
   return (
@@ -72,10 +73,18 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
           <button className="btn btn-outline" onClick={handleExportCSV}>
             <Download size={14} /> CSV
           </button>
-          <button className="btn btn-outline" onClick={() => gisInputRef.current?.click()}>
+          <button
+            className="btn btn-outline"
+            onClick={() => gisInputRef.current?.click()}
+            disabled={userRole === 'VIEWER'}
+          >
             <FileJson size={14} /> Importar
           </button>
-          <button className="btn btn-outline" onClick={handleExportGeoJSON}>
+          <button
+            className="btn btn-outline"
+            onClick={handleExportGeoJSON}
+            disabled={userRole === 'VIEWER'}
+          >
             <Globe size={14} /> Exportar
           </button>
         </div>
@@ -85,6 +94,8 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
           className="hidden-input"
           accept=".geojson,.json"
           onChange={handleImportGeoJSON}
+          title="Importar Arquivo GeoJSON/KML"
+          placeholder="Selecione um arquivo"
         />
       </div>
 
@@ -115,7 +126,7 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
             >
               Histórico
             </button>
-            {activeSpan && (
+            {activeSpan && userRole !== 'VIEWER' && (
               <button
                 onClick={() => setActiveTab('eng')}
                 className={activeTab === 'eng' ? 'active' : ''}
@@ -162,11 +173,11 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
         <div className="stats-mini-grid">
           <div className="card stat-card">
             <span className="stat-label">Postes</span>
-            <span className="stat-value">{stats.totalPoles}</span>
+            <span className="stat-value">{stats.total}</span>
           </div>
           <div className="card stat-card">
-            <span className="stat-label">Inspeções</span>
-            <span className="stat-value">{stats.totalInspections}</span>
+            <span className="stat-label">Saudáveis</span>
+            <span className="stat-value">{stats.healthy}</span>
           </div>
         </div>
       </div>

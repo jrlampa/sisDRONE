@@ -6,16 +6,21 @@ import { degreesToUtm } from './utils/geo';
 import { calculateDistance } from './utils/math';
 import { api } from './services/api';
 import { useNetwork } from './hooks/useNetwork';
-import type { Pole, Span, Inspection, AnalysisResult, Tenant } from './types';
+import type { Pole, Span, Inspection, AnalysisResult, Tenant, User } from './types';
 
 const API_BASE = 'http://localhost:3001';
 
 const App: React.FC = () => {
   // --- Custom Hooks ---
-  const { poles, setPoles, stats, fetchStats, fetchPoles, activeTenantId, setActiveTenantId } = useNetwork();
+  const {
+    poles, setPoles, stats, fetchStats, fetchPoles,
+    activeTenantId, setActiveTenantId,
+    currentUser, setCurrentUser
+  } = useNetwork();
 
   // --- UI State ---
   const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [activeTenant, setActiveTenant] = useState<Tenant | null>(null);
   const [selectedPole, setSelectedPole] = useState<Pole | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
@@ -36,14 +41,22 @@ const App: React.FC = () => {
   // Refs
   const gisInputRef = useRef<HTMLInputElement>(null!);
 
-  // --- Sync Tenants & Theme ---
+  // --- Sync Tenants, Users & Theme ---
   useEffect(() => {
-    api.getTenants().then(res => {
-      setTenants(res.data);
-      const initial = res.data.find(t => t.id === activeTenantId);
-      if (initial) setActiveTenant(initial);
+    Promise.all([api.getTenants(), api.getUsers()]).then(([tRes, uRes]) => {
+      setTenants(tRes.data);
+      setUsers(uRes.data);
+
+      const mockUser = uRes.data.find(u => u.tenant_id === activeTenantId) || uRes.data[0];
+      if (mockUser) {
+        setCurrentUser(mockUser);
+        localStorage.setItem('sisdrone_mock_role', mockUser.role);
+      }
+
+      const initialTenant = tRes.data.find(t => t.id === activeTenantId);
+      if (initialTenant) setActiveTenant(initialTenant);
     });
-  }, [activeTenantId]);
+  }, [activeTenantId, setCurrentUser]);
 
   useEffect(() => {
     if (activeTenant) {
@@ -53,6 +66,19 @@ const App: React.FC = () => {
       fetchPoles();
     }
   }, [activeTenant, fetchPoles]);
+
+  const handleUserSwitch = (userId: number) => {
+    const user = users.find(u => u.id === userId);
+    if (user) {
+      setCurrentUser(user);
+      setActiveTenantId(user.tenant_id);
+      localStorage.setItem('sisdrone_mock_role', user.role);
+      // Update tenant branding if it changed
+      const tenant = tenants.find(t => t.id === user.tenant_id);
+      if (tenant) setActiveTenant(tenant);
+      showNotification(`Logado como ${user.username} (${user.role})`);
+    }
+  };
 
   // --- Sync History ---
   useEffect(() => {
@@ -207,10 +233,26 @@ const App: React.FC = () => {
           <h1 className="logo-text">sisDRONE / {activeTenant?.name || 'Enterprise'}</h1>
         </div>
 
-        <div className="tenant-switcher">
+        <div className="tenant-switcher flex items-center gap-4">
+          <select
+            value={currentUser?.id || ''}
+            onChange={(e) => handleUserSwitch(Number(e.target.value))}
+            className="glass-input tenant-select"
+            title="Trocar Usuário (Mock Auth)"
+          >
+            {users.map(u => (
+              <option key={u.id} value={u.id}>{u.username} ({u.role})</option>
+            ))}
+          </select>
+
           <select
             value={activeTenantId}
-            onChange={(e) => setActiveTenantId(Number(e.target.value))}
+            onChange={(e) => {
+              const tid = Number(e.target.value);
+              setActiveTenantId(tid);
+              const tenant = tenants.find(t => t.id === tid);
+              if (tenant) setActiveTenant(tenant);
+            }}
             className="glass-input tenant-select"
             title="Trocar Concessionária"
           >
@@ -222,6 +264,7 @@ const App: React.FC = () => {
       </header>
 
       <Sidebar
+        userRole={currentUser?.role || 'VIEWER'}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         isMeasuring={isMeasuring}
