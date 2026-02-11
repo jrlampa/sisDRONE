@@ -34,8 +34,15 @@ export interface AnalysisResult {
 }
 
 export interface Stats {
-  totalPoles: number;
-  totalInspections: number;
-  activeAlerts: number;
-  status: string;
+  total: number;
+  critical: number;
+  healthy: number;
+}
+
+export interface Tenant {
+  id: number;
+  name: string;
+  primary_color: string;
+  accent_color: string;
+  logo_url?: string;
 }

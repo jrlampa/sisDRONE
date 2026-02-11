@@ -2,37 +2,34 @@ import { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
 import type { Pole, Stats } from '../types';
 
-export const useNetwork = () => {
+export function useNetwork() {
   const [poles, setPoles] = useState<Pole[]>([]);
-  const [stats, setStats] = useState<Stats>({ totalPoles: 0, totalInspections: 0, activeAlerts: 0, status: '...' });
-  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [activeTenantId, setActiveTenantId] = useState<number>(1);
 
   const fetchPoles = useCallback(async () => {
     try {
       const res = await api.getPoles();
-      setPoles(res.data);
-    } catch (err) {
-      console.error('Error fetching poles', err);
+      // Filter by tenant client-side for now
+      setPoles(res.data.filter((p: any) => p.tenant_id === activeTenantId));
+    } catch (error) {
+      console.error('Failed to fetch poles:', error);
     }
-  }, []);
+  }, [activeTenantId]);
 
   const fetchStats = useCallback(async () => {
     try {
       const res = await api.getStats();
       setStats(res.data);
-    } catch (err) {
-      console.error('Error fetching stats', err);
+    } catch (error) {
+      console.error('Failed to fetch stats:', error);
     }
   }, []);
 
   useEffect(() => {
-    const init = async () => {
-      setLoading(true);
-      await Promise.all([fetchPoles(), fetchStats()]);
-      setLoading(false);
-    };
-    init();
+    fetchPoles();
+    fetchStats();
   }, [fetchPoles, fetchStats]);
 
-  return { poles, setPoles, stats, fetchStats, fetchPoles, loading };
-};
+  return { poles, setPoles, stats, fetchStats, fetchPoles, activeTenantId, setActiveTenantId };
+}

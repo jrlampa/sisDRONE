@@ -1,16 +1,17 @@
 :root {
-  --primary: #2563eb;
-  --primary-hover: #1d4ed8;
-  --secondary: #64748b;
-  --accent: #38bdf8;
+  /* Default Branding Colors */
+  --primary: #3b82f6;
+  --accent: #10b981;
+  --accent-hover: #059669;
+  --danger: #ef4444;
   --success: #10b981;
   --warning: #f59e0b;
-  --danger: #ef4444;
+
   --bg-dark: #0f172a;
+  --glass-bg: rgba(30, 41, 59, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.1);
   --text-main: #f8fafc;
   --text-muted: #94a3b8;
-  --glass-bg: rgba(15, 23, 42, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.1);
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -28,9 +29,8 @@ body {
   overflow: hidden;
 }
 
+/* Main Layout */
 .app-container {
-  display: flex;
-  height: 100vh;
   padding: 1rem;
   gap: 1rem;
   background: radial-gradient(circle at top right, #1e293b, #0f172a);

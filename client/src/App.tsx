@@ -6,15 +6,17 @@ import { degreesToUtm } from './utils/geo';
 import { calculateDistance } from './utils/math';
 import { api } from './services/api';
 import { useNetwork } from './hooks/useNetwork';
-import type { Pole, Span, Inspection, AnalysisResult } from './types';
+import type { Pole, Span, Inspection, AnalysisResult, Tenant } from './types';
 
 const API_BASE = 'http://localhost:3001';
 
 const App: React.FC = () => {
   // --- Custom Hooks ---
-  const { poles, setPoles, stats, fetchStats, fetchPoles } = useNetwork();
+  const { poles, setPoles, stats, fetchStats, fetchPoles, activeTenantId, setActiveTenantId } = useNetwork();
 
   // --- UI State ---
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [activeTenant, setActiveTenant] = useState<Tenant | null>(null);
   const [selectedPole, setSelectedPole] = useState<Pole | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
@@ -33,6 +35,24 @@ const App: React.FC = () => {
 
   // Refs
   const gisInputRef = useRef<HTMLInputElement>(null!);
+
+  // --- Sync Tenants & Theme ---
+  useEffect(() => {
+    api.getTenants().then(res => {
+      setTenants(res.data);
+      const initial = res.data.find(t => t.id === activeTenantId);
+      if (initial) setActiveTenant(initial);
+    });
+  }, [activeTenantId]);
+
+  useEffect(() => {
+    if (activeTenant) {
+      document.documentElement.style.setProperty('--primary', activeTenant.primary_color);
+      document.documentElement.style.setProperty('--accent', activeTenant.accent_color);
+      document.documentElement.style.setProperty('--accent-hover', activeTenant.primary_color);
+      fetchPoles();
+    }
+  }, [activeTenant, fetchPoles]);
 
   // --- Sync History ---
   useEffect(() => {
@@ -66,7 +86,8 @@ const App: React.FC = () => {
       showNotification(`Criando Poste...`);
       const res = await api.createPole({
         lat, lng, name: `Poste ${poles.length + 1}`,
-        utm_x: utm.x, utm_y: utm.y
+        utm_x: utm.x, utm_y: utm.y,
+        tenant_id: activeTenantId
       });
       setPoles(prev => [res.data, ...prev]);
       setSelectedPole(res.data);
@@ -180,6 +201,26 @@ const App: React.FC = () => {
 
   return (
     <div className="app-container">
+      <header className="app-header glass-panel">
+        <div className="flex items-center gap-4">
+          <Zap className="text-accent" />
+          <h1 className="logo-text">sisDRONE / {activeTenant?.name || 'Enterprise'}</h1>
+        </div>
+
+        <div className="tenant-switcher">
+          <select
+            value={activeTenantId}
+            onChange={(e) => setActiveTenantId(Number(e.target.value))}
+            className="glass-input tenant-select"
+            title="Trocar Concessionária"
+          >
+            {tenants.map(t => (
+              <option key={t.id} value={t.id}>{t.name}</option>
+            ))}
+          </select>
+        </div>
+      </header>
+
       <Sidebar
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
@@ -209,7 +250,7 @@ const App: React.FC = () => {
         analysis={analysis}
         onFeedback={handleFeedback}
         history={history}
-        stats={stats}
+        stats={stats || { total: 0, critical: 0, healthy: 0 }}
         conductorWeight={conductorWeight}
         setConductorWeight={setConductorWeight}
         tension={tension}
