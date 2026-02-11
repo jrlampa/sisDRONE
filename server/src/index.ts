@@ -146,6 +146,72 @@ app.post('/api/analyze', async (req: Request, res: Response) => {
   }
 });
 
+// GET GIS Export (GeoJSON)
+app.get('/api/gis/export/geojson', async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    const poles = await db.all('SELECT * FROM poles');
+
+    const geojson = {
+      type: 'FeatureCollection',
+      features: poles.map(p => ({
+        type: 'Feature',
+        id: p.id,
+        geometry: {
+          type: 'Point',
+          coordinates: [p.lng, p.lat]
+        },
+        properties: {
+          name: p.external_id,
+          utm_x: p.utm_x,
+          utm_y: p.utm_y,
+          status: p.status,
+          created_at: p.created_at
+        }
+      }))
+    };
+
+    res.json(geojson);
+  } catch (error) {
+    console.error('Export error:', error);
+    res.status(500).json({ error: 'Failed to export GeoJSON' });
+  }
+});
+
+// POST GIS Import (GeoJSON)
+app.post('/api/gis/import/geojson', async (req: Request, res: Response) => {
+  const { geojson } = req.body;
+
+  if (!geojson || geojson.type !== 'FeatureCollection') {
+    return res.status(400).json({ error: 'Formato GeoJSON inválido' });
+  }
+
+  try {
+    const db = await getDb();
+    let importedCount = 0;
+
+    for (const feature of geojson.features) {
+      if (feature.geometry.type === 'Point') {
+        const [lng, lat] = feature.geometry.coordinates;
+        const name = feature.properties?.name || `Imported Pole ${Date.now()}`;
+        const utm_x = feature.properties?.utm_x || 0;
+        const utm_y = feature.properties?.utm_y || 0;
+
+        await db.run(
+          'INSERT INTO poles (external_id, lat, lng, utm_x, utm_y) VALUES (?, ?, ?, ?, ?)',
+          [name, lat, lng, utm_x, utm_y]
+        );
+        importedCount++;
+      }
+    }
+
+    res.json({ status: 'success', detail: `Importados ${importedCount} ativos.` });
+  } catch (error) {
+    console.error('Import error:', error);
+    res.status(500).json({ error: 'Erro ao importar ativos.' });
+  }
+});
+
 // POST feedback
 app.post('/api/feedback', async (req: Request, res: Response) => {
   const { labelId, poleId, isCorrect, correction } = req.body;

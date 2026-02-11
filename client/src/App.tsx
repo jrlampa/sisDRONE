@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import axios from 'axios';
 import Map from './components/Map';
-import { MapPin, CheckCircle, AlertTriangle, Upload, LayoutDashboard, Zap, Activity, Ruler, Search, Download, Clock, Image as ImageIcon, ChevronRight } from 'lucide-react';
+import { MapPin, CheckCircle, AlertTriangle, Upload, LayoutDashboard, Zap, Activity, Ruler, Search, Download, Clock, Image as ImageIcon, ChevronRight, FileJson, Globe } from 'lucide-react';
 import { degreesToUtm } from './utils/geo';
 import { calculateDistance } from './utils/math';
 
@@ -56,7 +56,9 @@ const App: React.FC = () => {
   const [measurementStart, setMeasurementStart] = useState<Pole | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCondition, setFilterCondition] = useState<'All' | 'Critical' | 'Warning' | 'Good'>('All');
+
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const gisInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchPoles();
@@ -166,6 +168,41 @@ const App: React.FC = () => {
     showNotification("Relatório exportado!");
   };
 
+  const handleExportGeoJSON = async () => {
+    try {
+      const res = await axios.get(`${API_BASE}/api/gis/export/geojson`);
+      const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: 'application/json' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.setAttribute('download', `sisdrone_network_${new Date().toISOString().split('T')[0]}.geojson`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showNotification("GeoJSON exportado!");
+    } catch (err) {
+      showNotification("Erro ao exportar GeoJSON.");
+    }
+  };
+
+  const handleImportGeoJSON = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const geojson = JSON.parse(e.target?.result as string);
+        const res = await axios.post(`${API_BASE}/api/gis/import/geojson`, { geojson });
+        showNotification(res.data.detail);
+        fetchPoles();
+        fetchStats();
+      } catch (err) {
+        showNotification("GeoJSON inválido ou erro no servidor.");
+      }
+    };
+    reader.readAsText(file);
+  };
+
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || !selectedPole) return;
@@ -238,19 +275,30 @@ const App: React.FC = () => {
             />
           </div>
 
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button className={`btn btn-outline \${isMeasuring ? 'active' : ''}`} onClick={() => { setIsMeasuring(!isMeasuring); setMeasurementStart(null); }} style={{ flex: 1, fontSize: '0.8rem', borderColor: isMeasuring ? 'var(--primary)' : '' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+            <button className={`btn btn-outline ${isMeasuring ? 'active' : ''}`} onClick={() => { setIsMeasuring(!isMeasuring); setMeasurementStart(null); }} style={{ fontSize: '0.75rem', borderColor: isMeasuring ? 'var(--primary)' : '' }}>
               <Ruler size={14} /> Régua
             </button>
-            <button className="btn btn-outline" onClick={handleExportCSV} style={{ flex: 1, fontSize: '0.8rem' }}>
-              <Download size={14} /> Exportar
+            <button className="btn btn-outline" onClick={handleExportCSV} style={{ fontSize: '0.75rem' }}>
+              <Download size={14} /> CSV
             </button>
           </div>
+
+          {/* Phase 3: GIS Integration Tools */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+            <button className="btn btn-outline" onClick={() => gisInputRef.current?.click()} style={{ fontSize: '0.75rem' }}>
+              <FileJson size={14} /> Importar
+            </button>
+            <button className="btn btn-outline" onClick={handleExportGeoJSON} style={{ fontSize: '0.75rem' }}>
+              <Globe size={14} /> Exportar
+            </button>
+          </div>
+          <input type="file" ref={gisInputRef} style={{ display: 'none' }} accept=".geojson,.json" onChange={handleImportGeoJSON} />
         </div>
 
         <div className="filter-chips" style={{ display: 'flex', gap: '5px', marginBottom: '1.5rem', overflowX: 'auto' }}>
           {(['All', 'Critical', 'Warning', 'Good'] as const).map(c => (
-            <button key={c} className={`badge \${filterCondition === c ? 'active-chip' : 'inactive-chip'}`} onClick={() => setFilterCondition(c)} style={{ cursor: 'pointer', border: 'none', background: filterCondition === c ? 'var(--primary)' : 'rgba(255,255,255,0.05)', color: filterCondition === c ? 'white' : 'var(--text-muted)' }}>
+            <button key={c} className={`badge ${filterCondition === c ? 'active-chip' : 'inactive-chip'}`} onClick={() => setFilterCondition(c)} style={{ cursor: 'pointer', border: 'none', background: filterCondition === c ? 'var(--primary)' : 'rgba(255,255,255,0.05)', color: filterCondition === c ? 'white' : 'var(--text-muted)' }}>
               {c === 'All' ? 'Todos' : c === 'Critical' ? 'Crítico' : c === 'Warning' ? 'Atenção' : 'Saudável'}
             </button>
           ))}
