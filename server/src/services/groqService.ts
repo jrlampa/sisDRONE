@@ -65,3 +65,49 @@ export async function analyzeImage(imageBase64: string) {
     throw new Error('Failed to analyze image');
   }
 }
+
+export async function generateMaintenancePlan(analysis: any) {
+  if (!GROQ_API_KEY) {
+    throw new Error('GROQ_API_KEY is not defined');
+  }
+
+  const prompt = `
+    Atue como um Engenheiro Elétrico Sênior especializado em manutenção de redes de distribuição.
+    Com base na análise técnica abaixo, gere um Plano de Manutenção detalhado.
+
+    DADOS DA ANÁLISE:
+    ${JSON.stringify(analysis, null, 2)}
+
+    O SEU RELATÓRIO DEVE CONTER:
+    1. **Diagnóstico Técnico**: Resumo profissional da situação e riscos associados.
+    2. **Ação Recomendada**: Passo-a-passo técnico para a equipe de campo (ex: "Desenergizar o circuito", "Substituir cruzeta").
+    3. **Lista de Materiais Estimada**: Sugestão de materiais compatíveis com o tipo de estrutura identificado.
+    4. **Prioridade sugerida**: (Alta/Média/Baixa) com justificativa baseada em risco à segurança ou continuidade do fornecimento.
+
+    Use formatação Markdown para deixar o texto claro e legível. Seja direto e técnico.
+  `;
+
+  try {
+    const response = await axios.post(
+      GROQ_API_URL,
+      {
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.3
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${GROQ_API_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    return (response.data as any).choices[0].message.content;
+  } catch (error: any) {
+    console.error('Error generating maintenance plan:', error.response?.data || error.message);
+    throw new Error('Failed to generate maintenance plan');
+  }
+}

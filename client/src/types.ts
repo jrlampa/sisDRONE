@@ -7,6 +7,9 @@ export interface Pole {
   utm_y?: string;
   tenant_id: number;
   status: string;
+  ahi_score?: number;
+  installation_date?: string;
+  material?: string;
 }
 
 export interface Span {
@@ -54,4 +57,25 @@ export interface User {
   username: string;
   role: 'ADMIN' | 'ENGINEER' | 'VIEWER';
   tenant_id: number;
+}
+
+export interface DashboardData {
+  totalPoles: number;
+  totalInspections: number;
+  conditionStats: { condition: string; count: number }[];
+  materialStats: { material: string; count: number }[];
+  ahiHistogram: { range: string; count: number }[];
+}
+
+export interface WorkOrder {
+  id: number;
+  title: string;
+  description: string;
+  priority: 'LOW' | 'MED' | 'HIGH' | 'CRITICAL';
+  status: 'OPEN' | 'IN_PROGRESS' | 'BLOCKED' | 'COMPLETED';
+  assignee_id?: number;
+  pole_id?: number;
+  due_date?: string;
+  created_at: string;
+  updated_at: string;
 }

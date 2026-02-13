@@ -1,11 +1,16 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import Map from './components/Map';
 import Sidebar from './components/Sidebar/Sidebar';
-import { Zap } from 'lucide-react';
+import MobileFab from './components/MobileFab';
+import ChatAssistant from './components/ChatAssistant';
+import AnalyticsDashboard from './components/Dashboard/AnalyticsDashboard';
+import KanbanBoard from './components/WorkOrders/KanbanBoard';
+import { Zap, Menu } from 'lucide-react';
 import { degreesToUtm } from './utils/geo';
 import { calculateDistance } from './utils/math';
 import { api } from './services/api';
 import { useNetwork } from './hooks/useNetwork';
+import { WifiOff, RefreshCw } from 'lucide-react';
 import type { Pole, Span, Inspection, AnalysisResult, Tenant, User } from './types';
 
 const API_BASE = 'http://localhost:3001';
@@ -15,7 +20,8 @@ const App: React.FC = () => {
   const {
     poles, setPoles, stats, fetchStats, fetchPoles,
     activeTenantId, setActiveTenantId,
-    currentUser, setCurrentUser
+    currentUser, setCurrentUser,
+    isOnline, isSyncing
   } = useNetwork();
 
   // --- UI State ---
@@ -24,6 +30,7 @@ const App: React.FC = () => {
   const [activeTenant, setActiveTenant] = useState<Tenant | null>(null);
   const [selectedPole, setSelectedPole] = useState<Pole | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [history, setHistory] = useState<Inspection[]>([]);
   const [activeTab, setActiveTab] = useState<'details' | 'history' | 'eng'>('details');
@@ -31,8 +38,10 @@ const App: React.FC = () => {
   const [isMeasuring, setIsMeasuring] = useState(false);
   const [measurementStart, setMeasurementStart] = useState<Pole | null>(null);
   const [activeSpan, setActiveSpan] = useState<Span | null>(null);
+  const [showHeatmap, setShowHeatmap] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCondition, setFilterCondition] = useState<'All' | 'Critical' | 'Warning' | 'Good'>('All');
+  const [viewMode, setViewMode] = useState<'MAP' | 'ANALYTICS' | 'WORK_ORDERS'>('MAP');
 
   // Engineering State
   const [conductorWeight, setConductorWeight] = useState(0.545); // Default Penguin
@@ -145,15 +154,6 @@ const App: React.FC = () => {
     setActiveTab('details');
   };
 
-  const handleExportCSV = () => {
-    const headers = ['ID', 'Nome', 'Latitude', 'Longitude', 'UTM_X', 'UTM_Y'];
-    const rows = poles.map(p => [p.id, p.name, p.lat, p.lng, p.utm_x, p.utm_y].join(','));
-    const blob = new Blob([[headers.join(','), ...rows].join('\n')], { type: 'text/csv' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `sisdrone_report_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-  };
 
   const handleExportGeoJSON = async () => {
     try {
@@ -227,8 +227,32 @@ const App: React.FC = () => {
 
   return (
     <div className="app-container">
+      {(!isOnline || isSyncing) && (
+        <div className={`connection-status ${isOnline ? 'syncing' : 'offline'}`}>
+          {isOnline ? (
+            <>
+              <RefreshCw size={14} className="spin" />
+              <span>Sincronizando dados...</span>
+            </>
+          ) : (
+            <>
+              <WifiOff size={14} />
+              <span>Modo Offline - Alterações serão salvas localmente</span>
+            </>
+          )}
+        </div>
+      )}
+
       <header className="app-header glass-panel">
         <div className="flex items-center gap-4">
+          <button
+            className="mobile-menu-btn btn-icon"
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            aria-label="Abrir Menu"
+            title="Abrir Menu"
+          >
+            <Menu className="text-primary" />
+          </button>
           <Zap className="text-accent" />
           <h1 className="logo-text">sisDRONE / {activeTenant?.name || 'Enterprise'}</h1>
         </div>
@@ -263,60 +287,93 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      <Sidebar
-        userRole={currentUser?.role || 'VIEWER'}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        isMeasuring={isMeasuring}
-        setIsMeasuring={setIsMeasuring}
-        handleExportCSV={handleExportCSV}
-        handleExportGeoJSON={handleExportGeoJSON}
-        handleImportGeoJSON={handleImportGeoJSON}
-        gisInputRef={gisInputRef}
-        filterCondition={filterCondition}
-        setFilterCondition={setFilterCondition}
-        selectedPole={selectedPole}
-        activeSpan={activeSpan}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        isCapturing={isCapturing}
-        onAnalyze={() => {
-          const input = document.createElement('input');
-          input.type = 'file';
-          input.accept = 'image/*';
-          input.onchange = (e: Event) => {
-            const target = e.target as HTMLInputElement;
-            if (target.files) handleImageUpload(target.files[0]);
-          };
-          input.click();
-        }}
-        analysis={analysis}
-        onFeedback={handleFeedback}
-        history={history}
-        stats={stats || { total: 0, critical: 0, healthy: 0 }}
-        conductorWeight={conductorWeight}
-        setConductorWeight={setConductorWeight}
-        tension={tension}
-        setTension={setTension}
-        apiBase={API_BASE}
-      />
-
-      <div className="map-container glass-panel">
-        {notification && (
-          <div className="notification-overlay animate-fade-in">
-            <Zap size={16} className="text-primary" /><span>{notification}</span>
-          </div>
-        )}
-        <Map
-          poles={filteredPoles}
-          onMapClick={handleMapClick}
-          onMarkerClick={handleMarkerClick}
-          selectedPole={selectedPole}
-          isMeasuring={isMeasuring}
-          activeSpan={activeSpan}
+      <main className="content-wrapper">
+        <Sidebar
           userRole={currentUser?.role || 'VIEWER'}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          isMeasuring={isMeasuring}
+          setIsMeasuring={setIsMeasuring}
+          handleExportGeoJSON={handleExportGeoJSON}
+          handleImportGeoJSON={handleImportGeoJSON}
+          gisInputRef={gisInputRef}
+          filterCondition={filterCondition}
+          setFilterCondition={setFilterCondition}
+          selectedPole={selectedPole}
+          activeSpan={activeSpan}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          isCapturing={isCapturing}
+          onAnalyze={() => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.capture = 'environment';
+            input.onchange = (e: Event) => {
+              const target = e.target as HTMLInputElement;
+              if (target.files) handleImageUpload(target.files[0]);
+            };
+            input.click();
+          }}
+          analysis={analysis}
+          onFeedback={handleFeedback}
+          history={history}
+          stats={stats || { total: 0, critical: 0, healthy: 0 }}
+          conductorWeight={conductorWeight}
+          setConductorWeight={setConductorWeight}
+          tension={tension}
+          setTension={setTension}
+          apiBase={API_BASE}
+          showHeatmap={showHeatmap}
+          setShowHeatmap={setShowHeatmap}
+          activeTenant={activeTenant || undefined}
+          poles={filteredPoles}
+          isOpen={isSidebarOpen}
+          onClose={() => setIsSidebarOpen(false)}
+          viewMode={viewMode}
+          setViewMode={setViewMode}
+          users={users}
         />
-      </div>
+
+        <div className="map-container glass-panel">
+          {notification && (
+            <div className="notification-overlay animate-fade-in">
+              <Zap size={16} className="text-primary" /><span>{notification}</span>
+            </div>
+          )}
+
+          {viewMode === 'MAP' ? (
+            <Map
+              poles={filteredPoles}
+              onMapClick={handleMapClick}
+              onMarkerClick={handleMarkerClick}
+              selectedPole={selectedPole}
+              isMeasuring={isMeasuring}
+              activeSpan={activeSpan}
+              userRole={currentUser?.role || 'VIEWER'}
+              showHeatmap={showHeatmap}
+            />
+          ) : viewMode === 'ANALYTICS' ? (
+            <AnalyticsDashboard />
+          ) : (
+            <KanbanBoard currentUser={currentUser} users={users} />
+          )}
+        </div>
+      </main>
+
+      <MobileFab
+        onAddPole={() => {
+          // Get current center or user location - for now we trigger map click at center
+          // In a real app we'd get navigator.geolocation
+          navigator.geolocation.getCurrentPosition(
+            (pos) => handleMapClick(pos.coords.latitude, pos.coords.longitude),
+            () => showNotification("Erro ao obter GPS")
+          );
+        }}
+        onCameraCapture={handleImageUpload}
+        isCapturing={isCapturing}
+      />
+      <ChatAssistant selectedPole={selectedPole} analysis={analysis} />
     </div>
   );
 };

@@ -15,6 +15,11 @@ export default defineConfig({
         short_name: 'sisDRONE',
         description: 'SISTEMA DE INSPEÇÃO AUTOMATIZADA',
         theme_color: '#0f172a',
+        background_color: '#0f172a',
+        display: 'standalone',
+        scope: '/',
+        start_url: '/',
+        orientation: 'portrait',
         icons: [
           {
             src: 'pwa-192x192.png',

@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMapEvents, Polyline } from '
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { Pole, Span } from '../types';
+import HeatmapLayer from './HeatmapLayer';
 
 // Fix for default marker icons in Leaflet + React
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -25,11 +26,17 @@ interface MapProps {
   isMeasuring: boolean;
   activeSpan: Span | null;
   userRole: 'ADMIN' | 'ENGINEER' | 'VIEWER';
+  showHeatmap: boolean;
 }
 
 const Map: React.FC<MapProps> = ({
-  poles, selectedPole, onMarkerClick, onMapClick, isMeasuring, activeSpan, userRole
+  poles, selectedPole, onMarkerClick, onMapClick, isMeasuring, activeSpan, userRole, showHeatmap
 }) => {
+  const heatmapPoints: [number, number, number][] = poles.map(p => {
+    // Inverse of AHI: Lower score = Higher intensity in heatmap (more damaged)
+    const intensity = p.ahi_score ? (100 - p.ahi_score) / 100 : 0.2;
+    return [p.lat, p.lng, intensity];
+  });
   const MapEvents = () => {
     useMapEvents({
       click(e) {
@@ -53,6 +60,8 @@ const Map: React.FC<MapProps> = ({
       />
       <MapEvents />
 
+      {showHeatmap && <HeatmapLayer points={heatmapPoints} />}
+
       {poles.map((pole) => (
         <Marker
           key={pole.id}
@@ -66,7 +75,10 @@ const Map: React.FC<MapProps> = ({
             <div className="popup-content">
               <strong>{pole.name || `Poste ${pole.id}`}</strong>
               <p>Coords: {pole.lat.toFixed(6)}, {pole.lng.toFixed(6)}</p>
-              <p>Status: <span className={`status-badge ${pole.id % 5 === 0 ? 'critical' : 'saudavel'}`}>{pole.id % 5 === 0 ? 'Critical' : 'Healthy'}</span></p>
+              <p>Coords: {pole.lat.toFixed(6)}, {pole.lng.toFixed(6)}</p>
+              <p>AHI: <span className={`status-badge ${(pole.ahi_score || 100) < 50 ? 'critical' : ((pole.ahi_score || 100) < 80 ? 'warning' : 'saudavel')}`}>
+                {pole.ahi_score ?? 100}
+              </span></p>
             </div>
           </Popup>
         </Marker>

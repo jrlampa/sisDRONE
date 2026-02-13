@@ -9,6 +9,9 @@ import inspectionsRouter from './routes/inspections';
 import gisRouter from './routes/gis';
 import tenantsRouter from './routes/tenants';
 import usersRouter from './routes/users';
+import aiRoutes from './routes/aiRoutes';
+import maintenanceRouter from './routes/maintenance';
+import workOrderRouter from './routes/workOrders';
 import { checkPermission } from './middleware/auth';
 
 dotenv.config();
@@ -29,6 +32,9 @@ app.use('/api', inspectionsRouter);
 app.use('/api/gis', gisRouter);
 app.use('/api/tenants', tenantsRouter);
 app.use('/api/users', usersRouter);
+app.use('/api/ai', aiRoutes);
+app.use('/api/maintenance', maintenanceRouter);
+app.use('/api/work-orders', workOrderRouter);
 
 // Global Guard Example: Only ADMIN can export GIS
 app.get('/api/gis/export/geojson', checkPermission(['ADMIN']));

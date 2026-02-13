@@ -2,7 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
 import type { Pole, Stats, User } from '../types';
 
+import { getQueue, removeFromQueue } from '../utils/offlineQueue';
+import axios from 'axios';
+
 export function useNetwork() {
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [poles, setPoles] = useState<Pole[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [activeTenantId, setActiveTenantId] = useState<number>(1);
@@ -27,6 +32,47 @@ export function useNetwork() {
     }
   }, []);
 
+  const syncQueue = useCallback(async () => {
+    if (!navigator.onLine) return;
+    setIsSyncing(true);
+    const queue = await getQueue();
+
+    for (const req of queue) {
+      try {
+        console.log('[Sync] Retrying:', req.url);
+        await axios({
+          url: req.url,
+          method: req.method,
+          data: req.data,
+          headers: { 'x-user-role': localStorage.getItem('sisdrone_mock_role') || 'VIEWER' }
+        });
+        if (req.id) await removeFromQueue(req.id);
+      } catch (err) {
+        console.error('[Sync] Failed:', err);
+      }
+    }
+
+    setIsSyncing(false);
+    fetchPoles(); // Refresh data after sync
+    fetchStats();
+  }, [fetchPoles, fetchStats]);
+
+  useEffect(() => {
+    const handleOnline = () => { setIsOnline(true); syncQueue(); };
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    // Initial sync check
+    if (navigator.onLine) syncQueue();
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [syncQueue]);
+
   useEffect(() => {
     fetchPoles();
     fetchStats();
@@ -35,6 +81,7 @@ export function useNetwork() {
   return {
     poles, setPoles, stats, fetchStats, fetchPoles,
     activeTenantId, setActiveTenantId,
-    currentUser, setCurrentUser
+    currentUser, setCurrentUser,
+    isOnline, isSyncing
   };
 }

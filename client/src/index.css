@@ -34,6 +34,38 @@ body {
   padding: 1rem;
   gap: 1rem;
   background: radial-gradient(circle at top right, #1e293b, #0f172a);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.content-wrapper {
+  display: flex;
+  gap: 1rem;
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.app-header {
+  flex-shrink: 0;
+}
+
+.mobile-menu-btn {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-main);
+}
+
+.mobile-close-btn {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
 }
 
 /* Glass Panels */
@@ -54,6 +86,76 @@ body {
   padding: 1.5rem;
   overflow-y: auto;
   z-index: 10;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .app-container {
+    padding: 0;
+    gap: 0;
+  }
+
+  .app-header {
+    border-radius: 0;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    padding: 10px 1rem;
+  }
+
+  .content-wrapper {
+    gap: 0;
+  }
+
+  .map-container.glass-panel {
+    border-radius: 0;
+    border: none;
+  }
+
+  .mobile-menu-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .mobile-close-btn {
+    display: flex;
+  }
+
+  .sidebar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 85%;
+    max-width: 380px;
+    z-index: 50;
+    transform: translateX(-100%);
+    border-radius: 0 16px 16px 0;
+    background: #0f172a;
+    /* Solid background for mobile */
+    border-right: 1px solid var(--glass-border);
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+    box-shadow: 10px 0 50px rgba(0, 0, 0, 0.5);
+  }
+
+  /* Overlay for when sidebar is open */
+  .sidebar.open::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: -1;
+    pointer-events: none;
+    /* Let clicks pass through if we want to close on click outside, handled by JS usually but this is just visual dimming */
+  }
 }
 
 .sidebar-header h1 {
@@ -327,7 +429,134 @@ body {
 
 .history-arrow {
   color: var(--text-muted);
-  opacity: 0.5;
+  opacity: 0.4;
+}
+
+/* Connection Status */
+.connection-status {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  z-index: 3000;
+}
+
+.connection-status.offline {
+  background: var(--danger);
+  color: white;
+}
+
+.connection-status.syncing {
+  background: var(--warning);
+  color: white;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Mobile FAB */
+.mobile-fab-container {
+  display: none;
+  /* Hidden on desktop */
+}
+
+@media (max-width: 768px) {
+  .mobile-fab-container {
+    display: block;
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 1000;
+  }
+
+  .fab-main-btn {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: white;
+    border: none;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1002;
+  }
+
+  .fab-main-btn:active {
+    transform: scale(0.95);
+  }
+
+  .fab-main-btn.active {
+    background: var(--bg-dark);
+    border: 2px solid var(--primary);
+    transform: rotate(90deg);
+  }
+
+  .fab-options {
+    position: absolute;
+    bottom: 70px;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-end;
+    z-index: 1001;
+  }
+
+  .fab-option-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    padding: 10px 16px;
+    border-radius: 50px;
+    color: var(--text-main);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .fab-option-btn span {
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+
+  .fab-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
+    z-index: 999;
+    animation: fadeIn 0.2s ease-out;
+  }
 }
 
 /* Engineering */
@@ -435,6 +664,47 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
+}
+
+.analytics-section {
+  margin-bottom: 1.5rem;
+}
+
+.analytics-section h3 {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 0.75rem;
+}
+
+.analytics-card {
+  padding: 0.75rem !important;
+  background: rgba(255, 255, 255, 0.02) !important;
+}
+
+.flex {
+  display: flex;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.mb-2 {
+  margin-bottom: 0.5rem;
+}
+
+.text-xs {
+  font-size: 0.75rem;
+}
+
+.font-medium {
+  font-weight: 500;
 }
 
 /* Utilities */
