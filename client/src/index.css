@@ -432,6 +432,66 @@ body {
   opacity: 0.4;
 }
 
+/* Drone Live View */
+.drone-live-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.live-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(239, 68, 68, 0.1);
+  padding: 4px 12px;
+  border-radius: 50px;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  font-weight: 700;
+  font-size: 0.7rem;
+  letter-spacing: 1px;
+}
+
+.live-indicator .dot {
+  width: 8px;
+  height: 8px;
+  background: #ef4444;
+  border-radius: 50%;
+  box-shadow: 0 0 10px #ef4444;
+}
+
+.drone-status-tag {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 4px 12px;
+  border-radius: 50px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.video-viewport {
+  flex: 1;
+  min-height: 0;
+  background: black;
+}
+
+.hud-overlay {
+  background: radial-gradient(circle, transparent 20%, rgba(0, 0, 0, 0.4) 80%);
+}
+
+.hud-corners {
+  pointer-events: none;
+}
+
+.drone-controls-grid .card:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
 /* Connection Status */
 .connection-status {
   position: absolute;

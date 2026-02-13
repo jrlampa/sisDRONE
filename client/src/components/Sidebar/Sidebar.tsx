@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, FileJson, Globe, FileText, Ruler, LayoutDashboard, Download, X } from 'lucide-react';
+import { Search, FileJson, Globe, FileText, Ruler, LayoutDashboard, Download, X, Zap } from 'lucide-react';
 import PoleDetails from './PoleDetails';
 import { generateInspectionReport } from '../../utils/pdfGenerator';
 import { api } from '../../services/api';
@@ -39,8 +39,8 @@ interface SidebarProps {
   poles: Pole[];
   isOpen: boolean;
   onClose: () => void;
-  viewMode: 'MAP' | 'ANALYTICS' | 'WORK_ORDERS';
-  setViewMode: (mode: 'MAP' | 'ANALYTICS' | 'WORK_ORDERS') => void;
+  viewMode: 'MAP' | 'ANALYTICS' | 'WORK_ORDERS' | 'DRONE_LIVE';
+  setViewMode: (mode: 'MAP' | 'ANALYTICS' | 'WORK_ORDERS' | 'DRONE_LIVE') => void;
   users: User[]; // New prop
 }
 
@@ -145,8 +145,15 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
             <FileText size={14} /> Relatório
           </button>
           <button
+            className={`btn btn-outline ${viewMode === 'DRONE_LIVE' ? 'active' : ''}`}
+            onClick={() => setViewMode(viewMode === 'DRONE_LIVE' ? 'MAP' : 'DRONE_LIVE')}
+            title="Live Drone Feed"
+          >
+            <Zap size={14} /> Live
+          </button>
+          <button
             className={`btn btn-outline ${viewMode === 'ANALYTICS' ? 'active' : ''}`}
-            onClick={() => setViewMode(viewMode === 'MAP' ? 'ANALYTICS' : 'MAP')}
+            onClick={() => setViewMode(viewMode === 'ANALYTICS' ? 'MAP' : 'ANALYTICS')}
           >
             <LayoutDashboard size={14} /> Dash
           </button>

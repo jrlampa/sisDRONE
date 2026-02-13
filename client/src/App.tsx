@@ -13,6 +13,8 @@ import { useNetwork } from './hooks/useNetwork';
 import { WifiOff, RefreshCw } from 'lucide-react';
 import type { Pole, Span, Inspection, AnalysisResult, Tenant, User } from './types';
 
+import DroneLiveView from './components/Dashboard/DroneLiveView';
+
 const API_BASE = 'http://localhost:3001';
 
 const App: React.FC = () => {
@@ -41,7 +43,7 @@ const App: React.FC = () => {
   const [showHeatmap, setShowHeatmap] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCondition, setFilterCondition] = useState<'All' | 'Critical' | 'Warning' | 'Good'>('All');
-  const [viewMode, setViewMode] = useState<'MAP' | 'ANALYTICS' | 'WORK_ORDERS'>('MAP');
+  const [viewMode, setViewMode] = useState<'MAP' | 'ANALYTICS' | 'WORK_ORDERS' | 'DRONE_LIVE'>('MAP');
 
   // Engineering State
   const [conductorWeight, setConductorWeight] = useState(0.545); // Default Penguin
@@ -355,8 +357,10 @@ const App: React.FC = () => {
             />
           ) : viewMode === 'ANALYTICS' ? (
             <AnalyticsDashboard />
-          ) : (
+          ) : viewMode === 'WORK_ORDERS' ? (
             <KanbanBoard currentUser={currentUser} users={users} />
+          ) : (
+            <DroneLiveView apiBase={API_BASE} />
           )}
         </div>
       </main>
