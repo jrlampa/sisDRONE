@@ -47,7 +47,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ users }) => {
     }
   };
 
-  const Column = ({ status, title, icon: Icon }: { status: string, title: string, icon: any }) => (
+  const Column = ({ status, title, icon: Icon }: { status: string, title: string, icon: React.ElementType }) => (
     <div className="flex-1 min-w-[300px] bg-white/5 rounded-lg p-4 flex flex-col gap-3">
       <div className="flex items-center justify-between mb-2">
         <h3 className="font-bold flex items-center gap-2">
@@ -87,7 +87,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ users }) => {
     </div>
   );
 
-  const handleDrop = (e: React.DragEvent, status: any) => {
+  const handleDrop = (e: React.DragEvent, status: WorkOrder['status']) => {
     const taskId = Number(e.dataTransfer.getData('taskId'));
     if (taskId) handleStatusChange(taskId, status);
   };

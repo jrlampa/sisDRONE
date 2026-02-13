@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Save } from 'lucide-react';
 import { api } from '../../services/api';
-import type { User, Pole } from '../../types';
+import type { User, Pole, WorkOrder } from '../../types';
 
 interface WorkOrderModalProps {
   isOpen: boolean;
@@ -48,29 +48,38 @@ const WorkOrderModal: React.FC<WorkOrderModalProps> = ({ isOpen, onClose, pole, 
       <div className="bg-[#1e293b] rounded-xl shadow-2xl w-full max-w-md border border-white/10 animate-fade-in">
         <div className="flex justify-between items-center p-4 border-b border-white/10">
           <h3 className="font-bold text-lg text-white">Nova Ordem de Serviço</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-white">
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-white"
+            title="Fechar"
+            aria-label="Fechar"
+          >
             <X size={20} />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Título</label>
+            <label htmlFor="wo-title" className="block text-sm text-gray-400 mb-1">Título</label>
             <input
+              id="wo-title"
               type="text"
               value={title}
               onChange={e => setTitle(e.target.value)}
               className="w-full bg-black/20 border border-white/10 rounded p-2 text-white"
               required
+              title="Título da Ordem de Serviço"
             />
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Prioridade</label>
+            <label htmlFor="wo-priority" className="block text-sm text-gray-400 mb-1">Prioridade</label>
             <select
+              id="wo-priority"
               value={priority}
-              onChange={e => setPriority(e.target.value as any)}
+              onChange={e => setPriority(e.target.value as WorkOrder['priority'])}
               className="w-full bg-black/20 border border-white/10 rounded p-2 text-white"
+              title="Prioridade"
             >
               <option value="LOW">Baixa</option>
               <option value="MED">Média</option>
@@ -80,11 +89,13 @@ const WorkOrderModal: React.FC<WorkOrderModalProps> = ({ isOpen, onClose, pole, 
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Atribuir a</label>
+            <label htmlFor="wo-assignee" className="block text-sm text-gray-400 mb-1">Atribuir a</label>
             <select
+              id="wo-assignee"
               value={assigneeId}
               onChange={e => setAssigneeId(e.target.value ? Number(e.target.value) : '')}
               className="w-full bg-black/20 border border-white/10 rounded p-2 text-white"
+              title="Atribuir a"
             >
               <option value="">-- Selecione --</option>
               {users.map(u => (
@@ -94,13 +105,15 @@ const WorkOrderModal: React.FC<WorkOrderModalProps> = ({ isOpen, onClose, pole, 
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Descrição</label>
+            <label htmlFor="wo-desc" className="block text-sm text-gray-400 mb-1">Descrição</label>
             <textarea
+              id="wo-desc"
               value={description}
               onChange={e => setDescription(e.target.value)}
               rows={3}
               className="w-full bg-black/20 border border-white/10 rounded p-2 text-white resize-none"
               placeholder="Detalhes do problema..."
+              title="Descrição"
             />
           </div>
 

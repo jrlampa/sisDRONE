@@ -40,31 +40,16 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
   const [showHistory, setShowHistory] = useState(false);
   const [isWOModalOpen, setIsWOModalOpen] = useState(false);
 
-  React.useEffect(() => {
-    if (pole.id) {
-      loadHistory();
-      loadPrediction();
-      setMaintenancePlan(null);
-    }
-  }, [pole.id]);
-
-  const loadPrediction = async () => {
+  const loadPrediction = React.useCallback(async () => {
     try {
       const res = await api.getPrediction(pole.id);
       setPrediction(res.data);
     } catch (e) {
       console.error('Failed to load prediction', e);
     }
-  };
-
-  React.useEffect(() => {
-    if (pole.id) {
-      loadHistory();
-      setMaintenancePlan(null); // Reset current view
-    }
   }, [pole.id]);
 
-  const loadHistory = async () => {
+  const loadHistory = React.useCallback(async () => {
     try {
       const res = await api.getMaintenancePlans(pole.id);
       if (res.data && res.data.length > 0) {
@@ -79,7 +64,22 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
     } catch (error) {
       console.error('Failed to load history', error);
     }
-  };
+  }, [pole.id]);
+
+  React.useEffect(() => {
+    if (pole.id) {
+      loadHistory();
+      loadPrediction();
+      setMaintenancePlan(null);
+    }
+  }, [pole.id, loadHistory, loadPrediction]);
+
+  React.useEffect(() => {
+    if (pole.id) {
+      loadHistory();
+      setMaintenancePlan(null); // Reset current view
+    }
+  }, [pole.id, loadHistory]);
 
   const handleGeneratePlan = async () => {
     if (!analysis) return;
@@ -112,7 +112,7 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
       const updated = { ...plan, status: 'COMPLETED' as const };
       setMaintenancePlan(updated);
       setHistory(prev => prev.map(p => p.id === plan.id ? updated : p));
-    } catch (e) {
+    } catch {
       alert('Erro ao atualizar status');
     }
   };

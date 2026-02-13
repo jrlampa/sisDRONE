@@ -12,16 +12,15 @@ import type { DashboardData } from '../../types';
 const AnalyticsDashboard: React.FC = () => {
   const [data, setData] = useState<DashboardData | null>(null);
 
-  const loadStats = async () => {
-    try {
-      const res = await api.getStats();
-      setData(res.data);
-    } catch (error) {
-      console.error('Failed to load stats', error);
-    }
-  };
-
   useEffect(() => {
+    const loadStats = async () => {
+      try {
+        const res = await api.getStats();
+        setData(res.data);
+      } catch (error) {
+        console.error('Failed to load stats', error);
+      }
+    };
     loadStats();
   }, []);
 

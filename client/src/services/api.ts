@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Tenant, User, WorkOrder } from '../types';
+import type { Tenant, User, WorkOrder, Pole, AnalysisResult } from '../types';
 import type { Prediction } from '../types/prediction';
 import { addToQueue } from '../utils/offlineQueue';
 
@@ -63,12 +63,12 @@ export const api = {
     axios.post(`${API_BASE}/api/analyze`, { poleId, image: base64Image }),
   sendFeedback: (data: { labelId: number, poleId: number, isCorrect: boolean, correction: string }) =>
     axios.post(`${API_BASE}/api/feedback`, data),
-  generateMaintenancePlan: (poleId: number, analysis: any) =>
+  generateMaintenancePlan: (poleId: number, analysis: AnalysisResult) =>
     axios.post<{ plan: string, planId: number, estimatedCost: number }>(`${API_BASE}/api/ai/plan`, { poleId, analysis }),
   getMaintenancePlans: (poleId: number) => axios.get(`${API_BASE}/api/maintenance/${poleId}`),
   updateMaintenanceStatus: (planId: number, status: string) =>
     axios.patch(`${API_BASE}/api/maintenance/${planId}/status`, { status }),
-  chatWithAI: (message: string, context: any) =>
+  chatWithAI: (message: string, context: { pole: Pole | null, analysis: AnalysisResult | null }) =>
     axios.post(`${API_BASE}/api/ai/chat`, { message, context }),
   getPrediction: (id: number) => axios.get<Prediction>(`${API_BASE}/api/ai/predict/${id}`),
   exportCSV: () => axios.get(`${API_BASE}/api/poles/export`, { responseType: 'blob' }),

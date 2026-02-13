@@ -7,7 +7,7 @@ export interface QueuedRequest {
   id?: number;
   url: string;
   method: string;
-  data: any;
+  data: unknown;
   timestamp: number;
 }
 

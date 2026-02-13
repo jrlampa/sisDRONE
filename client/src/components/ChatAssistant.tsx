@@ -49,7 +49,7 @@ const ChatAssistant: React.FC<ChatAssistantProps> = ({ selectedPole, analysis })
       const res = await api.chatWithAI(userMsg.content, context);
       const aiMsg: Message = { id: Date.now() + 1, role: 'assistant', content: res.data.response };
       setMessages(prev => [...prev, aiMsg]);
-    } catch (error) {
+    } catch {
       setMessages(prev => [...prev, { id: Date.now(), role: 'assistant', content: 'Desculpe, estou com problemas de conexão.' }]);
     } finally {
       setLoading(false);

@@ -65,7 +65,12 @@ export function useNetwork() {
     window.addEventListener('offline', handleOffline);
 
     // Initial sync check
-    if (navigator.onLine) syncQueue();
+    const initSync = async () => {
+      if (navigator.onLine) {
+        await syncQueue();
+      }
+    };
+    initSync();
 
     return () => {
       window.removeEventListener('online', handleOnline);
@@ -74,8 +79,11 @@ export function useNetwork() {
   }, [syncQueue]);
 
   useEffect(() => {
-    fetchPoles();
-    fetchStats();
+    const init = async () => {
+      await fetchPoles();
+      await fetchStats();
+    };
+    init();
   }, [fetchPoles, fetchStats]);
 
   return {
