@@ -3,9 +3,17 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
-});
+const getGroqClient = () => {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) {
+    // Return a dummy object or handle gracefully if called
+    console.warn('GROQ_API_KEY not found. AI Chat will not work.');
+    return null;
+  }
+  return new Groq({ apiKey });
+};
+
+const groq = getGroqClient();
 
 export async function chatWithData(message: string, context: any): Promise<string> {
   const systemPrompt = `
@@ -22,6 +30,10 @@ export async function chatWithData(message: string, context: any): Promise<strin
     4. Be concise, professional, and helpful.
     5. Reply in Portuguese (PT-BR).
   `;
+
+  if (!groq) {
+    throw new Error('AI Service unavailable (missing API Key)');
+  }
 
   try {
     const completion = await groq.chat.completions.create({

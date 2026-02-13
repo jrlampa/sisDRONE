@@ -1,0 +1,33 @@
+[36mvite v7.3.1 [32mbuilding client environment for production...[36m[39m
+transforming...
+[32mÔ£ô[39m 2697 modules transformed.
+rendering chunks...
+computing gzip size...
+[2mdist/[22m[32mregisterSW.js              [39m[1m[2m    0.13 kB[22m[1m[22m
+[2mdist/[22m[32mmanifest.webmanifest       [39m[1m[2m    0.40 kB[22m[1m[22m
+[2mdist/[22m[32mindex.html                 [39m[1m[2m    0.57 kB[22m[1m[22m[2m Ôöé gzip:   0.34 kB[22m
+[2mdist/[22m[35massets/index-DI2ogI50.css  [39m[1m[2m   25.13 kB[22m[1m[22m[2m Ôöé gzip:   8.84 kB[22m
+[2mdist/[22m[36massets/index-DRT_gSv4.js   [39m[1m[33m2,426.22 kB[39m[22m[2m Ôöé gzip: 787.45 kB[22m
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[32mÔ£ô built in 11.39s[39m
+error during build:
+Error: 
+  Configure "workbox.maximumFileSizeToCacheInBytes" to change the limit: the default value is 2 MiB.
+  Check https://vite-pwa-org.netlify.app/guide/faq.html#missing-assets-from-sw-precache-manifest for more information.
+  Assets exceeding the limit:
+  - assets/index-DRT_gSv4.js is 2.43 MB, and won't be precached.
+
+    at logWorkboxResult (file:///C:/Users/Jonatas%20Lampa/OneDrive%20-%20IM3%20Brasil/utils/myworld/sisDRONE/client/node_modules/vite-plugin-pwa/dist/chunk-G4TAN34B.js:44:13)
+    at generateServiceWorker (file:///C:/Users/Jonatas%20Lampa/OneDrive%20-%20IM3%20Brasil/utils/myworld/sisDRONE/client/node_modules/vite-plugin-pwa/dist/index.js:209:3)
+    at async _generateSW (file:///C:/Users/Jonatas%20Lampa/OneDrive%20-%20IM3%20Brasil/utils/myworld/sisDRONE/client/node_modules/vite-plugin-pwa/dist/index.js:234:5)
+    at async Object.handler (file:///C:/Users/Jonatas%20Lampa/OneDrive%20-%20IM3%20Brasil/utils/myworld/sisDRONE/client/node_modules/vite-plugin-pwa/dist/index.js:427:13)
+    at async PluginDriver.hookParallel (file:///C:/Users/Jonatas%20Lampa/OneDrive%20-%20IM3%20Brasil/utils/myworld/sisDRONE/client/node_modules/rollup/dist/es/shared/node-entry.js:22452:17)
+    at async Object.close (file:///C:/Users/Jonatas%20Lampa/OneDrive%20-%20IM3%20Brasil/utils/myworld/sisDRONE/client/node_modules/rollup/dist/es/shared/node-entry.js:23471:13)
+    at async buildEnvironment (file:///C:/Users/Jonatas%20Lampa/OneDrive%20-%20IM3%20Brasil/utils/myworld/sisDRONE/client/node_modules/vite/dist/node/chunks/config.js:33555:15)
+    at async Object.build (file:///C:/Users/Jonatas%20Lampa/OneDrive%20-%20IM3%20Brasil/utils/myworld/sisDRONE/client/node_modules/vite/dist/node/chunks/config.js:33900:19)
+    at async Object.buildApp (file:///C:/Users/Jonatas%20Lampa/OneDrive%20-%20IM3%20Brasil/utils/myworld/sisDRONE/client/node_modules/vite/dist/node/chunks/config.js:33897:153)
+    at async CAC.<anonymous> (file:///C:/Users/Jonatas%20Lampa/OneDrive%20-%20IM3%20Brasil/utils/myworld/sisDRONE/client/node_modules/vite/dist/node/cli.js:629:3)
