@@ -1,7 +1,11 @@
 import React from 'react';
 import { Camera, Signal, Battery, Zap, LayoutDashboard } from 'lucide-react';
 
-const DroneLiveView: React.FC = () => {
+interface DroneLiveViewProps {
+  apiBase: string;
+}
+
+const DroneLiveView: React.FC<DroneLiveViewProps> = ({ apiBase }) => {
   return (
     <div className="drone-live-container animate-fade-in">
       <div className="live-header flex justify-between items-center mb-4">
@@ -32,7 +36,7 @@ const DroneLiveView: React.FC = () => {
           muted
           className="w-full h-full object-cover opacity-80"
         >
-          <source src="http://localhost:3001/uploads/simu_drone.mp4" type="video/mp4" />
+          <source src={`${apiBase}/uploads/simu_drone.mp4`} type="video/mp4" />
           Seu navegador não suporta vídeos.
         </video>
 
