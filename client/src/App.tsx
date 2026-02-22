@@ -10,6 +10,7 @@ import { Zap, Menu, Building } from 'lucide-react';
 import { api } from './services/api';
 import { useNetwork } from './hooks/useNetwork';
 import { useAppHandlers } from './hooks/useAppHandlers';
+import { TenantProvider } from './context/TenantContext';
 import { WifiOff, RefreshCw } from 'lucide-react';
 import type { Pole, Span, Inspection, AnalysisResult, Tenant, User } from './types';
 import DroneLiveView from './components/Dashboard/DroneLiveView';
@@ -110,6 +111,7 @@ const App: React.FC = () => {
   }), [poles, searchQuery, filterCondition]);
 
   return (
+    <TenantProvider value={{ activeTenantId, setActiveTenantId, currentUser, setCurrentUser, isOnline }}>
     <div className="app-container">
       {(!isOnline || isSyncing) && (
         <div className={`connection-status ${isOnline ? 'syncing' : 'offline'}`}>
@@ -193,8 +195,6 @@ const App: React.FC = () => {
           viewMode={viewMode}
           setViewMode={setViewMode}
           users={users}
-          isOnline={isOnline}
-          activeTenantId={activeTenantId}
           onVideoFrameAnalyzed={(result) => {
             setAnalysis({
               analysis_summary: result.analysis_summary,
@@ -209,6 +209,7 @@ const App: React.FC = () => {
             });
             fetchStats();
           }}
+          onSelectPole={handleMarkerClick}
         />
 
         <div className="map-container glass-panel">
@@ -246,6 +247,7 @@ const App: React.FC = () => {
       />
       <ChatAssistant selectedPole={selectedPole} analysis={analysis} />
     </div>
+    </TenantProvider>
   );
 };
 

@@ -59,7 +59,7 @@ const BimStructureEditor: React.FC<BimStructureEditorProps> = ({ pole }) => {
     setMessage(null);
   }, [loadStructure]);
 
-  const handleChange = (field: keyof BimStructure, value: unknown) => {
+  const handleChange = (field: keyof BimStructure, value: string | number | boolean) => {
     setStructure(prev => ({ ...prev, [field]: value }));
   };
 

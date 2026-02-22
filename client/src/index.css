@@ -870,3 +870,36 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
+
+/* NearbySearchPanel */
+.nearby-search-panel {
+  margin-bottom: 0.5rem;
+}
+
+.nearby-form {
+  padding: 0.5rem;
+  background: rgba(255,255,255,0.04);
+  border-radius: 0.5rem;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.nearby-results {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.nearby-result-item {
+  padding: 0.4rem 0.5rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.06);
+  margin-bottom: 0.25rem;
+  transition: background 0.15s;
+}
+
+.nearby-result-item:hover {
+  background: rgba(255,255,255,0.08);
+}

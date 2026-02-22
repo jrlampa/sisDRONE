@@ -7,6 +7,8 @@ import InspectionHistory from './InspectionHistory';
 import EngineeringTools from './EngineeringTools';
 import VideoCapturePanel from '../VideoCapture/VideoCapturePanel';
 import BimStructureEditor from './BimStructureEditor';
+import NearbySearchPanel from './NearbySearchPanel';
+import { useTenant } from '../../context/TenantContext';
 import type { Pole, Span, Inspection, AnalysisResult, Stats, Tenant, User } from '../../types';
 import type { FrameAnalysis } from '../../hooks/useVideoCapture';
 
@@ -45,9 +47,8 @@ interface SidebarProps {
   viewMode: 'MAP' | 'ANALYTICS' | 'WORK_ORDERS' | 'DRONE_LIVE';
   setViewMode: (mode: 'MAP' | 'ANALYTICS' | 'WORK_ORDERS' | 'DRONE_LIVE') => void;
   users: User[];
-  isOnline: boolean;
-  activeTenantId: number;
   onVideoFrameAnalyzed: (result: FrameAnalysis) => void;
+  onSelectPole: (pole: Pole) => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = (props) => {
@@ -58,8 +59,11 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
     activeTab, setActiveTab, isCapturing, onAnalyze, analysis, onFeedback,
     history, stats, conductorWeight, setConductorWeight, tension, setTension,
     apiBase, userRole, showHeatmap, setShowHeatmap, activeTenant, poles,
-    isOpen, onClose, viewMode, setViewMode, users, isOnline, activeTenantId, onVideoFrameAnalyzed
+    isOpen, onClose, viewMode, setViewMode, users, onVideoFrameAnalyzed,
+    onSelectPole,
   } = props;
+
+  const { activeTenantId, isOnline } = useTenant();
 
   const handleExportPDF = () => {
     if (!activeTenant) return;
@@ -118,6 +122,8 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
             className="glass-input"
           />
         </div>
+
+        <NearbySearchPanel onSelectPole={onSelectPole} />
 
         <div className="tools-grid">
           <button
