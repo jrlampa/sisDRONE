@@ -296,7 +296,7 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
       <div className="stats-dashboard">
         <h3 className="stats-title">Health Monitor</h3>
         <div className="analytics-section">
-          <h3>Sáude da Rede</h3>
+          <h3>Saúde da Rede</h3>
           <div className="card analytics-card">
             <div className="flex justify-between items-center mb-2">
               <span className="text-sm font-medium">Mapa de Calor (Riscos)</span>

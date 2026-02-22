@@ -34,6 +34,11 @@ router.post('/plan', rateLimit(10, 60_000), async (req, res) => {
       return res.status(400).json({ error: 'Analysis data is required' });
     }
 
+    const safePoleId = poleId !== undefined ? parseInt(String(poleId), 10) : NaN;
+    if (poleId !== undefined && (isNaN(safePoleId) || safePoleId <= 0)) {
+      return res.status(400).json({ error: 'poleId inválido' });
+    }
+
     console.log(`[AI] Generating maintenance plan for Pole ${poleId}...`);
     const planText = await generateMaintenancePlan(analysis);
     const estimatedCost = await calculatePlanCost(planText);
@@ -41,13 +46,13 @@ router.post('/plan', rateLimit(10, 60_000), async (req, res) => {
     const db = await getDb();
 
     // Calculate AHI
-    const pole = await db.get('SELECT * FROM poles WHERE id = ?', [poleId]);
+    const pole = await db.get('SELECT * FROM poles WHERE id = ?', [safePoleId]);
     const ahi = calculateAHI(pole, analysis);
-    await db.run('UPDATE poles SET ahi_score = ? WHERE id = ?', [ahi, poleId]);
+    await db.run('UPDATE poles SET ahi_score = ? WHERE id = ?', [ahi, safePoleId]);
 
     const result = await db.run(
       'INSERT INTO maintenance_plans (pole_id, plan_text, status, estimated_cost) VALUES (?, ?, ?, ?)',
-      [poleId, planText, 'PENDING', estimatedCost]
+      [safePoleId, planText, 'PENDING', estimatedCost]
     );
 
     res.json({ plan: planText, planId: result.lastID, estimatedCost });

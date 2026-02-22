@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { getDb } from '../db';
+import { rateLimit } from '../middleware/rateLimit';
 import { WorkOrder } from '../types';
 
 const VALID_STATUSES: WorkOrder['status'][] = ['OPEN', 'IN_PROGRESS', 'BLOCKED', 'COMPLETED'];
@@ -8,7 +9,7 @@ const VALID_PRIORITIES: WorkOrder['priority'][] = ['LOW', 'MED', 'HIGH', 'CRITIC
 const router = Router();
 
 // GET /api/work-orders - List all work orders
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', rateLimit(60, 60_000), async (req: Request, res: Response) => {
   try {
     const db = await getDb();
     const { status, assignee_id } = req.query;
@@ -52,7 +53,7 @@ router.get('/', async (req: Request, res: Response) => {
 });
 
 // POST /api/work-orders - Create a new work order
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', rateLimit(20, 60_000), async (req: Request, res: Response) => {
   try {
     const { title, description, priority, assignee_id, pole_id, due_date } = req.body;
 
@@ -95,8 +96,31 @@ router.post('/', async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/work-orders/:id - Get a single work order
+router.get('/:id', rateLimit(60, 60_000), async (req: Request, res: Response) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json({ error: 'ID inválido' });
+  }
+  try {
+    const db = await getDb();
+    const order = await db.get(`
+      SELECT w.*, u.username as assignee_name, p.name as pole_name
+      FROM work_orders w
+      LEFT JOIN users u ON w.assignee_id = u.id
+      LEFT JOIN poles p ON w.pole_id = p.id
+      WHERE w.id = ?
+    `, [id]);
+    if (!order) return res.status(404).json({ error: 'Ordem de serviço não encontrada' });
+    res.json(order);
+  } catch (error) {
+    console.error('Error fetching work order:', error);
+    res.status(500).json({ error: 'Failed to fetch work order' });
+  }
+});
+
 // PUT /api/work-orders/:id - Update status or assignment
-router.put('/:id', async (req: Request, res: Response) => {
+router.put('/:id', rateLimit(30, 60_000), async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id) || id <= 0) {

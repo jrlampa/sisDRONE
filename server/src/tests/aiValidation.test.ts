@@ -20,6 +20,12 @@ describe('AI Routes — Validation & Rate Limiting', () => {
     expect(res.body.error).toMatch(/Analysis data is required/i);
   });
 
+  it('POST /api/ai/plan should return 400 when poleId is not a valid integer', async () => {
+    const res = await request(app).post('/api/ai/plan').send({ analysis: { condition: 'boa' }, poleId: 'abc' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/poleId/i);
+  });
+
   it('POST /api/ai/chat should return 400 when message is missing', async () => {
     const res = await request(app).post('/api/ai/chat').send({ context: {} });
     expect(res.status).toBe(400);

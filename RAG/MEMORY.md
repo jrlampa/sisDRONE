@@ -1,6 +1,6 @@
 # sisDRONE – RAG / Memória de Trabalho
 
-> Última atualização: 2026-02-22 (Phase 9) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
+> Última atualização: 2026-02-22 (Phase 10) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
 
 ---
 
@@ -135,6 +135,12 @@ sisDRONE/
 | 16 | `/api/poles/export` inacessível pois `/:id` registrado antes | ✅ Corrigido | `routes/poles.ts` (Phase 6) |
 | 17 | `GET /api/poles/:id/history` rota inexistente — client chamava URL errada | ✅ Corrigido | `routes/poles.ts` (Phase 8) |
 | 18 | `useAppHandlers.ts` `setActiveTab` type faltava 'bim' | ✅ Corrigido | `hooks/useAppHandlers.ts` (Phase 8) |
+| 19 | `rateLimit.ts` store compartilhado entre todos os handlers (mesmo IP = mesma contagem) | ✅ Corrigido | `middleware/rateLimit.ts` (Phase 10) |
+| 20 | `workOrders.ts` GET/POST/PUT sem rateLimit | ✅ Corrigido | `routes/workOrders.ts` (Phase 10) |
+| 21 | `poles.ts` POST sem rateLimit | ✅ Corrigido | `routes/poles.ts` (Phase 10) |
+| 22 | `aiRoutes.ts` /plan: poleId não validado | ✅ Corrigido | `routes/aiRoutes.ts` (Phase 10) |
+| 23 | `groqService.ts` GROQ_API_KEY capturada no módulo (não testável) | ✅ Corrigido | `services/groqService.ts` (Phase 10) |
+| 24 | `Sidebar.tsx` typo "Sáude" → "Saúde" | ✅ Corrigido | `components/Sidebar/Sidebar.tsx` (Phase 10) |
 
 ---
 
@@ -161,21 +167,23 @@ sisDRONE/
 
 **Meta**: >= 80% de cobertura em código de lógica de negócio
 
-**Situação atual** (Phase 9): 169 server + 11 client = **180 testes no total** ✅
+**Situação atual** (Phase 10): 177 server + 11 client = **188 testes no total** ✅
 
 **Coverage Threshold** configurado em `server/vitest.config.ts`:
 - Lines/Functions/Statements: ≥ 80%
-- Branches: ≥ 70% (atual: 81.25% — acima da meta!)
+- Branches: ≥ 70% (atual: 88.75% — muito acima da meta!)
 
-**Coverage por módulo (Phase 9)**:
+**Coverage por módulo (Phase 10)**:
 - `middleware/auth.ts`: 100%
 - `middleware/rateLimit.ts`: 100%
 - `services/authService.ts`: 100%
+- `services/chatService.ts`: **100%** (era 75% stmts, 33% branches — Phase 10 fix)
+- `services/groqService.ts`: **100% stmts, 90% branches** (era 90%/70% — Phase 10 fix)
 - `services/healthService.ts`: 100%
-- `services/predictionService.ts`: 85.71% branches (era 64.28%)
+- `services/predictionService.ts`: 85.71% branches
 - `services/costService.ts`: 85.71%
 - `utils/geo.ts`: 100%
-- **Total servidor**: 94.7% statements, **81.25% branches** ✅
+- **Total servidor**: **98.7% statements, 88.75% branches** ✅
 
 Testes existentes (Phase 9):
 - `predictionService.test.ts` – 8 (+6 edge cases: no date, unknown material, age≤2, age≤5, above failure, clamped years)
@@ -233,6 +241,15 @@ Testes existentes (Phase 9):
 - [x] ~~PoleDetails: formulário inline de edição (PUT /api/poles/:id)~~ — Phase 9
 - [x] ~~PoleDetails: botão de exclusão com confirmação (DELETE /api/poles/:id)~~ — Phase 9
 - [x] ~~Branch coverage ≥ 80% (81.25% atingido)~~ — Phase 9
+- [x] ~~chatService.ts 100% coverage (era 75%/33%)~~ — Phase 10
+- [x] ~~groqService.ts 100% stmts / 90% branches (era 90%/70%)~~ — Phase 10
+- [x] ~~rateLimit.ts: bug critical: shared store entre handlers (corrigido: handlerId + ip)~~ — Phase 10
+- [x] ~~workOrders.ts: todos os 3 handlers sem rateLimit (GET/POST/PUT) — adicionados~~ — Phase 10
+- [x] ~~poles.ts POST sem rateLimit — adicionado rateLimit(30/min)~~ — Phase 10
+- [x] ~~GET /api/work-orders/:id endpoint ausente — adicionado~~ — Phase 10
+- [x] ~~aiRoutes.ts /plan: poleId sem validação de inteiro — corrigido~~ — Phase 10
+- [x] ~~groqService.ts: GROQ_API_KEY lida no módulo (não testável) → movida para dentro das funções~~ — Phase 10
+- [x] ~~Sidebar.tsx: typo "Sáude" → "Saúde"~~ — Phase 10
 
 ---
 

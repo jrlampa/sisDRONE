@@ -6,15 +6,19 @@ interface RateLimitEntry {
 }
 
 const store = new Map<string, RateLimitEntry>();
+let handlerCounter = 0;
 
 /**
  * Simple in-memory rate limiter.
+ * Each call to rateLimit() creates an independent handler with its own counter per IP.
  * @param maxRequests Maximum requests per window
  * @param windowMs Window size in milliseconds
  */
 export function rateLimit(maxRequests: number, windowMs: number) {
+  const handlerId = ++handlerCounter;
   return (req: Request, res: Response, next: NextFunction): void => {
-    const key = req.ip || req.socket.remoteAddress || 'unknown';
+    const ip = req.ip || req.socket.remoteAddress || 'unknown';
+    const key = `${handlerId}:${ip}`;
     const now = Date.now();
 
     let entry = store.get(key);

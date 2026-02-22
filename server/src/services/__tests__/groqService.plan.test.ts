@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { generateMaintenancePlan } from '../groqService';
 import axios from 'axios';
 
@@ -51,5 +51,20 @@ describe('groqService - generateMaintenancePlan', () => {
     mockedAxios.post.mockRejectedValue(new Error('API Error'));
 
     await expect(generateMaintenancePlan(mockAnalysis)).rejects.toThrow('Failed to generate maintenance plan');
+  });
+
+  describe('when GROQ_API_KEY is not set', () => {
+    let originalKey: string | undefined;
+    beforeEach(() => {
+      originalKey = process.env.GROQ_API_KEY;
+      delete process.env.GROQ_API_KEY;
+    });
+    afterEach(() => {
+      if (originalKey !== undefined) process.env.GROQ_API_KEY = originalKey;
+    });
+
+    it('generateMaintenancePlan should throw GROQ_API_KEY is not defined', async () => {
+      await expect(generateMaintenancePlan(mockAnalysis)).rejects.toThrow('GROQ_API_KEY is not defined');
+    });
   });
 });

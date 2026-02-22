@@ -155,6 +155,26 @@ describe('Work Orders API', () => {
     const res = await request(app).put(`/api/work-orders/${id}`).send({ status: 'WRONG_STATUS' });
     expect(res.status).toBe(400);
   });
+
+  it('GET /api/work-orders/:id should return 400 for invalid id', async () => {
+    const res = await request(app).get('/api/work-orders/abc');
+    expect(res.status).toBe(400);
+  });
+
+  it('GET /api/work-orders/:id should return 404 for non-existent id', async () => {
+    const res = await request(app).get('/api/work-orders/999999');
+    expect(res.status).toBe(404);
+  });
+
+  it('GET /api/work-orders/:id should return a single work order', async () => {
+    const createRes = await request(app).post('/api/work-orders').send({ title: 'OS para busca individual' });
+    expect(createRes.status).toBe(201);
+    const id = createRes.body.id;
+    const res = await request(app).get(`/api/work-orders/${id}`);
+    expect(res.status).toBe(200);
+    expect(res.body.id).toBe(id);
+    expect(res.body.title).toBe('OS para busca individual');
+  });
 });
 
 describe('Maintenance API', () => {

@@ -24,7 +24,7 @@ router.get('/', rateLimit(100, 60_000), async (req: Request, res: Response) => {
 });
 
 // POST new pole
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', rateLimit(30, 60_000), async (req: Request, res: Response) => {
   const { lat, lng, name, utm_x, utm_y, tenant_id } = req.body;
 
   // Input validation
