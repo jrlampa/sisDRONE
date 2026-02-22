@@ -37,3 +37,7 @@ test-results
 simu_drone.mp4
 server/uploads/simu_drone.mp4
 
+# Uploaded inspection files and video sessions (runtime data)
+server/uploads/inspection_*.jpg
+server/uploads/video_sessions/
+
