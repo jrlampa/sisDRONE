@@ -31,10 +31,9 @@ describe('Groq Service', () => {
     vi.mocked(axios.post).mockResolvedValue(mockResponse as any);
 
     const result = await analyzeImage('dummy_base64');
-    const parsed = JSON.parse(result as string);
 
-    expect(parsed.pole_type).toBe('Concreto');
-    expect(parsed.confidence).toBe(0.95);
+    expect((result as any).pole_type).toBe('Concreto');
+    expect((result as any).confidence).toBe(0.95);
   });
 
   it('should throw error if API fails', async () => {

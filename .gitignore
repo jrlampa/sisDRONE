@@ -24,3 +24,16 @@ Thumbs.db
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Test artifacts
+coverage
+playwright-report
+test-results
+**/build_log.txt
+**/build_error_capture.txt
+**/lint-results.json
+
+# Large media in repo root
+simu_drone.mp4
+server/uploads/simu_drone.mp4
+

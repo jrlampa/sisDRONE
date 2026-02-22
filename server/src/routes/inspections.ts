@@ -15,6 +15,14 @@ router.post('/analyze', async (req: Request, res: Response) => {
   const { poleId, image } = req.body;
   if (!poleId || !image) return res.status(400).json({ error: 'Pole ID and image required' });
 
+  const safePoleId = parseInt(String(poleId), 10);
+  if (isNaN(safePoleId) || safePoleId <= 0) {
+    return res.status(400).json({ error: 'poleId inválido' });
+  }
+  if (typeof image !== 'string' || image.length > 10_000_000) {
+    return res.status(400).json({ error: 'Imagem inválida ou muito grande' });
+  }
+
   try {
     const analysis = await analyzeImage(image);
     const db = await getDb();
@@ -29,13 +37,13 @@ router.post('/analyze', async (req: Request, res: Response) => {
 
     const imageResult = await db.run(
       'INSERT INTO images (pole_id, file_path) VALUES (?, ?)',
-      [poleId, `/uploads/${filename}`]
+      [safePoleId, `/uploads/${filename}`]
     );
     const imageId = imageResult.lastID;
 
     const labelResult = await db.run(
       'INSERT INTO labels (pole_id, image_id, label, confidence, source) VALUES (?, ?, ?, ?, ?)',
-      [poleId, imageId, analysis.analysis_summary, analysis.confidence, 'ai']
+      [safePoleId, imageId, analysis.analysis_summary, analysis.confidence, 'ai']
     );
 
     res.json({
@@ -52,7 +60,10 @@ router.post('/analyze', async (req: Request, res: Response) => {
 
 // GET history for a pole
 router.get('/:id/history', async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json({ error: 'ID de poste inválido' });
+  }
   try {
     const db = await getDb();
     const history = await db.all(`
@@ -75,11 +86,19 @@ router.post('/feedback', async (req: Request, res: Response) => {
   if (labelId === undefined || poleId === undefined || isCorrect === undefined) {
     return res.status(400).json({ error: 'labelId, poleId, and isCorrect are required' });
   }
+
+  const safePoleId = parseInt(String(poleId), 10);
+  const safeLabelId = parseInt(String(labelId), 10);
+  if (isNaN(safePoleId) || isNaN(safeLabelId)) {
+    return res.status(400).json({ error: 'IDs inválidos' });
+  }
+  const safeCorrection = correction ? String(correction).slice(0, 500) : '';
+
   try {
     const db = await getDb();
     await db.run(
       'INSERT INTO labels (pole_id, label, confidence, source) VALUES (?, ?, ?, ?)',
-      [poleId, isCorrect ? 'Confirmado' : `Correção: ${correction}`, 1.0, 'user']
+      [safePoleId, isCorrect ? 'Confirmado' : `Correção: ${safeCorrection}`, 1.0, 'user']
     );
     res.json({ status: 'Feedback saved' });
   } catch (err) {

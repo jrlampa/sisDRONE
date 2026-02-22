@@ -59,7 +59,8 @@ export async function analyzeImage(imageBase64: string) {
       }
     );
 
-    return (response.data as any).choices[0].message.content;
+    const rawContent = (response.data as any).choices[0].message.content;
+    return typeof rawContent === 'string' ? JSON.parse(rawContent) : rawContent;
   } catch (error: any) {
     console.error('Error analyzing image with Groq:', error.response?.data || error.message);
     throw new Error('Failed to analyze image');

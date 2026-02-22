@@ -12,7 +12,6 @@ axios.interceptors.request.use(config => {
     config.headers['x-user-role'] = role;
   }
   return config;
-  return config;
 });
 
 // Offline Queue Interceptor

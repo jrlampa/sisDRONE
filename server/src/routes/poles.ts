@@ -17,14 +17,26 @@ router.get('/', async (req: Request, res: Response) => {
 
 // POST new pole
 router.post('/', async (req: Request, res: Response) => {
-  const { lat, lng, name, utm_x, utm_y } = req.body;
+  const { lat, lng, name, utm_x, utm_y, tenant_id } = req.body;
+
+  // Input validation
+  if (typeof lat !== 'number' || typeof lng !== 'number') {
+    return res.status(400).json({ error: 'lat e lng são obrigatórios e devem ser números' });
+  }
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+    return res.status(400).json({ error: 'Coordenadas fora do intervalo válido' });
+  }
+
+  const safeName = String(name || `Poste Sem Nome`).slice(0, 100);
+  const safeTenantId = Number(tenant_id) || 1;
+
   try {
     const db = await getDb();
     const result = await db.run(
-      'INSERT INTO poles (name, lat, lng, utm_x, utm_y) VALUES (?, ?, ?, ?, ?)',
-      [name, lat, lng, utm_x, utm_y]
+      'INSERT INTO poles (name, lat, lng, utm_x, utm_y, tenant_id) VALUES (?, ?, ?, ?, ?, ?)',
+      [safeName, lat, lng, utm_x || null, utm_y || null, safeTenantId]
     );
-    res.json({ id: result.lastID, name, lat, lng, utm_x, utm_y });
+    res.json({ id: result.lastID, name: safeName, lat, lng, utm_x, utm_y, tenant_id: safeTenantId });
   } catch (err) {
     res.status(500).json({ error: 'Failed to create pole' });
   }

@@ -108,8 +108,9 @@ const App: React.FC = () => {
     return poles.filter(pole => {
       const matchesSearch = pole.name.toLowerCase().includes(searchQuery.toLowerCase()) || pole.id.toString().includes(searchQuery);
       if (filterCondition === 'All') return matchesSearch;
-      const isCritical = pole.id % 5 === 0;
-      const isWarning = pole.id % 3 === 0 && !isCritical;
+      const score = pole.ahi_score ?? 100;
+      const isCritical = score < 50;
+      const isWarning = score >= 50 && score < 80;
       if (filterCondition === 'Critical') return matchesSearch && isCritical;
       if (filterCondition === 'Warning') return matchesSearch && isWarning;
       return matchesSearch && !isCritical && !isWarning;

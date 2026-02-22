@@ -51,6 +51,7 @@ async function initDb(database: Database) {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       tenant_id INTEGER DEFAULT 1,
       external_id TEXT,
+      name TEXT,
       lat REAL,
       lng REAL,
       utm_x REAL,
@@ -164,5 +165,13 @@ async function initDb(database: Database) {
     console.log('Migrated poles table with AHI columns');
   } catch (e) {
     // Ignore error if columns already exist
+  }
+
+  // Migration for name column
+  try {
+    await database.exec(`ALTER TABLE poles ADD COLUMN name TEXT`);
+    console.log('Migrated poles table with name column');
+  } catch (e) {
+    // Ignore error if column already exists
   }
 }

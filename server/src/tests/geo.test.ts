@@ -24,4 +24,22 @@ describe('Geospatial Utils', () => {
     const result = degreesToUtm(lat, lng);
     expect(result.zone).toBe('18N');
   });
+
+  it('should convert Nova Friburgo/RJ test coordinates (decimal) to Zone 23S UTM', () => {
+    // Decimal coordinates from problem statement: -22.15018, -42.92185
+    // These are in UTM Zone 23S
+    const lat = -22.15018;
+    const lng = -42.92185;
+
+    const result = degreesToUtm(lat, lng);
+
+    expect(result.zone).toBe('23S');
+    // Easting ~714315 (lng -42.92185 is ~2.08° east of zone 23 central meridian at -45°)
+    expect(result.x).toBeGreaterThan(713500);
+    expect(result.x).toBeLessThan(715500);
+    // Northing ~7549084 (Southern hemisphere with 10,000,000 false northing)
+    expect(result.y).toBeGreaterThan(7548000);
+    expect(result.y).toBeLessThan(7550500);
+  });
 });
+
