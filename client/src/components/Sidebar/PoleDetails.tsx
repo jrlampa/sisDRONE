@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MapPin, Upload, Activity, CheckCircle, AlertTriangle, FileText, Loader, Clock, Archive, Download } from 'lucide-react';
+import { MapPin, Upload, Activity, CheckCircle, AlertTriangle, FileText, Loader, Clock, Archive, Download, Edit2, Trash2, Save, X } from 'lucide-react';
 import { api } from '../../services/api';
 import type { Pole, AnalysisResult, User } from '../../types';
 import type { Prediction } from '../../types/prediction';
@@ -22,10 +22,15 @@ interface PoleDetailsProps {
   onFeedback: (isCorrect: boolean) => void;
   apiBase: string;
   users: User[];
+  onPoleUpdated?: (pole: Pole) => void;
+  onPoleDeleted?: (id: number) => void;
 }
 
+const VALID_STATUSES = ['pending', 'inspected', 'maintenance', 'critical', 'ok'] as const;
+
 const PoleDetails: React.FC<PoleDetailsProps> = ({
-  pole, isCapturing, onAnalyze, analysis, onFeedback, apiBase, users
+  pole, isCapturing, onAnalyze, analysis, onFeedback, apiBase, users,
+  onPoleUpdated, onPoleDeleted,
 }) => {
   const getAHIStatus = (score: number = 100) => {
     if (score < 50) return { color: 'text-danger', bg: 'bg-danger', label: 'Crítico' };
@@ -39,6 +44,15 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
   const [loadingPlan, setLoadingPlan] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [isWOModalOpen, setIsWOModalOpen] = useState(false);
+
+  // Edit state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(pole.name);
+  const [editMaterial, setEditMaterial] = useState(pole.material || '');
+  const [editStatus, setEditStatus] = useState<typeof VALID_STATUSES[number]>(
+    VALID_STATUSES.includes(pole.status as typeof VALID_STATUSES[number]) ? pole.status as typeof VALID_STATUSES[number] : 'pending'
+  );
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const loadPrediction = React.useCallback(async () => {
     try {
@@ -54,7 +68,6 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
       const res = await api.getMaintenancePlans(pole.id);
       if (res.data && res.data.length > 0) {
         setHistory(res.data);
-        // Default to showing the latest plan if pending
         if (res.data[0].status === 'PENDING') {
           setMaintenancePlan(res.data[0]);
         }
@@ -71,16 +84,45 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
       loadHistory();
       loadPrediction();
       setMaintenancePlan(null);
+      setIsEditing(false);
+      setEditName(pole.name);
+      setEditMaterial(pole.material || '');
+      setEditStatus(VALID_STATUSES.includes(pole.status as typeof VALID_STATUSES[number]) ? pole.status as typeof VALID_STATUSES[number] : 'pending');
     }
   }, [pole.id, loadHistory, loadPrediction]);
+
+  const handleSaveEdit = async () => {
+    setSavingEdit(true);
+    try {
+      const res = await api.updatePole(pole.id, {
+        name: editName,
+        material: editMaterial || undefined,
+        status: editStatus,
+      });
+      onPoleUpdated?.(res.data);
+      setIsEditing(false);
+    } catch {
+      alert('Erro ao salvar alterações');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleDeletePole = async () => {
+    if (!window.confirm(`Confirmar exclusão do poste "${pole.name}"? Esta ação não pode ser desfeita.`)) return;
+    try {
+      await api.deletePole(pole.id);
+      onPoleDeleted?.(pole.id);
+    } catch {
+      alert('Erro ao excluir poste');
+    }
+  };
 
   const handleGeneratePlan = async () => {
     if (!analysis) return;
     setLoadingPlan(true);
     try {
-      // Optimistic update wrapper not needed here as we want real data
       const res = await api.generateMaintenancePlan(pole.id, analysis);
-      // Construct local object from response
       const newPlan: MaintenancePlan = {
         id: res.data.planId,
         pole_id: pole.id,
@@ -116,18 +158,82 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
         <div className="card-header">
           <MapPin size={20} className="text-accent" />
           <h2>{pole.name}</h2>
-        </div>
-        <div className="stats-row">
-          <div className="stat-item">
-            <span className="stat-label">Latitude</span>
-            <span className="stat-value">{pole.lat.toFixed(6)}</span>
+          <div className="flex gap-1 ml-auto">
+            <button
+              className="btn-icon"
+              onClick={() => setIsEditing(!isEditing)}
+              title={isEditing ? 'Cancelar edição' : 'Editar poste'}
+              aria-label={isEditing ? 'Cancelar edição' : 'Editar poste'}
+            >
+              {isEditing ? <X size={16} /> : <Edit2 size={16} />}
+            </button>
+            <button
+              className="btn-icon text-danger"
+              onClick={handleDeletePole}
+              title="Excluir poste"
+              aria-label="Excluir poste"
+            >
+              <Trash2 size={16} />
+            </button>
           </div>
-          <div className="stat-item">
-            <span className="stat-label">Longitude</span>
-            <span className="stat-value">{pole.lng.toFixed(6)}</span>
-          </div>
         </div>
-        <div className="utm-line"><strong>UTM:</strong> {pole.utm_x}, {pole.utm_y}</div>
+
+        {isEditing ? (
+          <div className="edit-form mt-2">
+            <div className="form-group mb-2">
+              <label className="text-xs text-muted">Nome</label>
+              <input
+                className="glass-input w-full mt-1"
+                value={editName}
+                onChange={e => setEditName(e.target.value.slice(0, 100))}
+                placeholder="Nome do poste"
+              />
+            </div>
+            <div className="form-group mb-2">
+              <label className="text-xs text-muted">Material</label>
+              <input
+                className="glass-input w-full mt-1"
+                value={editMaterial}
+                onChange={e => setEditMaterial(e.target.value.slice(0, 50))}
+                placeholder="Concreto, Madeira, Metal..."
+              />
+            </div>
+            <div className="form-group mb-2">
+              <label className="text-xs text-muted">Status</label>
+              <select
+                className="glass-input w-full mt-1"
+                value={editStatus}
+                onChange={e => setEditStatus(e.target.value as typeof VALID_STATUSES[number])}
+              >
+                {VALID_STATUSES.map(s => (
+                  <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+                ))}
+              </select>
+            </div>
+            <button
+              className="btn btn-primary btn-full mt-1"
+              onClick={handleSaveEdit}
+              disabled={savingEdit || !editName.trim()}
+            >
+              {savingEdit ? <Loader size={14} className="spin" /> : <Save size={14} />}
+              {savingEdit ? 'Salvando...' : 'Salvar Alterações'}
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="stats-row">
+              <div className="stat-item">
+                <span className="stat-label">Latitude</span>
+                <span className="stat-value">{pole.lat.toFixed(6)}</span>
+              </div>
+              <div className="stat-item">
+                <span className="stat-label">Longitude</span>
+                <span className="stat-value">{pole.lng.toFixed(6)}</span>
+              </div>
+            </div>
+            <div className="utm-line"><strong>UTM:</strong> {pole.utm_x}, {pole.utm_y}</div>
+          </>
+        )}
 
         {/* AHI Gauge */}
         <div className="mt-3 pt-3 border-t border-light/10">
@@ -156,27 +262,21 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
             </div>
 
             <div className="relative h-24 w-full bg-darker rounded p-2">
-              {/* SVG Decay Chart */}
               <svg className="w-full h-full" viewBox="0 0 100 50" preserveAspectRatio="none">
-                {/* Grid Lines */}
                 <line x1="0" y1="40" x2="100" y2="40" stroke="#333" strokeWidth="0.5" />
                 <line x1="0" y1="10" x2="100" y2="10" stroke="#333" strokeDasharray="2" strokeWidth="0.5" />
-
-                {/* Decay Curve */}
                 <polyline
                   points={prediction.health_history.map((pt, _, arr) => {
                     const startYear = arr[0].year;
                     const totalYears = arr[arr.length - 1].year - startYear;
                     const x = ((pt.year - startYear) / totalYears) * 100;
-                    const y = 50 - (pt.score / 100) * 50; // Invert Y (0 is top)
+                    const y = 50 - (pt.score / 100) * 50;
                     return `${x},${y}`;
                   }).join(' ')}
                   fill="none"
                   stroke={prediction.years_remaining < 5 ? '#ef4444' : '#10b981'}
                   strokeWidth="2"
                 />
-
-                {/* Current Point */}
                 <circle
                   cx={(() => {
                     const startYear = prediction.health_history[0].year;

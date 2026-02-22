@@ -1,11 +1,12 @@
 import { Router } from 'express';
 import { getDb } from '../db';
+import { rateLimit } from '../middleware/rateLimit';
 
 const VALID_PLAN_STATUSES = ['PENDING', 'APPROVED', 'COMPLETED'] as const;
 
 const router = Router();
 
-router.get('/:poleId', async (req, res) => {
+router.get('/:poleId', rateLimit(60, 60_000), async (req, res) => {
   const poleId = parseInt(req.params.poleId, 10);
   if (isNaN(poleId) || poleId <= 0) {
     return res.status(400).json({ error: 'poleId inválido' });
@@ -23,7 +24,7 @@ router.get('/:poleId', async (req, res) => {
   }
 });
 
-router.patch('/:planId/status', async (req, res) => {
+router.patch('/:planId/status', rateLimit(30, 60_000), async (req, res) => {
   const planId = parseInt(req.params.planId, 10);
   if (isNaN(planId) || planId <= 0) {
     return res.status(400).json({ error: 'planId inválido' });

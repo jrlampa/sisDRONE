@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { getDb } from '../db';
 import { analyzeImage } from '../services/groqService';
+import { rateLimit } from '../middleware/rateLimit';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -11,7 +12,7 @@ const __dirname = path.dirname(__filename);
 const router = Router();
 
 // POST analyze image
-router.post('/analyze', async (req: Request, res: Response) => {
+router.post('/analyze', rateLimit(20, 60_000), async (req: Request, res: Response) => {
   const { poleId, image } = req.body;
   if (!poleId || !image) return res.status(400).json({ error: 'Pole ID and image required' });
 
@@ -59,7 +60,7 @@ router.post('/analyze', async (req: Request, res: Response) => {
 });
 
 // GET history for a pole
-router.get('/:id/history', async (req: Request, res: Response) => {
+router.get('/:id/history', rateLimit(60, 60_000), async (req: Request, res: Response) => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id) || id <= 0) {
     return res.status(400).json({ error: 'ID de poste inválido' });
@@ -80,7 +81,7 @@ router.get('/:id/history', async (req: Request, res: Response) => {
 });
 
 // POST feedback
-router.post('/feedback', async (req: Request, res: Response) => {
+router.post('/feedback', rateLimit(30, 60_000), async (req: Request, res: Response) => {
   const { labelId, poleId, isCorrect, correction } = req.body;
 
   if (labelId === undefined || poleId === undefined || isCorrect === undefined) {

@@ -49,6 +49,8 @@ interface SidebarProps {
   users: User[];
   onVideoFrameAnalyzed: (result: FrameAnalysis) => void;
   onSelectPole: (pole: Pole) => void;
+  onPoleUpdated?: (pole: Pole) => void;
+  onPoleDeleted?: (id: number) => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = (props) => {
@@ -60,7 +62,7 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
     history, stats, conductorWeight, setConductorWeight, tension, setTension,
     apiBase, userRole, showHeatmap, setShowHeatmap, activeTenant, poles,
     isOpen, onClose, viewMode, setViewMode, users, onVideoFrameAnalyzed,
-    onSelectPole,
+    onSelectPole, onPoleUpdated, onPoleDeleted,
   } = props;
 
   const { activeTenantId, isOnline } = useTenant();
@@ -252,6 +254,8 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
               onFeedback={onFeedback}
               apiBase={apiBase}
               users={users}
+              onPoleUpdated={onPoleUpdated}
+              onPoleDeleted={onPoleDeleted}
             />
           )}
 

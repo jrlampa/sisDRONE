@@ -1,6 +1,6 @@
 # sisDRONE – RAG / Memória de Trabalho
 
-> Última atualização: 2026-02-22 (Phase 8) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
+> Última atualização: 2026-02-22 (Phase 9) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
 
 ---
 
@@ -161,33 +161,33 @@ sisDRONE/
 
 **Meta**: >= 80% de cobertura em código de lógica de negócio
 
-**Situação atual** (Phase 8): 151 server + 11 client = **162 testes no total** ✅
+**Situação atual** (Phase 9): 169 server + 11 client = **180 testes no total** ✅
 
 **Coverage Threshold** configurado em `server/vitest.config.ts`:
 - Lines/Functions/Statements: ≥ 80%
-- Branches: ≥ 70%
+- Branches: ≥ 70% (atual: 81.25% — acima da meta!)
 
-**Coverage por módulo (Phase 6)**:
-- `middleware/auth.ts`: ~90%+ (JWT path agora testado)
+**Coverage por módulo (Phase 9)**:
+- `middleware/auth.ts`: 100%
 - `middleware/rateLimit.ts`: 100%
 - `services/authService.ts`: 100%
 - `services/healthService.ts`: 100%
-- `services/predictionService.ts`: 100%
-- `services/costService.ts`: 85.7%
+- `services/predictionService.ts`: 85.71% branches (era 64.28%)
+- `services/costService.ts`: 85.71%
 - `utils/geo.ts`: 100%
-- **Total servidor**: ~87% statements
+- **Total servidor**: 94.7% statements, **81.25% branches** ✅
 
-Testes existentes (Phase 6):
-- `predictionService.test.ts` – 2
+Testes existentes (Phase 9):
+- `predictionService.test.ts` – 8 (+6 edge cases: no date, unknown material, age≤2, age≤5, above failure, clamped years)
 - `healthService.test.ts` – 5
 - `costService.test.ts` – 4
 - `authService.test.ts` – 5
-- `chatService.test.ts` – 4 (novo Phase 6)
+- `chatService.test.ts` – 5 (+3 validation: missing msg, non-string, Groq unavailable)
 - `groqService.plan.test.ts` – 2
 - `tests/groq.test.ts` – 2
 - `tests/geo.test.ts` – 8
 - `tests/api.test.ts` – 27
-- `tests/auth.test.ts` – 7 (+3 JWT tests, Phase 6)
+- `tests/auth.test.ts` – 7
 - `tests/authJwt.test.ts` – 6
 - `tests/nearby.test.ts` – 9
 - `tests/rateLimit.test.ts` – 3
@@ -195,9 +195,11 @@ Testes existentes (Phase 6):
 - `tests/bim.test.ts` – 10
 - `tests/aneel.test.ts` – 7
 - `tests/report.test.ts` – 5
-- `tests/polesCrud.test.ts` – 14 (novo Phase 6: GET/:id, PUT/:id, DELETE/:id)
-- `tests/polesHistory.test.ts` – 4 (novo Phase 8: GET /api/poles/:id/history)
-- `tests/aiValidation.test.ts` – 6 (novo Phase 8: AI rate limits + validation)
+- `tests/polesCrud.test.ts` – 14
+- `tests/polesHistory.test.ts` – 4
+- `tests/aiValidation.test.ts` – 6
+- `tests/health.test.ts` – 5 (novo Phase 9: GET /health com DB status)
+- `tests/maintenancePlans.test.ts` – 6 (novo Phase 9: GET /:poleId, PATCH /:planId/status)
 - `client/utils/eng.test.ts` – 3
 - `client/utils/geo.test.ts` – 2
 - `client/utils/math.test.ts` – 6
@@ -226,6 +228,11 @@ Testes existentes (Phase 6):
 - [x] ~~Bug: GET /api/poles/:id/history rota inexistente nos poles router~~ — Phase 8
 - [x] ~~Rate limiting nos endpoints AI~~ — Phase 8
 - [x] ~~KanbanBoard coluna BLOCKED~~ — Phase 8
+- [x] ~~Endpoint GET /health com informações detalhadas (DB, uptime, poles count, version)~~ — Phase 9
+- [x] ~~Rate limiting em inspections.ts e maintenance.ts (todos os endpoints)~~ — Phase 9
+- [x] ~~PoleDetails: formulário inline de edição (PUT /api/poles/:id)~~ — Phase 9
+- [x] ~~PoleDetails: botão de exclusão com confirmação (DELETE /api/poles/:id)~~ — Phase 9
+- [x] ~~Branch coverage ≥ 80% (81.25% atingido)~~ — Phase 9
 
 ---
 
@@ -257,4 +264,4 @@ Testes existentes (Phase 6):
 - bcrypt hash de senhas (rounds=10)
 - Rate limiting em todos os endpoints (custom middleware `rateLimit.ts`)
 - Input sanitization: enum whitelists, length caps, parseInt/parseFloat guards
-- Nota: CodeQL `js/missing-rate-limiting` detecta falsos positivos pois não reconhece o custom middleware
+- Nota: CodeQL `js/missing-rate-limiting` detecta falsos positivos pois não reconhece o custom middleware. Todos os 6 alertas de Phase 9 são falsos positivos — `rateLimit()` é aplicado em todos os handlers indicados.

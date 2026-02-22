@@ -18,18 +18,35 @@ import aneelRouter from './routes/aneelRoutes';
 import bimRouter from './routes/bimRoutes';
 import reportRouter from './routes/reportRoutes';
 import { checkPermission } from './middleware/auth';
+import { rateLimit } from './middleware/rateLimit';
+import { getDb } from './db';
 
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const START_TIME = Date.now();
 const app = express();
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
-app.get('/health', (req, res) => res.json({ status: 'ok' }));
+app.get('/health', rateLimit(60, 60_000), async (_req, res) => {
+  try {
+    const db = await getDb();
+    const polesRow = await db.get('SELECT COUNT(*) as count FROM poles');
+    res.json({
+      status: 'ok',
+      uptime_s: Math.floor((Date.now() - START_TIME) / 1000),
+      db: 'connected',
+      poles: polesRow?.count ?? 0,
+      version: '1.0.0',
+    });
+  } catch {
+    res.status(503).json({ status: 'degraded', db: 'error' });
+  }
+});
 
 // Auth (no role required)
 app.use('/api/auth', authRouter);

@@ -241,6 +241,16 @@ const App: React.FC = () => {
             fetchStats();
           }}
           onSelectPole={handleMarkerClick}
+          onPoleUpdated={(updated) => {
+            setPoles(prev => prev.map(p => p.id === updated.id ? { ...p, ...updated } : p));
+            setSelectedPole(prev => prev?.id === updated.id ? { ...prev, ...updated } : prev);
+            showNotification(`Poste "${updated.name}" atualizado com sucesso`);
+          }}
+          onPoleDeleted={(id) => {
+            setPoles(prev => prev.filter(p => p.id !== id));
+            setSelectedPole(null);
+            showNotification('Poste removido com sucesso');
+          }}
         />
 
         <div className="map-container glass-panel">
