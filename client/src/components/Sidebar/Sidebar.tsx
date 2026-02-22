@@ -1,11 +1,13 @@
 import React from 'react';
-import { Search, FileJson, Globe, FileText, Ruler, LayoutDashboard, Download, X, Zap, ClipboardList } from 'lucide-react';
+import { Search, FileJson, Globe, FileText, Ruler, LayoutDashboard, Download, X, Zap, ClipboardList, Video } from 'lucide-react';
 import PoleDetails from './PoleDetails';
 import { generateInspectionReport } from '../../utils/pdfGenerator';
 import { api } from '../../services/api';
 import InspectionHistory from './InspectionHistory';
 import EngineeringTools from './EngineeringTools';
+import VideoCapturePanel from '../VideoCapture/VideoCapturePanel';
 import type { Pole, Span, Inspection, AnalysisResult, Stats, Tenant, User } from '../../types';
+import type { FrameAnalysis } from '../../hooks/useVideoCapture';
 
 interface SidebarProps {
   searchQuery: string;
@@ -19,8 +21,8 @@ interface SidebarProps {
   setFilterCondition: (c: 'All' | 'Critical' | 'Warning' | 'Good') => void;
   selectedPole: Pole | null;
   activeSpan: Span | null;
-  activeTab: 'details' | 'history' | 'eng';
-  setActiveTab: (t: 'details' | 'history' | 'eng') => void;
+  activeTab: 'details' | 'history' | 'eng' | 'video';
+  setActiveTab: (t: 'details' | 'history' | 'eng' | 'video') => void;
   isCapturing: boolean;
   onAnalyze: () => void;
   analysis: AnalysisResult | null;
@@ -41,7 +43,10 @@ interface SidebarProps {
   onClose: () => void;
   viewMode: 'MAP' | 'ANALYTICS' | 'WORK_ORDERS' | 'DRONE_LIVE';
   setViewMode: (mode: 'MAP' | 'ANALYTICS' | 'WORK_ORDERS' | 'DRONE_LIVE') => void;
-  users: User[]; // New prop
+  users: User[];
+  isOnline: boolean;
+  activeTenantId: number;
+  onVideoFrameAnalyzed: (result: FrameAnalysis) => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = (props) => {
@@ -52,7 +57,7 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
     activeTab, setActiveTab, isCapturing, onAnalyze, analysis, onFeedback,
     history, stats, conductorWeight, setConductorWeight, tension, setTension,
     apiBase, userRole, showHeatmap, setShowHeatmap, activeTenant, poles,
-    isOpen, onClose, viewMode, setViewMode, users
+    isOpen, onClose, viewMode, setViewMode, users, isOnline, activeTenantId, onVideoFrameAnalyzed
   } = props;
 
   const handleExportPDF = () => {
@@ -203,6 +208,15 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
             >
               Histórico
             </button>
+            {selectedPole && userRole !== 'VIEWER' && (
+              <button
+                onClick={() => setActiveTab('video')}
+                className={activeTab === 'video' ? 'active' : ''}
+                title="Captura de Vídeo / Frames"
+              >
+                <Video size={12} className="inline mr-1" />Vídeo
+              </button>
+            )}
             {activeSpan && userRole !== 'VIEWER' && (
               <button
                 onClick={() => setActiveTab('eng')}
@@ -227,6 +241,15 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
 
           {activeTab === 'history' && (
             <InspectionHistory history={history} apiBase={apiBase} />
+          )}
+
+          {activeTab === 'video' && selectedPole && (
+            <VideoCapturePanel
+              pole={selectedPole}
+              tenantId={activeTenantId}
+              isOnline={isOnline}
+              onFrameAnalyzed={onVideoFrameAnalyzed}
+            />
           )}
 
           {activeTab === 'eng' && activeSpan && (

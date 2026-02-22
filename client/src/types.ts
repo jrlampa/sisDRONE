@@ -30,12 +30,14 @@ export interface Inspection {
 
 export interface AnalysisResult {
   labelId: number;
+  imageId?: number;
   pole_type: string;
   structures: string[];
   condition: string;
   confidence: number;
   analysis_summary: string;
   imageUrl?: string;
+  ahi_score?: number;
 }
 
 export interface Stats {

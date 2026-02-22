@@ -86,4 +86,21 @@ export const api = {
     axios.post<WorkOrder>(`${API_BASE}/api/work-orders`, data),
   updateWorkOrder: (id: number, data: Partial<WorkOrder>) =>
     axios.put<WorkOrder>(`${API_BASE}/api/work-orders/${id}`, data),
+
+  // Video Analysis
+  startVideoSession: (poleId: number, tenantId: number, mode: 'frame' | 'recording') =>
+    axios.post<{ sessionId: number; mode: string; status: string }>(
+      `${API_BASE}/api/video/session/start`,
+      { pole_id: poleId, tenant_id: tenantId, mode }
+    ),
+  analyzeVideoFrame: (poleId: number, image: string, sessionId: number | null, sequence: number) =>
+    axios.post(`${API_BASE}/api/video/frame`, { pole_id: poleId, image, sessionId, sequence }),
+  uploadVideoChunk: (data: {
+    sessionId: number; pole_id: number; chunk: string;
+    chunkIndex: number; totalChunks: number; isLast: boolean;
+  }) => axios.post(`${API_BASE}/api/video/upload`, data),
+  completeVideoSession: (sessionId: number) =>
+    axios.post(`${API_BASE}/api/video/session/${sessionId}/complete`),
+  getVideoSessions: (poleId: number) =>
+    axios.get(`${API_BASE}/api/video/sessions/${poleId}`),
 };

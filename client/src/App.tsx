@@ -35,7 +35,7 @@ const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [history, setHistory] = useState<Inspection[]>([]);
-  const [activeTab, setActiveTab] = useState<'details' | 'history' | 'eng'>('details');
+  const [activeTab, setActiveTab] = useState<'details' | 'history' | 'eng' | 'video'>('details');
   const [notification, setNotification] = useState<string | null>(null);
   const [isMeasuring, setIsMeasuring] = useState(false);
   const [measurementStart, setMeasurementStart] = useState<Pole | null>(null);
@@ -336,6 +336,22 @@ const App: React.FC = () => {
           viewMode={viewMode}
           setViewMode={setViewMode}
           users={users}
+          isOnline={isOnline}
+          activeTenantId={activeTenantId}
+          onVideoFrameAnalyzed={(result) => {
+            setAnalysis({
+              analysis_summary: result.analysis_summary,
+              condition: result.condition,
+              confidence: result.confidence,
+              pole_type: result.pole_type,
+              ahi_score: result.ahi_score ?? 100,
+              labelId: result.labelId,
+              imageId: result.imageId,
+              imageUrl: result.imageUrl,
+              structures: [],
+            });
+            fetchStats();
+          }}
         />
 
         <div className="map-container glass-panel">

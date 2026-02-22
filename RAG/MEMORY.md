@@ -1,6 +1,6 @@
 # sisDRONE – RAG / Memória de Trabalho
 
-> Última atualização: 2026-02-22 (Phase 3) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
+> Última atualização: 2026-02-22 (Phase 4) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
 
 ---
 
@@ -54,10 +54,12 @@ sisDRONE/
 |---------|-----------|-------|
 | **Infraestrutura** | Pole, Tenant | `/api/poles`, `/api/tenants` |
 | **Inspeção** | Inspection (Label), Image | `/api/analyze`, `/api/feedback`, `/:id/history` |
+| **Vídeo / Captura** | VideoSession, Frame | `/api/video/session/start`, `/api/video/frame`, `/api/video/upload`, `/api/video/session/:id/complete`, `/api/video/sessions/:poleId` |
 | **IA / Manutenção** | MaintenancePlan | `/api/ai/plan`, `/api/ai/chat`, `/api/ai/predict/:id` |
 | **GIS** | GeoJSON | `/api/gis/export/geojson`, `/api/gis/import/geojson` |
 | **Operações** | WorkOrder | `/api/work-orders` |
 | **Usuários** | User | `/api/users` |
+| **Auth** | JWT | `/api/auth/login` |
 
 ---
 
@@ -146,21 +148,22 @@ sisDRONE/
 
 **Meta**: >= 80% de cobertura em código de lógica de negócio
 
-**Situação atual** (Phase 3): 77 server + 11 client = **88 testes no total** ✅
+**Situação atual** (Phase 4): 95 server + 11 client = **106 testes no total** ✅
 
 Testes existentes:
 - `predictionService.test.ts` – 2 casos
 - `healthService.test.ts` – 5 casos  
 - `costService.test.ts` – 4 casos
-- `authService.test.ts` – 5 casos (novo Phase 3)
+- `authService.test.ts` – 5 casos
 - `groqService.plan.test.ts` – 2 casos
 - `tests/groq.test.ts` – 2 casos
-- `tests/geo.test.ts` – 8 casos (5 novos haversineMeters)
+- `tests/geo.test.ts` – 8 casos
 - `tests/api.test.ts` – 27 casos
 - `tests/auth.test.ts` – 4 casos
-- `tests/authJwt.test.ts` – 6 casos (novo Phase 3)
-- `tests/nearby.test.ts` – 9 casos (novo Phase 3)
+- `tests/authJwt.test.ts` – 6 casos
+- `tests/nearby.test.ts` – 9 casos
 - `tests/rateLimit.test.ts` – 3 casos
+- `tests/video.test.ts` – 18 casos (novo Phase 4)
 - `client/src/utils/eng.test.ts` – 3 casos
 - `client/src/utils/geo.test.ts` – 2 casos
 - `client/src/utils/math.test.ts` – 6 casos
@@ -172,7 +175,30 @@ Testes existentes:
 - [x] ~~Autenticação JWT real (substituir header mock)~~ — Implementado Phase 3
 - [x] ~~WebSocket para telemetria do drone em tempo real~~ — Implementado Phase 3
 - [x] ~~Busca por raio (nearby poles)~~ — Implementado Phase 3
+- [x] ~~Análise de vídeo em tempo real + fallback de gravação offline~~ — Implementado Phase 4
 - [ ] Integração com ANEEL OpenData para dados de concessionárias
 - [ ] Relatório PDF automático por poste
 - [ ] BIM Half-way: importação IFC simplificado para estruturas de poste
 - [ ] Pipeline CI/CD com GitHub Actions + Docker Hub
+
+---
+
+## 11. Modos de Captura de Vídeo (Phase 4)
+
+### Modo Foto (`frame`)
+- Ativo quando: conexão disponível E usuário seleciona "Modo Foto"
+- Comportamento: captura frame JPEG a cada 2.5s da câmera do dispositivo
+- Envia para `POST /api/video/frame` — análise Groq AI imediata
+- Resultado exibido em tempo real no painel Vídeo da Sidebar
+- Fallback: se envio falhar por rede, frame enfileirado no IndexedDB
+
+### Modo Gravação (`recording`)
+- Ativo quando: offline OU usuário seleciona "Gravar"
+- Comportamento: MediaRecorder WebM a 800kbps, chunks a cada 2s
+- Ao parar: upload sequencial de chunks para `POST /api/video/upload`
+- Quando `isLast=true`: servidor monta `recording.webm` final
+- Se offline: chunks enfileirados no IndexedDB para upload ao reconectar
+
+### DB: `video_sessions`
+- Campos: `id, pole_id, tenant_id, mode, status, frame_count, blob_path, started_at, completed_at`
+- Status: `recording → completed`

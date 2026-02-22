@@ -96,6 +96,7 @@ async function initDb(database: Database) {
       username TEXT NOT NULL,
       role TEXT NOT NULL,
       tenant_id INTEGER NOT NULL,
+      password_hash TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (tenant_id) REFERENCES tenants(id)
     );
@@ -126,7 +127,33 @@ async function initDb(database: Database) {
     );
   `);
 
-  // Seed default tenants if empty
+  // ── Migrations (run before seeding so seeds see up-to-date schema) ──
+  // AHI fields
+  try { await database.exec(`ALTER TABLE poles ADD COLUMN ahi_score INTEGER DEFAULT 100`); } catch {}
+  try { await database.exec(`ALTER TABLE poles ADD COLUMN installation_date DATETIME DEFAULT '2020-01-01'`); } catch {}
+  // name column
+  try { await database.exec(`ALTER TABLE poles ADD COLUMN name TEXT`); } catch {}
+  // password_hash column (for DBs created before this column was added)
+  try { await database.exec(`ALTER TABLE users ADD COLUMN password_hash TEXT`); } catch {}
+  // video_sessions table (Phase 4)
+  await database.exec(`
+    CREATE TABLE IF NOT EXISTS video_sessions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      pole_id INTEGER,
+      tenant_id INTEGER DEFAULT 1,
+      mode TEXT NOT NULL DEFAULT 'frame',
+      status TEXT NOT NULL DEFAULT 'recording',
+      frame_count INTEGER DEFAULT 0,
+      blob_path TEXT,
+      started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      completed_at DATETIME,
+      FOREIGN KEY (pole_id) REFERENCES poles(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_vsessions_pole ON video_sessions(pole_id);
+    CREATE INDEX IF NOT EXISTS idx_vsessions_status ON video_sessions(status);
+  `);
+
+  // ── Seeds ──
   const tenantRes = await database.get('SELECT COUNT(*) as count FROM tenants');
   if (tenantRes && tenantRes.count === 0) {
     for (const t of seeds.tenants) {
@@ -163,31 +190,6 @@ async function initDb(database: Database) {
     CREATE INDEX IF NOT EXISTS idx_wo_status ON work_orders(status);
     CREATE INDEX IF NOT EXISTS idx_wo_assignee ON work_orders(assignee_id);
   `);
-
-  // Migration for AHI fields
-  try {
-    await database.exec(`ALTER TABLE poles ADD COLUMN ahi_score INTEGER DEFAULT 100`);
-    await database.exec(`ALTER TABLE poles ADD COLUMN installation_date DATETIME DEFAULT '2020-01-01'`);
-    console.log('Migrated poles table with AHI columns');
-  } catch (e) {
-    // Ignore error if columns already exist
-  }
-
-  // Migration for name column
-  try {
-    await database.exec(`ALTER TABLE poles ADD COLUMN name TEXT`);
-    console.log('Migrated poles table with name column');
-  } catch (e) {
-    // Ignore error if column already exists
-  }
-
-  // Migration for password_hash column in users
-  try {
-    await database.exec(`ALTER TABLE users ADD COLUMN password_hash TEXT`);
-    console.log('Migrated users table with password_hash column');
-  } catch (e) {
-    // Ignore error if column already exists
-  }
 
   // Backfill password_hash for existing users who don't have one
   const usersWithoutHash = await database.all('SELECT id FROM users WHERE password_hash IS NULL');
