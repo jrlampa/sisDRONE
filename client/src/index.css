@@ -836,3 +836,37 @@ body {
   z-index: -1;
   opacity: 0.4;
 }
+/* ANEEL Search Panel */
+.aneel-panel-container {
+  position: absolute;
+  top: 64px;
+  right: 16px;
+  z-index: 1000;
+  width: 360px;
+  max-height: 70vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* BIM Structure Editor */
+.bim-editor .form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.bim-editor .form-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.bim-editor .form-label span {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}

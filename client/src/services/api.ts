@@ -57,6 +57,10 @@ export const api = {
   login: (username: string, password: string) =>
     axios.post<{ token: string, user: User }>(`${API_BASE}/api/auth/login`, { username, password }),
   getPoles: (tenantId?: number) => axios.get(`${API_BASE}/api/poles`, { params: tenantId ? { tenant_id: tenantId } : {} }),
+  getPole: (id: number) => axios.get(`${API_BASE}/api/poles/${id}`),
+  updatePole: (id: number, data: { name?: string; material?: string; height?: number; structure_type?: string; status?: string }) =>
+    axios.put(`${API_BASE}/api/poles/${id}`, data),
+  deletePole: (id: number) => axios.delete(`${API_BASE}/api/poles/${id}`),
   getNearbyPoles: (lat: number, lng: number, radius: number) =>
     axios.get(`${API_BASE}/api/poles/nearby`, { params: { lat, lng, radius } }),
   getStats: () => axios.get(`${API_BASE}/api/poles/stats`),

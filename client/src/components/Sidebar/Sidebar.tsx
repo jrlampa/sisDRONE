@@ -1,11 +1,12 @@
 import React from 'react';
-import { Search, FileJson, Globe, FileText, Ruler, LayoutDashboard, Download, X, Zap, ClipboardList, Video } from 'lucide-react';
+import { Search, FileJson, Globe, FileText, Ruler, LayoutDashboard, Download, X, Zap, ClipboardList, Video, Building2 } from 'lucide-react';
 import PoleDetails from './PoleDetails';
 import { generateInspectionReport } from '../../utils/pdfGenerator';
 import { api } from '../../services/api';
 import InspectionHistory from './InspectionHistory';
 import EngineeringTools from './EngineeringTools';
 import VideoCapturePanel from '../VideoCapture/VideoCapturePanel';
+import BimStructureEditor from './BimStructureEditor';
 import type { Pole, Span, Inspection, AnalysisResult, Stats, Tenant, User } from '../../types';
 import type { FrameAnalysis } from '../../hooks/useVideoCapture';
 
@@ -21,8 +22,8 @@ interface SidebarProps {
   setFilterCondition: (c: 'All' | 'Critical' | 'Warning' | 'Good') => void;
   selectedPole: Pole | null;
   activeSpan: Span | null;
-  activeTab: 'details' | 'history' | 'eng' | 'video';
-  setActiveTab: (t: 'details' | 'history' | 'eng' | 'video') => void;
+  activeTab: 'details' | 'history' | 'eng' | 'video' | 'bim';
+  setActiveTab: (t: 'details' | 'history' | 'eng' | 'video' | 'bim') => void;
   isCapturing: boolean;
   onAnalyze: () => void;
   analysis: AnalysisResult | null;
@@ -210,6 +211,15 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
             </button>
             {selectedPole && userRole !== 'VIEWER' && (
               <button
+                onClick={() => setActiveTab('bim')}
+                className={activeTab === 'bim' ? 'active' : ''}
+                title="Estrutura BIM / IFC-lite"
+              >
+                <Building2 size={12} className="inline mr-1" />BIM
+              </button>
+            )}
+            {selectedPole && userRole !== 'VIEWER' && (
+              <button
                 onClick={() => setActiveTab('video')}
                 className={activeTab === 'video' ? 'active' : ''}
                 title="Captura de Vídeo / Frames"
@@ -250,6 +260,10 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
               isOnline={isOnline}
               onFrameAnalyzed={onVideoFrameAnalyzed}
             />
+          )}
+
+          {activeTab === 'bim' && selectedPole && (
+            <BimStructureEditor pole={selectedPole} />
           )}
 
           {activeTab === 'eng' && activeSpan && (

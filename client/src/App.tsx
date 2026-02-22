@@ -5,7 +5,8 @@ import MobileFab from './components/MobileFab';
 import ChatAssistant from './components/ChatAssistant';
 import AnalyticsDashboard from './components/Dashboard/AnalyticsDashboard';
 import KanbanBoard from './components/WorkOrders/KanbanBoard';
-import { Zap, Menu } from 'lucide-react';
+import AneelSearchPanel from './components/AneelSearchPanel';
+import { Zap, Menu, Building } from 'lucide-react';
 import { api } from './services/api';
 import { useNetwork } from './hooks/useNetwork';
 import { useAppHandlers } from './hooks/useAppHandlers';
@@ -32,7 +33,7 @@ const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [history, setHistory] = useState<Inspection[]>([]);
-  const [activeTab, setActiveTab] = useState<'details' | 'history' | 'eng' | 'video'>('details');
+  const [activeTab, setActiveTab] = useState<'details' | 'history' | 'eng' | 'video' | 'bim'>('details');
   const [notification, setNotification] = useState<string | null>(null);
   const [isMeasuring, setIsMeasuring] = useState(false);
   const [measurementStart, setMeasurementStart] = useState<Pole | null>(null);
@@ -43,6 +44,8 @@ const App: React.FC = () => {
   const [viewMode, setViewMode] = useState<'MAP' | 'ANALYTICS' | 'WORK_ORDERS' | 'DRONE_LIVE'>('MAP');
   const [conductorWeight, setConductorWeight] = useState(0.545);
   const [tension, setTension] = useState(250);
+
+  const [showAneelPanel, setShowAneelPanel] = useState(false);
 
   const gisInputRef = useRef<HTMLInputElement>(null!);
 
@@ -129,6 +132,13 @@ const App: React.FC = () => {
         </div>
 
         <div className="tenant-switcher flex items-center gap-4">
+          <button
+            className={`btn btn-outline btn-sm ${showAneelPanel ? 'active' : ''}`}
+            onClick={() => setShowAneelPanel(!showAneelPanel)}
+            title="Buscar Agentes ANEEL"
+          >
+            <Building size={14} /> ANEEL
+          </button>
           <select value={currentUser?.id || ''} onChange={(e) => handleUserSwitch(Number(e.target.value))}
             className="glass-input tenant-select" title="Trocar Usuário">
             {users.map(u => <option key={u.id} value={u.id}>{u.username} ({u.role})</option>)}
@@ -144,7 +154,10 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      <main className="content-wrapper">
+      <main className="content-wrapper" style={{ position: 'relative' }}>
+        {showAneelPanel && (
+          <AneelSearchPanel onClose={() => setShowAneelPanel(false)} />
+        )}
         <Sidebar
           userRole={currentUser?.role || 'VIEWER'}
           searchQuery={searchQuery}

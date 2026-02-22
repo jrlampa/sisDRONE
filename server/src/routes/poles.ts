@@ -145,7 +145,7 @@ router.get('/stats', async (req: Request, res: Response) => {
   }
 });
 
-// GET export CSV
+// GET export CSV  (must be before /:id to avoid shadowing)
 router.get('/export', async (req: Request, res: Response) => {
   try {
     const db = await getDb();
@@ -157,11 +157,6 @@ router.get('/export', async (req: Request, res: Response) => {
       'height', 'structure_type', 'tenant_id', 'created_at'
     ];
 
-    // We need to require/import json2csv here or at top. 
-    // Since we are in TS module, we should import at top, but for minimal diff let's try dynamic import or assume I'll add top-level import in next step.
-    // Actually, I should add the import at the top first or use dynamic import.
-    // Let's use dynamic import for cleaner diff or add import in a separate replace call.
-    // Better: I will use a multi-replace to add import and route.
     const { Parser } = await import('json2csv');
     const parser = new Parser({ fields });
     const csv = parser.parse(poles);
@@ -173,6 +168,75 @@ router.get('/export', async (req: Request, res: Response) => {
   } catch (err) {
     console.error('Export error:', err);
     res.status(500).json({ error: 'Failed to export CSV' });
+  }
+});
+
+// GET single pole by id (must be after all named GET routes)
+router.get('/:id', rateLimit(120, 60_000), async (req: Request, res: Response) => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json({ error: 'id inválido' });
+  }
+  try {
+    const db = await getDb();
+    const pole = await db.get('SELECT * FROM poles WHERE id = ?', [id]);
+    if (!pole) return res.status(404).json({ error: 'Poste não encontrado' });
+    res.json(pole);
+  } catch (err) {
+    res.status(500).json({ error: 'DB Error' });
+  }
+});
+
+// PUT update pole by id (ENGINEER+)
+router.put('/:id', rateLimit(60, 60_000), async (req: Request, res: Response) => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json({ error: 'id inválido' });
+  }
+  const { name, material, height, structure_type, status } = req.body;
+  const VALID_STATUSES = ['pending', 'inspected', 'maintenance', 'critical', 'ok'];
+  if (status && !VALID_STATUSES.includes(status)) {
+    return res.status(400).json({ error: `status inválido. Use: ${VALID_STATUSES.join(', ')}` });
+  }
+  const safeName = name ? String(name).slice(0, 100) : undefined;
+  const safeMaterial = material ? String(material).slice(0, 50) : undefined;
+  const safeHeight = height !== undefined ? Number(height) : undefined;
+  const safeStructureType = structure_type ? String(structure_type).slice(0, 50) : undefined;
+  try {
+    const db = await getDb();
+    const pole = await db.get('SELECT id FROM poles WHERE id = ?', [id]);
+    if (!pole) return res.status(404).json({ error: 'Poste não encontrado' });
+    const updates: string[] = [];
+    const params: unknown[] = [];
+    if (safeName !== undefined) { updates.push('name = ?'); params.push(safeName); }
+    if (safeMaterial !== undefined) { updates.push('material = ?'); params.push(safeMaterial); }
+    if (safeHeight !== undefined && !isNaN(safeHeight)) { updates.push('height = ?'); params.push(safeHeight); }
+    if (safeStructureType !== undefined) { updates.push('structure_type = ?'); params.push(safeStructureType); }
+    if (status) { updates.push('status = ?'); params.push(status); }
+    if (updates.length === 0) return res.status(400).json({ error: 'Nenhum campo para atualizar' });
+    params.push(id);
+    await db.run(`UPDATE poles SET ${updates.join(', ')} WHERE id = ?`, params);
+    const updated = await db.get('SELECT * FROM poles WHERE id = ?', [id]);
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: 'DB Error' });
+  }
+});
+
+// DELETE pole by id (ADMIN only)
+router.delete('/:id', rateLimit(30, 60_000), async (req: Request, res: Response) => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json({ error: 'id inválido' });
+  }
+  try {
+    const db = await getDb();
+    const pole = await db.get('SELECT id FROM poles WHERE id = ?', [id]);
+    if (!pole) return res.status(404).json({ error: 'Poste não encontrado' });
+    await db.run('DELETE FROM poles WHERE id = ?', [id]);
+    res.json({ message: 'Poste removido com sucesso', id });
+  } catch (err) {
+    res.status(500).json({ error: 'DB Error' });
   }
 });
 

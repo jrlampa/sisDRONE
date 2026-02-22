@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MapPin, Upload, Activity, CheckCircle, AlertTriangle, FileText, Loader, Clock, Archive } from 'lucide-react';
+import { MapPin, Upload, Activity, CheckCircle, AlertTriangle, FileText, Loader, Clock, Archive, Download } from 'lucide-react';
 import { api } from '../../services/api';
 import type { Pole, AnalysisResult, User } from '../../types';
 import type { Prediction } from '../../types/prediction';
@@ -212,6 +212,16 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
       >
         <FileText size={18} /> Criar Ordem de Serviço
       </button>
+
+      <a
+        href={api.getPoleReportUrl(pole.id)}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="btn btn-outline btn-full mt-2"
+        title="Baixar Relatório PDF do Poste"
+      >
+        <Download size={18} /> Relatório PDF
+      </a>
 
       <WorkOrderModal
         isOpen={isWOModalOpen}
