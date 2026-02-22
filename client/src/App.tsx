@@ -1,23 +1,28 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback, lazy, Suspense } from 'react';
 import Map from './components/Map';
 import Sidebar from './components/Sidebar/Sidebar';
 import MobileFab from './components/MobileFab';
-import ChatAssistant from './components/ChatAssistant';
-import AnalyticsDashboard from './components/Dashboard/AnalyticsDashboard';
-import KanbanBoard from './components/WorkOrders/KanbanBoard';
+import LoginPage from './components/LoginPage';
 import AneelSearchPanel from './components/AneelSearchPanel';
-import { Zap, Menu, Building } from 'lucide-react';
+import { Zap, Menu, Building, LogOut } from 'lucide-react';
 import { api } from './services/api';
 import { useNetwork } from './hooks/useNetwork';
 import { useAppHandlers } from './hooks/useAppHandlers';
 import { TenantProvider } from './context/TenantContext';
 import { WifiOff, RefreshCw } from 'lucide-react';
 import type { Pole, Span, Inspection, AnalysisResult, Tenant, User } from './types';
-import DroneLiveView from './components/Dashboard/DroneLiveView';
+
+// Lazy-load heavy view components to reduce initial bundle size
+const AnalyticsDashboard = lazy(() => import('./components/Dashboard/AnalyticsDashboard'));
+const KanbanBoard = lazy(() => import('./components/WorkOrders/KanbanBoard'));
+const DroneLiveView = lazy(() => import('./components/Dashboard/DroneLiveView'));
+const ChatAssistant = lazy(() => import('./components/ChatAssistant'));
 
 const API_BASE = 'http://localhost:3001';
 
 const App: React.FC = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem('sisdrone_jwt'));
+
   const {
     poles, setPoles, stats, fetchStats, fetchPoles,
     activeTenantId, setActiveTenantId,
@@ -53,6 +58,21 @@ const App: React.FC = () => {
   const showNotification = useCallback((msg: string) => {
     setNotification(msg);
     setTimeout(() => setNotification(null), 3000);
+  }, []);
+
+  const handleLogin = useCallback((user: User) => {
+    setCurrentUser(user);
+    setActiveTenantId(user.tenant_id);
+    setIsAuthenticated(true);
+    fetchPoles();
+    fetchStats();
+  }, [setCurrentUser, setActiveTenantId, fetchPoles, fetchStats]);
+
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem('sisdrone_jwt');
+    localStorage.removeItem('sisdrone_user');
+    localStorage.removeItem('sisdrone_mock_role');
+    setIsAuthenticated(false);
   }, []);
 
   // ── Handlers (extracted) ──
@@ -112,6 +132,9 @@ const App: React.FC = () => {
 
   return (
     <TenantProvider value={{ activeTenantId, setActiveTenantId, currentUser, setCurrentUser, isOnline }}>
+    {!isAuthenticated ? (
+      <LoginPage onLogin={handleLogin} />
+    ) : (
     <div className="app-container">
       {(!isOnline || isSyncing) && (
         <div className={`connection-status ${isOnline ? 'syncing' : 'offline'}`}>
@@ -153,6 +176,14 @@ const App: React.FC = () => {
           }} className="glass-input tenant-select" title="Trocar Concessionária">
             {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
+          <button
+            className="btn btn-outline btn-sm"
+            onClick={handleLogout}
+            title="Sair"
+            aria-label="Sair do sistema"
+          >
+            <LogOut size={14} /> Sair
+          </button>
         </div>
       </header>
 
@@ -231,11 +262,17 @@ const App: React.FC = () => {
               showHeatmap={showHeatmap}
             />
           ) : viewMode === 'ANALYTICS' ? (
-            <AnalyticsDashboard />
+            <Suspense fallback={<div className="p-8 text-center">Carregando Analytics...</div>}>
+              <AnalyticsDashboard />
+            </Suspense>
           ) : viewMode === 'WORK_ORDERS' ? (
-            <KanbanBoard currentUser={currentUser} users={users} />
+            <Suspense fallback={<div className="p-8 text-center">Carregando Ordens...</div>}>
+              <KanbanBoard currentUser={currentUser} users={users} />
+            </Suspense>
           ) : (
-            <DroneLiveView apiBase={API_BASE} />
+            <Suspense fallback={<div className="p-8 text-center">Carregando Live...</div>}>
+              <DroneLiveView apiBase={API_BASE} />
+            </Suspense>
           )}
         </div>
       </main>
@@ -245,8 +282,11 @@ const App: React.FC = () => {
         onCameraCapture={handleImageUpload}
         isCapturing={isCapturing}
       />
-      <ChatAssistant selectedPole={selectedPole} analysis={analysis} />
+      <Suspense fallback={null}>
+        <ChatAssistant selectedPole={selectedPole} analysis={analysis} />
+      </Suspense>
     </div>
+    )}
     </TenantProvider>
   );
 };

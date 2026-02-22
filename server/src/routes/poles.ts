@@ -171,6 +171,27 @@ router.get('/export', async (req: Request, res: Response) => {
   }
 });
 
+// GET inspection history for a pole (must be before /:id to avoid shadowing)
+router.get('/:id/history', rateLimit(60, 60_000), async (req: Request, res: Response) => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json({ error: 'ID de poste inválido' });
+  }
+  try {
+    const db = await getDb();
+    const history = await db.all(`
+      SELECT l.*, i.file_path
+      FROM labels l
+      LEFT JOIN images i ON l.image_id = i.id
+      WHERE l.pole_id = ?
+      ORDER BY l.created_at DESC
+    `, [id]);
+    res.json(history);
+  } catch (err) {
+    res.status(500).json({ error: 'History error' });
+  }
+});
+
 // GET single pole by id (must be after all named GET routes)
 router.get('/:id', rateLimit(120, 60_000), async (req: Request, res: Response) => {
   const id = parseInt(String(req.params.id), 10);

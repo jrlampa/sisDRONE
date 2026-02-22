@@ -25,7 +25,7 @@ interface AppHandlersOptions {
   setSelectedPole: (p: Pole | null) => void;
   setAnalysis: (a: AnalysisResult | null) => void;
   setHistory: (h: Inspection[]) => void;
-  setActiveTab: (t: 'details' | 'history' | 'eng' | 'video') => void;
+  setActiveTab: (t: 'details' | 'history' | 'eng' | 'video' | 'bim') => void;
   setIsCapturing: (v: boolean) => void;
   setIsMeasuring: (v: boolean) => void;
   setMeasurementStart: (p: Pole | null) => void;

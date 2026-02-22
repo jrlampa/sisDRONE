@@ -1,6 +1,6 @@
 # sisDRONE – RAG / Memória de Trabalho
 
-> Última atualização: 2026-02-22 (Phase 7) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
+> Última atualização: 2026-02-22 (Phase 8) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
 
 ---
 
@@ -133,6 +133,8 @@ sisDRONE/
 | 14 | DroneLiveView com telemetria estática e hardcoded | ✅ Corrigido | `DroneLiveView.tsx` (WS) |
 | 15 | E2E test seletor errado (texto não existe na UI) | ✅ Corrigido | `e2e/workflow.test.ts` |
 | 16 | `/api/poles/export` inacessível pois `/:id` registrado antes | ✅ Corrigido | `routes/poles.ts` (Phase 6) |
+| 17 | `GET /api/poles/:id/history` rota inexistente — client chamava URL errada | ✅ Corrigido | `routes/poles.ts` (Phase 8) |
+| 18 | `useAppHandlers.ts` `setActiveTab` type faltava 'bim' | ✅ Corrigido | `hooks/useAppHandlers.ts` (Phase 8) |
 
 ---
 
@@ -159,7 +161,7 @@ sisDRONE/
 
 **Meta**: >= 80% de cobertura em código de lógica de negócio
 
-**Situação atual** (Phase 7): 141 server + 11 client = **152 testes no total** ✅ (mesmo count — Phase 7 focou em UI/contexto/CI)
+**Situação atual** (Phase 8): 151 server + 11 client = **162 testes no total** ✅
 
 **Coverage Threshold** configurado em `server/vitest.config.ts`:
 - Lines/Functions/Statements: ≥ 80%
@@ -194,6 +196,8 @@ Testes existentes (Phase 6):
 - `tests/aneel.test.ts` – 7
 - `tests/report.test.ts` – 5
 - `tests/polesCrud.test.ts` – 14 (novo Phase 6: GET/:id, PUT/:id, DELETE/:id)
+- `tests/polesHistory.test.ts` – 4 (novo Phase 8: GET /api/poles/:id/history)
+- `tests/aiValidation.test.ts` – 6 (novo Phase 8: AI rate limits + validation)
 - `client/utils/eng.test.ts` – 3
 - `client/utils/geo.test.ts` – 2
 - `client/utils/math.test.ts` – 6
@@ -217,8 +221,11 @@ Testes existentes (Phase 6):
 - [x] ~~Nearby Poles search UI no Sidebar (campo lat/lng/radius + geolocalização)~~ — Phase 7
 - [x] ~~Context API para activeTenantId/currentUser/isOnline (TenantContext)~~ — Phase 7
 - [x] ~~Pipeline CI/CD com Docker build validation~~ — Phase 7
-- [ ] Code splitting / lazy loading para reduzir bundle > 2MB
-- [ ] Login page com formulário real usando JWT (atualmente fallback mock)
+- [x] ~~Login page com formulário real usando JWT~~ — Phase 8
+- [x] ~~Code splitting / lazy loading para reduzir bundle > 2MB~~ — Phase 8
+- [x] ~~Bug: GET /api/poles/:id/history rota inexistente nos poles router~~ — Phase 8
+- [x] ~~Rate limiting nos endpoints AI~~ — Phase 8
+- [x] ~~KanbanBoard coluna BLOCKED~~ — Phase 8
 
 ---
 

@@ -5,10 +5,11 @@ import { calculatePlanCost } from '../services/costService';
 import { chatWithData } from '../services/chatService';
 import { calculateAHI } from '../services/healthService';
 import { predictLifespan } from '../services/predictionService';
+import { rateLimit } from '../middleware/rateLimit';
 
 const router = Router();
 
-router.get('/predict/:id', async (req, res) => {
+router.get('/predict/:id', rateLimit(30, 60_000), async (req, res) => {
   try {
     const db = await getDb();
     const pole = await db.get('SELECT * FROM poles WHERE id = ?', [req.params.id]);
@@ -25,7 +26,7 @@ router.get('/predict/:id', async (req, res) => {
   }
 });
 
-router.post('/plan', async (req, res) => {
+router.post('/plan', rateLimit(10, 60_000), async (req, res) => {
   try {
     const { analysis, poleId } = req.body;
 
@@ -56,10 +57,14 @@ router.post('/plan', async (req, res) => {
   }
 });
 
-router.post('/chat', async (req, res) => {
+router.post('/chat', rateLimit(20, 60_000), async (req, res) => {
+  const { message, context } = req.body;
+  if (!message || typeof message !== 'string') {
+    return res.status(400).json({ error: 'message é obrigatório' });
+  }
+  const safeMessage = message.slice(0, 2000);
   try {
-    const { message, context } = req.body;
-    const response = await chatWithData(message, context);
+    const response = await chatWithData(safeMessage, context);
     res.json({ response });
   } catch (error) {
     console.error('Chat error:', error);
