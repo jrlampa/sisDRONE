@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, FileJson, Globe, FileText, Ruler, LayoutDashboard, Download, X, Zap } from 'lucide-react';
+import { Search, FileJson, Globe, FileText, Ruler, LayoutDashboard, Download, X, Zap, ClipboardList } from 'lucide-react';
 import PoleDetails from './PoleDetails';
 import { generateInspectionReport } from '../../utils/pdfGenerator';
 import { api } from '../../services/api';
@@ -143,6 +143,13 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
             disabled={userRole === 'VIEWER'}
           >
             <FileText size={14} /> Relatório
+          </button>
+          <button
+            className={`btn btn-outline ${viewMode === 'WORK_ORDERS' ? 'active' : ''}`}
+            onClick={() => setViewMode(viewMode === 'WORK_ORDERS' ? 'MAP' : 'WORK_ORDERS')}
+            title="Ordens de Serviço"
+          >
+            <ClipboardList size={14} /> Ordens de Serviço
           </button>
           <button
             className={`btn btn-outline ${viewMode === 'DRONE_LIVE' ? 'active' : ''}`}

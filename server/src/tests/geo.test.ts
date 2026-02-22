@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { degreesToUtm } from '../utils/geo.js';
+import { degreesToUtm, haversineMeters } from '../utils/geo.js';
 
 describe('Geospatial Utils', () => {
   it('should convert Rio de Janeiro coordinates to UTM Zone 23S correctly', () => {
@@ -40,6 +40,41 @@ describe('Geospatial Utils', () => {
     // Northing ~7549084 (Southern hemisphere with 10,000,000 false northing)
     expect(result.y).toBeGreaterThan(7548000);
     expect(result.y).toBeLessThan(7550500);
+  });
+});
+
+describe('Haversine Distance (server)', () => {
+  const REF_LAT = -22.15018;
+  const REF_LNG = -42.92185;
+
+  it('should return 0 for same point', () => {
+    const d = haversineMeters(REF_LAT, REF_LNG, REF_LAT, REF_LNG);
+    expect(d).toBeCloseTo(0, 1);
+  });
+
+  it('should calculate ~100m correctly (problem statement test case)', () => {
+    // ~100m north of reference
+    const d = haversineMeters(REF_LAT, REF_LNG, REF_LAT - 0.0009, REF_LNG);
+    expect(d).toBeGreaterThan(90);
+    expect(d).toBeLessThan(110);
+  });
+
+  it('should calculate ~500m correctly (problem statement test case)', () => {
+    const d = haversineMeters(REF_LAT, REF_LNG, REF_LAT - 0.0045, REF_LNG);
+    expect(d).toBeGreaterThan(450);
+    expect(d).toBeLessThan(550);
+  });
+
+  it('should calculate ~1km correctly (problem statement test case)', () => {
+    const d = haversineMeters(REF_LAT, REF_LNG, REF_LAT - 0.009, REF_LNG);
+    expect(d).toBeGreaterThan(900);
+    expect(d).toBeLessThan(1100);
+  });
+
+  it('should be symmetric', () => {
+    const d1 = haversineMeters(REF_LAT, REF_LNG, -22.9068, -43.1729);
+    const d2 = haversineMeters(-22.9068, -43.1729, REF_LAT, REF_LNG);
+    expect(d1).toBeCloseTo(d2, 5);
   });
 });
 

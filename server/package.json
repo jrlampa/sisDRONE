@@ -14,15 +14,18 @@
   "type": "module",
   "dependencies": {
     "axios": "^1.13.5",
+    "bcryptjs": "^2.4.3",
     "cors": "^2.8.6",
     "dotenv": "^17.2.4",
     "express": "^5.2.1",
     "groq-sdk": "^0.37.0",
     "json2csv": "^6.0.0-alpha.2",
+    "jsonwebtoken": "^9.0.2",
     "libsql": "^0.5.22",
     "sqlite": "^5.1.1",
     "sqlite-vss": "^0.1.2",
-    "sqlite3": "^5.1.7"
+    "sqlite3": "^5.1.7",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "@types/axios": "^0.9.36",

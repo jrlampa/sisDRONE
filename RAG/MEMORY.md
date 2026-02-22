@@ -1,6 +1,6 @@
 # sisDRONE – RAG / Memória de Trabalho
 
-> Última atualização: 2026-02-22 (Phase 2) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
+> Última atualização: 2026-02-22 (Phase 3) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
 
 ---
 
@@ -115,6 +115,11 @@ sisDRONE/
 | 8 | `Map.tsx` tinha linha duplicada de Coords no popup | ✅ Corrigido | `Map.tsx` |
 | 9 | `PoleDetails.tsx` tinha useEffect duplicado chamando loadHistory 2x | ✅ Corrigido | `PoleDetails.tsx` |
 | 10 | Filtro de tenant feito no cliente em vez do servidor | ✅ Corrigido | `useNetwork.ts`, `routes/poles.ts` |
+| 11 | `useNetwork.fetchStats()` armazenava `DashboardData` em estado tipado como `Stats` | ✅ Corrigido | `useNetwork.ts` |
+| 12 | Usuários seedados sem `password_hash` — login falhava após migração | ✅ Corrigido | `db.ts` (backfill) |
+| 13 | PWA build falha por bundle > 2MiB (`maximumFileSizeToCacheInBytes`) | ✅ Corrigido | `vite.config.ts` |
+| 14 | DroneLiveView com telemetria estática e hardcoded | ✅ Corrigido | `DroneLiveView.tsx` (WS) |
+| 15 | E2E test seletor errado (texto não existe na UI) | ✅ Corrigido | `e2e/workflow.test.ts` |
 
 ---
 
@@ -141,28 +146,33 @@ sisDRONE/
 
 **Meta**: >= 80% de cobertura em código de lógica de negócio
 
-**Situação atual** (Phase 2): 49 server + 11 client = **60 testes no total** ✅
+**Situação atual** (Phase 3): 77 server + 11 client = **88 testes no total** ✅
 
 Testes existentes:
 - `predictionService.test.ts` – 2 casos
 - `healthService.test.ts` – 5 casos  
-- `costService.test.ts` – 4 casos (novo)
+- `costService.test.ts` – 4 casos
+- `authService.test.ts` – 5 casos (novo Phase 3)
 - `groqService.plan.test.ts` – 2 casos
 - `tests/groq.test.ts` – 2 casos
-- `tests/geo.test.ts` – 3 casos
-- `tests/api.test.ts` – 27 casos (11 novos: workOrders, maintenance, tenants, users)
+- `tests/geo.test.ts` – 8 casos (5 novos haversineMeters)
+- `tests/api.test.ts` – 27 casos
 - `tests/auth.test.ts` – 4 casos
+- `tests/authJwt.test.ts` – 6 casos (novo Phase 3)
+- `tests/nearby.test.ts` – 9 casos (novo Phase 3)
+- `tests/rateLimit.test.ts` – 3 casos
 - `client/src/utils/eng.test.ts` – 3 casos
 - `client/src/utils/geo.test.ts` – 2 casos
-- `client/src/utils/math.test.ts` – 6 casos (novo)
+- `client/src/utils/math.test.ts` – 6 casos
 
 ---
 
 ## 10. Próximas Evoluções (Backlog Técnico)
 
-- [ ] Autenticação JWT real (substituir header mock)
-- [ ] WebSocket para telemetria do drone em tempo real
+- [x] ~~Autenticação JWT real (substituir header mock)~~ — Implementado Phase 3
+- [x] ~~WebSocket para telemetria do drone em tempo real~~ — Implementado Phase 3
+- [x] ~~Busca por raio (nearby poles)~~ — Implementado Phase 3
 - [ ] Integração com ANEEL OpenData para dados de concessionárias
 - [ ] Relatório PDF automático por poste
 - [ ] BIM Half-way: importação IFC simplificado para estruturas de poste
-- [ ] Cache Redis para respostas de IA repetidas
+- [ ] Pipeline CI/CD com GitHub Actions + Docker Hub

@@ -12,9 +12,9 @@ test.describe('sisDRONE Workflow', () => {
     await expect(map).toBeVisible();
   });
 
-  test('should show pole instructions when no pole is selected', async ({ page }) => {
+  test('should show instructions when no pole is selected', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByText('Selecione um poste no mapa')).toBeVisible();
+    await expect(page.getByText('Selecione um ativo no mapa para iniciar inspeção.')).toBeVisible();
   });
 
   test('should handle active learning buttons visibility after analysis', async ({ page }) => {

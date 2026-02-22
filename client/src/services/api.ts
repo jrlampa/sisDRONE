@@ -5,11 +5,16 @@ import { addToQueue } from '../utils/offlineQueue';
 
 const API_BASE = 'http://localhost:3001';
 
-// Dynamic header injection for RBAC Mock
+// Inject JWT Bearer token (preferred) or mock role header (dev fallback)
 axios.interceptors.request.use(config => {
-  const role = localStorage.getItem('sisdrone_mock_role');
-  if (role) {
-    config.headers['x-user-role'] = role;
+  const token = localStorage.getItem('sisdrone_jwt');
+  if (token) {
+    config.headers['Authorization'] = `Bearer ${token}`;
+  } else {
+    const role = localStorage.getItem('sisdrone_mock_role');
+    if (role) {
+      config.headers['x-user-role'] = role;
+    }
   }
   return config;
 });
@@ -49,7 +54,11 @@ axios.interceptors.response.use(
 );
 
 export const api = {
+  login: (username: string, password: string) =>
+    axios.post<{ token: string, user: User }>(`${API_BASE}/api/auth/login`, { username, password }),
   getPoles: (tenantId?: number) => axios.get(`${API_BASE}/api/poles`, { params: tenantId ? { tenant_id: tenantId } : {} }),
+  getNearbyPoles: (lat: number, lng: number, radius: number) =>
+    axios.get(`${API_BASE}/api/poles/nearby`, { params: { lat, lng, radius } }),
   getStats: () => axios.get(`${API_BASE}/api/poles/stats`),
   getHistory: (id: number) => axios.get(`${API_BASE}/api/poles/${id}/history`),
   createPole: (data: { lat: number, lng: number, name: string, utm_x: string, utm_y: string, tenant_id: number }) =>

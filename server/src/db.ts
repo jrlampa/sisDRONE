@@ -1,8 +1,11 @@
+import dotenv from 'dotenv';
+dotenv.config();
 import sqlite3 from 'sqlite3';
 import { open, Database } from 'sqlite';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import * as seeds from './seeds';
+import { hashPassword } from './services/authService';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -134,10 +137,13 @@ async function initDb(database: Database) {
   // Seed mock users if empty
   const userRes = await database.get('SELECT COUNT(*) as count FROM users');
   if (userRes && userRes.count === 0) {
+    const defaultPasswordHash = await hashPassword('sisdrone123');
     for (const u of seeds.users) {
-      // Fix user seed structure if generic
       const role = (u as any).role || 'ENGINEER';
-      await database.run('INSERT INTO users (username, role, tenant_id) VALUES (?, ?, ?)', [u.username, role, u.tenant_id]);
+      await database.run(
+        'INSERT INTO users (username, role, tenant_id, password_hash) VALUES (?, ?, ?, ?)',
+        [u.username, role, u.tenant_id, defaultPasswordHash]
+      );
     }
   }
 
@@ -173,5 +179,21 @@ async function initDb(database: Database) {
     console.log('Migrated poles table with name column');
   } catch (e) {
     // Ignore error if column already exists
+  }
+
+  // Migration for password_hash column in users
+  try {
+    await database.exec(`ALTER TABLE users ADD COLUMN password_hash TEXT`);
+    console.log('Migrated users table with password_hash column');
+  } catch (e) {
+    // Ignore error if column already exists
+  }
+
+  // Backfill password_hash for existing users who don't have one
+  const usersWithoutHash = await database.all('SELECT id FROM users WHERE password_hash IS NULL');
+  if (usersWithoutHash.length > 0) {
+    const defaultHash = await hashPassword('sisdrone123');
+    await database.run('UPDATE users SET password_hash = ? WHERE password_hash IS NULL', [defaultHash]);
+    console.log(`Backfilled password_hash for ${usersWithoutHash.length} existing users`);
   }
 }

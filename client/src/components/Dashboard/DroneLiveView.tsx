@@ -1,31 +1,83 @@
-import React from 'react';
-import { Camera, Signal, Battery, Zap, LayoutDashboard } from 'lucide-react';
+import React, { useEffect, useState, useRef } from 'react';
+import { Camera, Signal, Battery, Zap, LayoutDashboard, MapPin } from 'lucide-react';
+
+interface DroneTelemetry {
+  battery: number;
+  signal: number;
+  altitude_m: number;
+  speed_ms: number;
+  lat: number;
+  lng: number;
+}
 
 interface DroneLiveViewProps {
   apiBase: string;
 }
 
+const WS_URL = 'ws://localhost:3001/ws/drone';
+
 const DroneLiveView: React.FC<DroneLiveViewProps> = ({ apiBase }) => {
+  const [telemetry, setTelemetry] = useState<DroneTelemetry>({
+    battery: 42,
+    signal: 98,
+    altitude_m: 12.4,
+    speed_ms: 2.1,
+    lat: -22.15018,
+    lng: -42.92185,
+  });
+  const [connected, setConnected] = useState(false);
+  const wsRef = useRef<WebSocket | null>(null);
+
+  useEffect(() => {
+    const connect = () => {
+      const ws = new WebSocket(WS_URL);
+      wsRef.current = ws;
+
+      ws.onopen = () => setConnected(true);
+      ws.onclose = () => {
+        setConnected(false);
+        // Reconnect after 2s
+        setTimeout(connect, 2000);
+      };
+      ws.onerror = () => ws.close();
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'telemetry') {
+            setTelemetry(data);
+          }
+        } catch {}
+      };
+    };
+
+    connect();
+    return () => {
+      wsRef.current?.close();
+    };
+  }, []);
+
+  const batteryColor = telemetry.battery > 50 ? 'text-green-400' : telemetry.battery > 20 ? 'text-yellow-400' : 'text-red-400';
+
   return (
     <div className="drone-live-container animate-fade-in">
       <div className="live-header flex justify-between items-center mb-4">
         <div className="flex items-center gap-3">
           <div className="live-indicator">
-            <div className="dot animate-pulse"></div>
-            <span>LIVE FEED</span>
+            <div className={`dot ${connected ? 'animate-pulse' : 'opacity-30'}`}></div>
+            <span>{connected ? 'LIVE FEED' : 'RECONECTANDO...'}</span>
           </div>
           <div className="drone-status-tag">
             <Signal size={14} className="text-green-400" />
-            <span>98% SIGNAL</span>
+            <span>{telemetry.signal}% SIGNAL</span>
           </div>
         </div>
         <div className="flex items-center gap-4 text-xs font-mono">
           <div className="flex items-center gap-1">
-            <Battery size={14} className="text-yellow-400" />
-            <span>42%</span>
+            <Battery size={14} className={batteryColor} />
+            <span className={batteryColor}>{telemetry.battery.toFixed(0)}%</span>
           </div>
-          <div className="text-muted">ALT: 12.4m</div>
-          <div className="text-muted">SPD: 2.1m/s</div>
+          <div className="text-muted">ALT: {telemetry.altitude_m}m</div>
+          <div className="text-muted">SPD: {telemetry.speed_ms}m/s</div>
         </div>
       </div>
 
@@ -56,21 +108,29 @@ const DroneLiveView: React.FC<DroneLiveViewProps> = ({ apiBase }) => {
               <span>Scanning structures...</span>
             </div>
           </div>
+
+          {/* Live GPS */}
+          <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-md p-2 rounded-lg border border-white/10 text-[10px] font-mono">
+            <div className="flex items-center gap-1 text-primary">
+              <MapPin size={10} />
+              <span>{telemetry.lat.toFixed(5)}, {telemetry.lng.toFixed(5)}</span>
+            </div>
+          </div>
         </div>
       </div>
 
       <div className="drone-controls-grid grid grid-cols-3 gap-4 mt-4">
         <div className="card glass-panel p-3 flex flex-col items-center justify-center hover:bg-white/5 cursor-pointer">
           <Camera size={20} className="mb-1" />
-          <span className="text-[10px] uppercase font-bold text-muted">Capture Snap</span>
+          <span className="text-[10px] uppercase font-bold text-muted">Capturar</span>
         </div>
         <div className="card glass-panel p-3 flex flex-col items-center justify-center hover:bg-white/5 cursor-pointer">
           <LayoutDashboard size={20} className="mb-1" />
-          <span className="text-[10px] uppercase font-bold text-muted">Telemetry</span>
+          <span className="text-[10px] uppercase font-bold text-muted">Telemetria</span>
         </div>
         <div className="card glass-panel p-3 flex flex-col items-center justify-center bg-primary/10 border-primary/30">
           <Zap size={20} className="mb-1 text-primary" />
-          <span className="text-[10px] uppercase font-bold text-primary">Auto-Pilot</span>
+          <span className="text-[10px] uppercase font-bold text-primary">Auto-Piloto</span>
         </div>
       </div>
     </div>

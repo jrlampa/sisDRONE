@@ -12,6 +12,7 @@ import usersRouter from './routes/users';
 import aiRoutes from './routes/aiRoutes';
 import maintenanceRouter from './routes/maintenance';
 import workOrderRouter from './routes/workOrders';
+import authRouter from './routes/authRoutes';
 import { checkPermission } from './middleware/auth';
 
 dotenv.config();
@@ -25,6 +26,9 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
+
+// Auth (no role required)
+app.use('/api/auth', authRouter);
 
 // Routes
 app.use('/api/poles', polesRouter);

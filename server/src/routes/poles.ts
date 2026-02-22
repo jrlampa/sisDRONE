@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { getDb } from '../db';
 import { rateLimit } from '../middleware/rateLimit';
+import { haversineMeters } from '../utils/geo';
 
 const router = Router();
 
@@ -49,7 +50,42 @@ router.post('/', async (req: Request, res: Response) => {
   }
 });
 
-// GET stats (Enhanced for Analytics Dashboard)
+// GET nearby poles within a radius (meters)
+router.get('/nearby', rateLimit(60, 60_000), async (req: Request, res: Response) => {
+  const lat = parseFloat(String(req.query.lat));
+  const lng = parseFloat(String(req.query.lng));
+  const radius = parseFloat(String(req.query.radius));
+
+  if (isNaN(lat) || isNaN(lng) || isNaN(radius)) {
+    return res.status(400).json({ error: 'lat, lng e radius são obrigatórios' });
+  }
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+    return res.status(400).json({ error: 'Coordenadas fora do intervalo válido' });
+  }
+  if (radius <= 0 || radius > 50000) {
+    return res.status(400).json({ error: 'Raio deve estar entre 1 e 50000 metros' });
+  }
+
+  try {
+    const db = await getDb();
+    // Bounding box pre-filter to reduce Haversine comparisons
+    // 1 degree latitude ≈ 111,000m; 1 degree longitude ≈ 111,000m * cos(lat)
+    const latDelta = radius / 111000;
+    const lngDelta = radius / (111000 * Math.cos((lat * Math.PI) / 180));
+    const poles = await db.all(
+      'SELECT * FROM poles WHERE lat BETWEEN ? AND ? AND lng BETWEEN ? AND ?',
+      [lat - latDelta, lat + latDelta, lng - lngDelta, lng + lngDelta]
+    );
+    const nearby = poles
+      .map((p: any) => ({ ...p, distance_m: Math.round(haversineMeters(lat, lng, p.lat, p.lng)) }))
+      .filter((p: any) => p.distance_m <= radius)
+      .sort((a: any, b: any) => a.distance_m - b.distance_m);
+
+    res.json({ lat, lng, radius_m: radius, count: nearby.length, poles: nearby });
+  } catch (err) {
+    res.status(500).json({ error: 'DB Error' });
+  }
+});
 router.get('/stats', async (req: Request, res: Response) => {
   try {
     const db = await getDb();
