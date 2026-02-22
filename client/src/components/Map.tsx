@@ -75,7 +75,6 @@ const Map: React.FC<MapProps> = ({
             <div className="popup-content">
               <strong>{pole.name || `Poste ${pole.id}`}</strong>
               <p>Coords: {pole.lat.toFixed(6)}, {pole.lng.toFixed(6)}</p>
-              <p>Coords: {pole.lat.toFixed(6)}, {pole.lng.toFixed(6)}</p>
               <p>AHI: <span className={`status-badge ${(pole.ahi_score || 100) < 50 ? 'critical' : ((pole.ahi_score || 100) < 80 ? 'warning' : 'saudavel')}`}>
                 {pole.ahi_score ?? 100}
               </span></p>

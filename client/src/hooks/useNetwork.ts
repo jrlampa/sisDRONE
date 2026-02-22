@@ -15,9 +15,8 @@ export function useNetwork() {
 
   const fetchPoles = useCallback(async () => {
     try {
-      const res = await api.getPoles();
-      // Filter by tenant client-side for now
-      setPoles(res.data.filter((p: Pole) => p.tenant_id === activeTenantId));
+      const res = await api.getPoles(activeTenantId);
+      setPoles(res.data);
     } catch (error) {
       console.error('Failed to fetch poles:', error);
     }

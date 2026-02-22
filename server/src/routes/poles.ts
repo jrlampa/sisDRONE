@@ -1,14 +1,21 @@
 import { Router, Request, Response } from 'express';
 import { getDb } from '../db';
-// import { Parser } from 'json2csv'; // Dynamic import used in route to avoid top-level fail if not installed yet (though it is).
+import { rateLimit } from '../middleware/rateLimit';
 
 const router = Router();
 
-// GET all poles
-router.get('/', async (req: Request, res: Response) => {
+// GET all poles (optionally filtered by tenant_id)
+router.get('/', rateLimit(100, 60_000), async (req: Request, res: Response) => {
   try {
     const db = await getDb();
-    const poles = await db.all('SELECT * FROM poles ORDER BY id DESC');
+    const tenantId = req.query.tenant_id ? parseInt(String(req.query.tenant_id), 10) : null;
+
+    let poles;
+    if (tenantId && !isNaN(tenantId) && tenantId > 0) {
+      poles = await db.all('SELECT * FROM poles WHERE tenant_id = ? ORDER BY id DESC', [tenantId]);
+    } else {
+      poles = await db.all('SELECT * FROM poles ORDER BY id DESC');
+    }
     res.json(poles);
   } catch (err) {
     res.status(500).json({ error: 'DB Error' });

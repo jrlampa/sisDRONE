@@ -74,13 +74,6 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
     }
   }, [pole.id, loadHistory, loadPrediction]);
 
-  React.useEffect(() => {
-    if (pole.id) {
-      loadHistory();
-      setMaintenancePlan(null); // Reset current view
-    }
-  }, [pole.id, loadHistory]);
-
   const handleGeneratePlan = async () => {
     if (!analysis) return;
     setLoadingPlan(true);

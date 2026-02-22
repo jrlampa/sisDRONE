@@ -49,8 +49,8 @@ axios.interceptors.response.use(
 );
 
 export const api = {
-  getPoles: () => axios.get(`${API_BASE}/api/poles`),
-  getStats: () => axios.get(`${API_BASE}/api/stats`),
+  getPoles: (tenantId?: number) => axios.get(`${API_BASE}/api/poles`, { params: tenantId ? { tenant_id: tenantId } : {} }),
+  getStats: () => axios.get(`${API_BASE}/api/poles/stats`),
   getHistory: (id: number) => axios.get(`${API_BASE}/api/poles/${id}/history`),
   createPole: (data: { lat: number, lng: number, name: string, utm_x: string, utm_y: string, tenant_id: number }) =>
     axios.post(`${API_BASE}/api/poles`, data),
