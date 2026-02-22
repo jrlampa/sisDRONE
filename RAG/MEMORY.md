@@ -1,6 +1,6 @@
 # sisDRONE – RAG / Memória de Trabalho
 
-> Última atualização: 2026-02-22 (Phase 4) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
+> Última atualização: 2026-02-22 (Phase 5) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
 
 ---
 
@@ -54,12 +54,15 @@ sisDRONE/
 |---------|-----------|-------|
 | **Infraestrutura** | Pole, Tenant | `/api/poles`, `/api/tenants` |
 | **Inspeção** | Inspection (Label), Image | `/api/analyze`, `/api/feedback`, `/:id/history` |
-| **Vídeo / Captura** | VideoSession, Frame | `/api/video/session/start`, `/api/video/frame`, `/api/video/upload`, `/api/video/session/:id/complete`, `/api/video/sessions/:poleId` |
-| **IA / Manutenção** | MaintenancePlan | `/api/ai/plan`, `/api/ai/chat`, `/api/ai/predict/:id` |
-| **GIS** | GeoJSON | `/api/gis/export/geojson`, `/api/gis/import/geojson` |
+| **Vídeo / Captura** | VideoSession, Frame | `/api/video/*` |
+| **IA / Manutenção** | MaintenancePlan | `/api/ai/*` |
+| **GIS** | GeoJSON | `/api/gis/*` |
 | **Operações** | WorkOrder | `/api/work-orders` |
 | **Usuários** | User | `/api/users` |
 | **Auth** | JWT | `/api/auth/login` |
+| **ANEEL** | Agents, Datasets | `/api/aneel/agents`, `/api/aneel/datasets` |
+| **BIM** | StructureData (IFC-lite) | `/api/bim/:poleId` (GET/PUT) |
+| **Relatório** | PdfReport | `/api/report/pole/:id` |
 
 ---
 
@@ -148,38 +151,49 @@ sisDRONE/
 
 **Meta**: >= 80% de cobertura em código de lógica de negócio
 
-**Situação atual** (Phase 4): 95 server + 11 client = **106 testes no total** ✅
+**Situação atual** (Phase 5): 120 server + 11 client = **131 testes no total** ✅
+
+**Coverage Threshold** configurado em `server/vitest.config.ts`:
+- Lines/Functions/Statements: ≥ 80%
+- Branches: ≥ 70%
 
 Testes existentes:
-- `predictionService.test.ts` – 2 casos
-- `healthService.test.ts` – 5 casos  
-- `costService.test.ts` – 4 casos
-- `authService.test.ts` – 5 casos
-- `groqService.plan.test.ts` – 2 casos
-- `tests/groq.test.ts` – 2 casos
-- `tests/geo.test.ts` – 8 casos
-- `tests/api.test.ts` – 27 casos
-- `tests/auth.test.ts` – 4 casos
-- `tests/authJwt.test.ts` – 6 casos
-- `tests/nearby.test.ts` – 9 casos
-- `tests/rateLimit.test.ts` – 3 casos
-- `tests/video.test.ts` – 18 casos (novo Phase 4)
-- `client/src/utils/eng.test.ts` – 3 casos
-- `client/src/utils/geo.test.ts` – 2 casos
-- `client/src/utils/math.test.ts` – 6 casos
+- `predictionService.test.ts` – 2
+- `healthService.test.ts` – 5
+- `costService.test.ts` – 4
+- `authService.test.ts` – 5
+- `groqService.plan.test.ts` – 2
+- `tests/groq.test.ts` – 2
+- `tests/geo.test.ts` – 8
+- `tests/api.test.ts` – 27
+- `tests/auth.test.ts` – 4
+- `tests/authJwt.test.ts` – 6
+- `tests/nearby.test.ts` – 9
+- `tests/rateLimit.test.ts` – 3
+- `tests/video.test.ts` – 18
+- `tests/bim.test.ts` – 10 (novo Phase 5)
+- `tests/aneel.test.ts` – 8 (novo Phase 5)
+- `tests/report.test.ts` – 5 (novo Phase 5)
+- `client/utils/eng.test.ts` – 3
+- `client/utils/geo.test.ts` – 2
+- `client/utils/math.test.ts` – 6
 
 ---
 
 ## 10. Próximas Evoluções (Backlog Técnico)
 
-- [x] ~~Autenticação JWT real (substituir header mock)~~ — Implementado Phase 3
-- [x] ~~WebSocket para telemetria do drone em tempo real~~ — Implementado Phase 3
-- [x] ~~Busca por raio (nearby poles)~~ — Implementado Phase 3
-- [x] ~~Análise de vídeo em tempo real + fallback de gravação offline~~ — Implementado Phase 4
-- [ ] Integração com ANEEL OpenData para dados de concessionárias
-- [ ] Relatório PDF automático por poste
-- [ ] BIM Half-way: importação IFC simplificado para estruturas de poste
-- [ ] Pipeline CI/CD com GitHub Actions + Docker Hub
+- [x] ~~Autenticação JWT real~~ — Phase 3
+- [x] ~~WebSocket telemetria drone~~ — Phase 3
+- [x] ~~Busca por raio (nearby)~~ — Phase 3
+- [x] ~~Análise de vídeo em tempo real + fallback offline~~ — Phase 4
+- [x] ~~Integração ANEEL OpenData~~ — Phase 5
+- [x] ~~Relatório PDF automático por poste~~ — Phase 5
+- [x] ~~BIM Half-way: IFC-lite para estruturas de poste~~ — Phase 5
+- [x] ~~Modularização App.tsx~~ — Phase 5
+- [ ] App.tsx `activeTenantId` state colocado em `useNetwork` (migrar para context)
+- [ ] BIM Half-way UI: formulário de edição de estrutura no PoleDetails
+- [ ] ANEEL UI: componente de busca de agentes por UF no header
+- [ ] Pipeline CI/CD com Docker Hub
 
 ---
 

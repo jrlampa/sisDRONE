@@ -6,19 +6,16 @@ import ChatAssistant from './components/ChatAssistant';
 import AnalyticsDashboard from './components/Dashboard/AnalyticsDashboard';
 import KanbanBoard from './components/WorkOrders/KanbanBoard';
 import { Zap, Menu } from 'lucide-react';
-import { degreesToUtm } from './utils/geo';
-import { calculateDistance } from './utils/math';
 import { api } from './services/api';
 import { useNetwork } from './hooks/useNetwork';
+import { useAppHandlers } from './hooks/useAppHandlers';
 import { WifiOff, RefreshCw } from 'lucide-react';
 import type { Pole, Span, Inspection, AnalysisResult, Tenant, User } from './types';
-
 import DroneLiveView from './components/Dashboard/DroneLiveView';
 
 const API_BASE = 'http://localhost:3001';
 
 const App: React.FC = () => {
-  // --- Custom Hooks ---
   const {
     poles, setPoles, stats, fetchStats, fetchPoles,
     activeTenantId, setActiveTenantId,
@@ -26,7 +23,7 @@ const App: React.FC = () => {
     isOnline, isSyncing
   } = useNetwork();
 
-  // --- UI State ---
+  // ── UI State ──
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [activeTenant, setActiveTenant] = useState<Tenant | null>(null);
@@ -44,28 +41,42 @@ const App: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCondition, setFilterCondition] = useState<'All' | 'Critical' | 'Warning' | 'Good'>('All');
   const [viewMode, setViewMode] = useState<'MAP' | 'ANALYTICS' | 'WORK_ORDERS' | 'DRONE_LIVE'>('MAP');
-
-  // Engineering State
-  const [conductorWeight, setConductorWeight] = useState(0.545); // Default Penguin
+  const [conductorWeight, setConductorWeight] = useState(0.545);
   const [tension, setTension] = useState(250);
 
-  // Refs
   const gisInputRef = useRef<HTMLInputElement>(null!);
 
-  // --- Sync Tenants, Users & Theme ---
+  const showNotification = useCallback((msg: string) => {
+    setNotification(msg);
+    setTimeout(() => setNotification(null), 3000);
+  }, []);
+
+  // ── Handlers (extracted) ──
+  const {
+    handleMapClick, handleMarkerClick, handleFeedback,
+    handleImageUpload, handleExportGeoJSON, handleImportGeoJSON,
+    handleUserSwitch, handleAnalyzeClick, handleMobileAddPole,
+  } = useAppHandlers({
+    poles, activeTenantId, isMeasuring, measurementStart,
+    selectedPole, analysis, users, tenants,
+    setPoles, setSelectedPole, setAnalysis, setHistory, setActiveTab,
+    setIsCapturing, setIsMeasuring, setMeasurementStart, setActiveSpan,
+    setActiveTenantId, setActiveTenant, setCurrentUser,
+    showNotification, fetchStats, fetchPoles,
+  });
+
+  // ── Bootstrap ──
   useEffect(() => {
     Promise.all([api.getTenants(), api.getUsers()]).then(([tRes, uRes]) => {
       setTenants(tRes.data);
       setUsers(uRes.data);
-
-      const mockUser = uRes.data.find(u => u.tenant_id === activeTenantId) || uRes.data[0];
+      const mockUser = uRes.data.find((u: User) => u.tenant_id === activeTenantId) || uRes.data[0];
       if (mockUser) {
         setCurrentUser(mockUser);
         localStorage.setItem('sisdrone_mock_role', mockUser.role);
       }
-
-      const initialTenant = tRes.data.find(t => t.id === activeTenantId);
-      if (initialTenant) setActiveTenant(initialTenant);
+      const initial = tRes.data.find((t: Tenant) => t.id === activeTenantId);
+      if (initial) setActiveTenant(initial);
     });
   }, [activeTenantId, setCurrentUser]);
 
@@ -78,182 +89,39 @@ const App: React.FC = () => {
     }
   }, [activeTenant, fetchPoles]);
 
-  const handleUserSwitch = (userId: number) => {
-    const user = users.find(u => u.id === userId);
-    if (user) {
-      setCurrentUser(user);
-      setActiveTenantId(user.tenant_id);
-      localStorage.setItem('sisdrone_mock_role', user.role);
-      // Update tenant branding if it changed
-      const tenant = tenants.find(t => t.id === user.tenant_id);
-      if (tenant) setActiveTenant(tenant);
-      showNotification(`Logado como ${user.username} (${user.role})`);
-    }
-  };
-
-  // --- Sync History ---
   useEffect(() => {
     if (selectedPole) {
-      api.getHistory(selectedPole.id).then(res => setHistory(res.data)).catch(() => { });
+      api.getHistory(selectedPole.id).then(res => setHistory(res.data)).catch(() => {});
     }
   }, [selectedPole]);
 
-  // --- Logic ---
-  const showNotification = useCallback((msg: string) => {
-    setNotification(msg);
-    setTimeout(() => setNotification(null), 3000);
-  }, []);
-
-  const filteredPoles = useMemo(() => {
-    return poles.filter(pole => {
-      const matchesSearch = pole.name.toLowerCase().includes(searchQuery.toLowerCase()) || pole.id.toString().includes(searchQuery);
-      if (filterCondition === 'All') return matchesSearch;
-      const score = pole.ahi_score ?? 100;
-      const isCritical = score < 50;
-      const isWarning = score >= 50 && score < 80;
-      if (filterCondition === 'Critical') return matchesSearch && isCritical;
-      if (filterCondition === 'Warning') return matchesSearch && isWarning;
-      return matchesSearch && !isCritical && !isWarning;
-    });
-  }, [poles, searchQuery, filterCondition]);
-
-  const handleMapClick = async (lat: number, lng: number) => {
-    if (isMeasuring || searchQuery || filterCondition !== 'All') return;
-    const utm = degreesToUtm(lat, lng);
-    try {
-      showNotification(`Criando Poste...`);
-      const res = await api.createPole({
-        lat, lng, name: `Poste ${poles.length + 1}`,
-        utm_x: utm.x, utm_y: utm.y,
-        tenant_id: activeTenantId
-      });
-      setPoles(prev => [res.data, ...prev]);
-      setSelectedPole(res.data);
-      fetchStats();
-      showNotification(`Registrado!`);
-    } catch (err) {
-      console.error('Error creating pole', err);
-      showNotification('Erro na conexão.');
-    }
-  };
-
-  const handleMarkerClick = (pole: Pole) => {
-    if (isMeasuring) {
-      if (!measurementStart) {
-        setMeasurementStart(pole);
-        showNotification("Selecione o segundo poste");
-      } else {
-        const dist = calculateDistance(measurementStart.lat, measurementStart.lng, pole.lat, pole.lng);
-        setActiveSpan({ p1: measurementStart, p2: pole, distance: dist });
-        setActiveTab('eng');
-        setMeasurementStart(null);
-        setIsMeasuring(false);
-        showNotification("Vão selecionado!");
-      }
-      return;
-    }
-    setSelectedPole(pole);
-    setAnalysis(null);
-    setActiveTab('details');
-  };
-
-
-  const handleExportGeoJSON = async () => {
-    try {
-      const res = await api.exportGis();
-      const blob = new Blob([JSON.stringify(res.data)], { type: 'application/json' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = `sisdrone_network.geojson`;
-      link.click();
-    } catch (err) {
-      console.error('Export error', err);
-      showNotification("Erro na exportação.");
-    }
-  };
-
-  const handleImportGeoJSON = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async (e: ProgressEvent<FileReader>) => {
-      try {
-        const geojson = JSON.parse(e.target?.result as string);
-        await api.importGis(geojson);
-        fetchPoles();
-        fetchStats();
-        showNotification("GIS Importado!");
-      } catch {
-        showNotification("Erro no GIS.");
-      }
-    };
-    reader.readAsText(file);
-  };
-
-
-  const handleFeedback = async (isCorrect: boolean) => {
-    if (!analysis || !selectedPole) return;
-    const correction = isCorrect ? "" : prompt("Qual a correção técnica?") || "";
-    if (!isCorrect && !correction) return;
-    try {
-      await api.sendFeedback({ labelId: analysis.labelId, poleId: selectedPole.id, isCorrect, correction });
-      showNotification(isCorrect ? "Calibrado!" : "Corrigido!");
-      setAnalysis(null);
-      fetchStats();
-      api.getHistory(selectedPole.id).then(res => setHistory(res.data)).catch(() => { });
-    } catch {
-      showNotification("Erro no feedback.");
-    }
-  };
-
-  const handleImageUpload = async (file: File) => {
-    if (!selectedPole) return;
-    setIsCapturing(true);
-    showNotification("Analisando...");
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const base64 = (reader.result as string).split(',')[1];
-      try {
-        const res = await api.analyzeImage(selectedPole.id, base64);
-        setAnalysis(res.data);
-        fetchStats();
-        api.getHistory(selectedPole.id).then(res => setHistory(res.data)).catch(() => { });
-        showNotification("Concluído!");
-      } catch {
-        showNotification("Erro na IA.");
-      } finally {
-        setIsCapturing(false);
-      }
-    };
-    reader.readAsDataURL(file);
-  };
+  // ── Filtered poles (memoized) ──
+  const filteredPoles = useMemo(() => poles.filter(pole => {
+    const matchesSearch = pole.name.toLowerCase().includes(searchQuery.toLowerCase())
+      || pole.id.toString().includes(searchQuery);
+    if (filterCondition === 'All') return matchesSearch;
+    const score = pole.ahi_score ?? 100;
+    if (filterCondition === 'Critical') return matchesSearch && score < 50;
+    if (filterCondition === 'Warning') return matchesSearch && score >= 50 && score < 80;
+    return matchesSearch && score >= 80;
+  }), [poles, searchQuery, filterCondition]);
 
   return (
     <div className="app-container">
       {(!isOnline || isSyncing) && (
         <div className={`connection-status ${isOnline ? 'syncing' : 'offline'}`}>
           {isOnline ? (
-            <>
-              <RefreshCw size={14} className="spin" />
-              <span>Sincronizando dados...</span>
-            </>
+            <><RefreshCw size={14} className="spin" /><span>Sincronizando dados...</span></>
           ) : (
-            <>
-              <WifiOff size={14} />
-              <span>Modo Offline - Alterações serão salvas localmente</span>
-            </>
+            <><WifiOff size={14} /><span>Modo Offline - Alterações serão salvas localmente</span></>
           )}
         </div>
       )}
 
       <header className="app-header glass-panel">
         <div className="flex items-center gap-4">
-          <button
-            className="mobile-menu-btn btn-icon"
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            aria-label="Abrir Menu"
-            title="Abrir Menu"
-          >
+          <button className="mobile-menu-btn btn-icon" onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            aria-label="Abrir Menu" title="Abrir Menu">
             <Menu className="text-primary" />
           </button>
           <Zap className="text-accent" />
@@ -261,31 +129,17 @@ const App: React.FC = () => {
         </div>
 
         <div className="tenant-switcher flex items-center gap-4">
-          <select
-            value={currentUser?.id || ''}
-            onChange={(e) => handleUserSwitch(Number(e.target.value))}
-            className="glass-input tenant-select"
-            title="Trocar Usuário (Mock Auth)"
-          >
-            {users.map(u => (
-              <option key={u.id} value={u.id}>{u.username} ({u.role})</option>
-            ))}
+          <select value={currentUser?.id || ''} onChange={(e) => handleUserSwitch(Number(e.target.value))}
+            className="glass-input tenant-select" title="Trocar Usuário">
+            {users.map(u => <option key={u.id} value={u.id}>{u.username} ({u.role})</option>)}
           </select>
-
-          <select
-            value={activeTenantId}
-            onChange={(e) => {
-              const tid = Number(e.target.value);
-              setActiveTenantId(tid);
-              const tenant = tenants.find(t => t.id === tid);
-              if (tenant) setActiveTenant(tenant);
-            }}
-            className="glass-input tenant-select"
-            title="Trocar Concessionária"
-          >
-            {tenants.map(t => (
-              <option key={t.id} value={t.id}>{t.name}</option>
-            ))}
+          <select value={activeTenantId} onChange={(e) => {
+            const tid = Number(e.target.value);
+            setActiveTenantId(tid);
+            const tenant = tenants.find(t => t.id === tid);
+            if (tenant) setActiveTenant(tenant);
+          }} className="glass-input tenant-select" title="Trocar Concessionária">
+            {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
         </div>
       </header>
@@ -307,17 +161,7 @@ const App: React.FC = () => {
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           isCapturing={isCapturing}
-          onAnalyze={() => {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = 'image/*';
-            input.capture = 'environment';
-            input.onchange = (e: Event) => {
-              const target = e.target as HTMLInputElement;
-              if (target.files) handleImageUpload(target.files[0]);
-            };
-            input.click();
-          }}
+          onAnalyze={handleAnalyzeClick}
           analysis={analysis}
           onFeedback={handleFeedback}
           history={history}
@@ -383,14 +227,7 @@ const App: React.FC = () => {
       </main>
 
       <MobileFab
-        onAddPole={() => {
-          // Get current center or user location - for now we trigger map click at center
-          // In a real app we'd get navigator.geolocation
-          navigator.geolocation.getCurrentPosition(
-            (pos) => handleMapClick(pos.coords.latitude, pos.coords.longitude),
-            () => showNotification("Erro ao obter GPS")
-          );
-        }}
+        onAddPole={handleMobileAddPole}
         onCameraCapture={handleImageUpload}
         isCapturing={isCapturing}
       />

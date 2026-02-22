@@ -13,6 +13,7 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "@types/pdfkit": "^0.17.5",
     "axios": "^1.13.5",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.6",
@@ -22,6 +23,7 @@
     "json2csv": "^6.0.0-alpha.2",
     "jsonwebtoken": "^9.0.2",
     "libsql": "^0.5.22",
+    "pdfkit": "^0.17.2",
     "sqlite": "^5.1.1",
     "sqlite-vss": "^0.1.2",
     "sqlite3": "^5.1.7",

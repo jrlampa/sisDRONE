@@ -103,4 +103,18 @@ export const api = {
     axios.post(`${API_BASE}/api/video/session/${sessionId}/complete`),
   getVideoSessions: (poleId: number) =>
     axios.get(`${API_BASE}/api/video/sessions/${poleId}`),
+
+  // ANEEL OpenData
+  getAneelAgents: (uf?: string, limit?: number) =>
+    axios.get(`${API_BASE}/api/aneel/agents`, { params: { uf, limit } }),
+
+  // BIM Half-way (IFC-lite)
+  getBimStructure: (poleId: number) =>
+    axios.get(`${API_BASE}/api/bim/${poleId}`),
+  updateBimStructure: (poleId: number, structureData: Record<string, unknown>) =>
+    axios.put(`${API_BASE}/api/bim/${poleId}`, { structure_data: structureData }),
+
+  // PDF Report
+  getPoleReportUrl: (poleId: number) =>
+    `${API_BASE}/api/report/pole/${poleId}`,
 };

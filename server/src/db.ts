@@ -135,6 +135,8 @@ async function initDb(database: Database) {
   try { await database.exec(`ALTER TABLE poles ADD COLUMN name TEXT`); } catch {}
   // password_hash column (for DBs created before this column was added)
   try { await database.exec(`ALTER TABLE users ADD COLUMN password_hash TEXT`); } catch {}
+  // structure_data column for BIM Half-way (Phase 5)
+  try { await database.exec(`ALTER TABLE poles ADD COLUMN structure_data TEXT`); } catch {}
   // video_sessions table (Phase 4)
   await database.exec(`
     CREATE TABLE IF NOT EXISTS video_sessions (

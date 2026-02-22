@@ -14,6 +14,9 @@ import maintenanceRouter from './routes/maintenance';
 import workOrderRouter from './routes/workOrders';
 import authRouter from './routes/authRoutes';
 import videoRouter from './routes/videoRoutes';
+import aneelRouter from './routes/aneelRoutes';
+import bimRouter from './routes/bimRoutes';
+import reportRouter from './routes/reportRoutes';
 import { checkPermission } from './middleware/auth';
 
 dotenv.config();
@@ -41,6 +44,9 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/maintenance', maintenanceRouter);
 app.use('/api/work-orders', workOrderRouter);
 app.use('/api/video', videoRouter);
+app.use('/api/aneel', aneelRouter);
+app.use('/api/bim', bimRouter);
+app.use('/api/report', reportRouter);
 
 // Global Guard Example: Only ADMIN can export GIS
 app.get('/api/gis/export/geojson', checkPermission(['ADMIN']));
