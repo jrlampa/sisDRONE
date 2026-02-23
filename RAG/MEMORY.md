@@ -1,6 +1,6 @@
 # sisDRONE – RAG / Memória de Trabalho
 
-> Última atualização: 2026-02-23 (Phase 15) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
+> Última atualização: 2026-02-23 (Phase 16) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
 
 ---
 
@@ -64,7 +64,7 @@ sisDRONE/
 | **IA / Manutenção** | MaintenancePlan | `/api/ai/*` |
 | **GIS** | GeoJSON | `/api/gis/*` |
 | **Operações** | WorkOrder | `/api/work-orders` |
-| **Usuários** | User | `/api/users`, `/api/users/:id` |
+| **Usuários** | User | `/api/users`, `/api/users/:id` (GET/PUT/DELETE) |
 | **Auth** | JWT | `/api/auth/login`, `/api/auth/register` |
 | **ANEEL** | Agents, Datasets | `/api/aneel/agents`, `/api/aneel/datasets` |
 | **BIM** | StructureData (IFC-lite) | `/api/bim/:poleId` (GET/PUT) |
@@ -178,7 +178,7 @@ sisDRONE/
 
 **Meta**: >= 80% de cobertura em código de lógica de negócio
 
-**Situação atual** (Phase 15): 248 server + 11 client = **259 testes no total** ✅
+**Situação atual** (Phase 16): 259 server + 11 client = **270 testes no total** ✅
 
 **Coverage Threshold** configurado em `server/vitest.config.ts`:
 - Lines/Functions/Statements: ≥ 80%
@@ -228,7 +228,7 @@ Testes existentes (Phase 9):
 - `tests/predict.test.ts` – 5 (novo Phase 13: GET /api/ai/predict/:id com validação)
 - `tests/polesSummary.test.ts` – 5 (novo Phase 14: GET /api/poles/:id/summary)
 - `tests/authRegister.test.ts` – 8 (novo Phase 15: POST /api/auth/register)
-- `tests/users.test.ts` – 8 (4 originais + 4 novos Phase 15: GET /api/users/:id)
+- `tests/users.test.ts` – 19 (4 GET / + 4 GET /:id + 6 PUT /:id + 5 DELETE /:id — Phase 16)
 - `client/utils/eng.test.ts` – 3
 - `client/utils/geo.test.ts` – 2
 - `client/utils/math.test.ts` – 6
@@ -301,6 +301,15 @@ Testes existentes (Phase 9):
 - [x] ~~PoleDetails.tsx: todas as alert() → useToast (showToast + ToastBanner)~~ — Phase 15
 - [x] ~~Sidebar.tsx: alert() no export CSV → useToast~~ — Phase 15
 - [x] ~~useToast hook + ToastBanner component criados~~ — Phase 15
+- [x] ~~PUT /api/users/:id: atualizar username/role (validação + rateLimit)~~ — Phase 16
+- [x] ~~DELETE /api/users/:id: excluir usuário (self-delete prevention + rateLimit)~~ — Phase 16
+- [x] ~~users.test.ts: 11 novos testes (GET /:id mantidos + 6 PUT + 5 DELETE)~~ — Phase 16
+- [x] ~~PoleAnalysisResult.tsx: extraído de PoleDetails (analysis card + maintenance) — 472→387 linhas~~ — Phase 16
+- [x] ~~useConfirm hook + ConfirmDialog component (substitui window.confirm)~~ — Phase 16
+- [x] ~~PoleDetails.tsx: handleDeletePole usa useConfirm em vez de window.confirm~~ — Phase 16
+- [x] ~~KanbanBoard.tsx: handleDelete usa useConfirm em vez de window.confirm~~ — Phase 16
+- [x] ~~LoginPage.tsx: tab "Registrar" com formulário + validação + api.register()~~ — Phase 16
+- [x] ~~api.updateUser() + api.deleteUser() adicionados em api.ts~~ — Phase 16
 
 ---
 

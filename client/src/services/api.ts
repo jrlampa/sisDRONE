@@ -78,6 +78,10 @@ export const api = {
   getTenants: () => axios.get<Tenant[]>(`${API_BASE}/api/tenants`),
   getUsers: () => axios.get<User[]>(`${API_BASE}/api/users`),
   getUserById: (id: number) => axios.get<User>(`${API_BASE}/api/users/${id}`),
+  updateUser: (id: number, data: { username?: string; role?: string }) =>
+    axios.put<User>(`${API_BASE}/api/users/${id}`, data),
+  deleteUser: (id: number) =>
+    axios.delete<{ message: string; id: number }>(`${API_BASE}/api/users/${id}`),
   analyzeImage: (poleId: number, base64Image: string) =>
     axios.post(`${API_BASE}/api/analyze`, { poleId, image: base64Image }),
   sendFeedback: (data: { labelId: number, poleId: number, isCorrect: boolean, correction: string }) =>

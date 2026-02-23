@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { MapPin, Upload, Activity, CheckCircle, AlertTriangle, FileText, Loader, Clock, Archive, Download, Edit2, Trash2, Save, X } from 'lucide-react';
+import { MapPin, Upload, FileText, Loader, Download, Edit2, Trash2, Save, X } from 'lucide-react';
 import { api } from '../../services/api';
 import type { Pole, AnalysisResult, User, PoleSummary } from '../../types';
 import type { Prediction } from '../../types/prediction';
 import WorkOrderModal from '../WorkOrders/WorkOrderModal';
 import ToastBanner from '../ToastBanner';
+import ConfirmDialog from '../ConfirmDialog';
+import PoleAnalysisResult from './PoleAnalysisResult';
 import { useToast } from '../../hooks/useToast';
+import { useConfirm } from '../../hooks/useConfirm';
 
 interface MaintenancePlan {
   id: number;
@@ -41,6 +44,7 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
   };
 
   const { toast, showToast, clearToast } = useToast();
+  const { confirmState, confirm, handleAnswer } = useConfirm();
 
   const [maintenancePlan, setMaintenancePlan] = useState<MaintenancePlan | null>(null);
   const [history, setHistory] = useState<MaintenancePlan[]>([]);
@@ -123,7 +127,12 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
   };
 
   const handleDeletePole = async () => {
-    if (!window.confirm(`Confirmar exclusão do poste "${pole.name}"? Esta ação não pode ser desfeita.`)) return;
+    const ok = await confirm({
+      title: 'Excluir Poste',
+      message: `Confirmar exclusão do poste "${pole.name}"? Esta ação não pode ser desfeita.`,
+      confirmLabel: 'Excluir',
+    });
+    if (!ok) return;
     try {
       await api.deletePole(pole.id);
       onPoleDeleted?.(pole.id);
@@ -168,6 +177,7 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
 
   return (
     <div className="pole-details animate-fade-in">
+      <ConfirmDialog state={confirmState} onAnswer={handleAnswer} />
       <ToastBanner toast={toast} onDismiss={clearToast} />
       <div className="card">
         <div className="card-header">
@@ -364,107 +374,22 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
         onSuccess={() => showToast('Ordem de Serviço criada com sucesso!', 'success')}
       />
 
-      {
-        analysis && (
-          <div className="analysis-result card gradient-border animate-slide-up">
-            <div className="analysis-header">
-              <h3><Activity size={16} /> Relatório Vision</h3>
-              <span className={`badge ${analysis.confidence > 0.8 ? 'badge-success' : 'badge-warning'}`}>
-                {Math.round(analysis.confidence * 100)}% Conf.
-              </span>
-            </div>
-            {analysis.imageUrl && (
-              <div className="analysis-img">
-                <img src={`${apiBase}${analysis.imageUrl}`} alt="Audit" />
-              </div>
-            )}
-            <p><strong>Tipo:</strong> {analysis.pole_type}</p>
-            <p>
-              <strong>Condição:</strong>
-              <span className={analysis.condition.toLowerCase().includes('boa') ? 'text-success' : 'text-danger'}>
-                {analysis.condition}
-              </span>
-            </p>
-            <div className="analysis-summary">{analysis.analysis_summary}</div>
-            <div className="feedback-row">
-              <button
-                className="btn btn-outline btn-success"
-                onClick={() => onFeedback(true)}
-              >
-                <CheckCircle size={16} /> OK
-              </button>
-              <button
-                className="btn btn-outline btn-danger"
-                onClick={() => onFeedback(false)}
-              >
-                <AlertTriangle size={16} /> Corrigir
-              </button>
-            </div>
 
-            <div className="maintenance-section">
-              <button
-                className="btn btn-secondary btn-full mt-2"
-                onClick={handleGeneratePlan}
-                disabled={loadingPlan}
-              >
-                {loadingPlan ? <Loader className="spin" size={16} /> : <FileText size={16} />}
-                {loadingPlan ? 'Gerando Plano...' : 'Gerar Plano de Manutenção'}
-              </button>
-
-              {maintenancePlan && (
-                <div className="maintenance-plan mt-2 card bg-darker">
-                  <div className="flex-between">
-                    <h4><FileText size={14} /> Plano de Manutenção #{maintenancePlan.id}</h4>
-                    <span className={`badge ${maintenancePlan.status === 'COMPLETED' ? 'badge-success' : 'badge-warning'}`}>
-                      {maintenancePlan.status}
-                    </span>
-                  </div>
-                  <div className="plan-meta text-muted text-xs mb-2">
-                    <Clock size={10} /> {new Date(maintenancePlan.created_at).toLocaleString()}
-                  </div>
-
-                  <div className="plan-content">
-                    {maintenancePlan.plan_text.split('\n').map((line, i) => (
-                      <p key={i}>{line}</p>
-                    ))}
-                  </div>
-
-                  {maintenancePlan.status !== 'COMPLETED' && (
-                    <button
-                      className="btn btn-sm btn-success w-full mt-2"
-                      onClick={() => markCompleted(maintenancePlan)}
-                    >
-                      <CheckCircle size={14} /> Marcar como Realizado
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {history.length > 0 && !maintenancePlan && (
-                <button className="btn btn-outline btn-sm w-full mt-2" onClick={() => setShowHistory(!showHistory)}>
-                  <Archive size={14} /> Ver Histórico ({history.length})
-                </button>
-              )}
-
-              {showHistory && !maintenancePlan && (
-                <div className="history-list mt-2">
-                  {history.map(h => (
-                    <div key={h.id} className="history-item card p-2 mb-1" onClick={() => setMaintenancePlan(h)}>
-                      <div className="flex-between">
-                        <span>#{h.id} - {new Date(h.created_at).toLocaleDateString()}</span>
-                        <div className="flex gap-2">
-                          {h.estimated_cost && <span className="badge badge-info">R$ {h.estimated_cost.toFixed(2)}</span>}
-                          <span className={`badge ${h.status === 'COMPLETED' ? 'badge-success' : 'badge-warning'}`}>{h.status}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )
-      }
+      {analysis && (
+        <PoleAnalysisResult
+          analysis={analysis}
+          apiBase={apiBase}
+          maintenancePlan={maintenancePlan}
+          history={history}
+          loadingPlan={loadingPlan}
+          showHistory={showHistory}
+          onFeedback={onFeedback}
+          onGeneratePlan={handleGeneratePlan}
+          onMarkCompleted={markCompleted}
+          onSetMaintenancePlan={setMaintenancePlan}
+          onToggleHistory={() => setShowHistory(prev => !prev)}
+        />
+      )}
     </div>
   );
 };

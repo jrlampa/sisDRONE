@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../../services/api';
 import type { WorkOrder, User } from '../../types';
 import { Clock, AlertTriangle, CheckCircle, User as UserIcon, Ban, Trash2 } from 'lucide-react';
+import ConfirmDialog from '../ConfirmDialog';
+import { useConfirm } from '../../hooks/useConfirm';
 
 interface KanbanBoardProps {
   currentUser: User | null;
@@ -61,6 +63,7 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({ task, assignee, onDelete
 const KanbanBoard: React.FC<KanbanBoardProps> = ({ users }) => {
   const [tasks, setTasks] = useState<WorkOrder[]>([]);
   const [loading, setLoading] = useState(true);
+  const { confirmState, confirm, handleAnswer } = useConfirm();
 
   const fetchTasks = useCallback(async () => {
     try {
@@ -88,7 +91,12 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ users }) => {
   }, [fetchTasks]);
 
   const handleDelete = useCallback(async (taskId: number) => {
-    if (!window.confirm('Deseja remover esta ordem de serviço?')) return;
+    const ok = await confirm({
+      title: 'Remover Ordem de Serviço',
+      message: 'Deseja remover permanentemente esta ordem de serviço?',
+      confirmLabel: 'Remover',
+    });
+    if (!ok) return;
     setTasks(prev => prev.filter(t => t.id !== taskId));
     try {
       await api.deleteWorkOrder(taskId);
@@ -129,20 +137,23 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ users }) => {
   if (loading) return <div className="p-10 text-center">Carregando tarefas...</div>;
 
   return (
-    <div className="flex gap-4 p-4 h-full overflow-x-auto">
-      <div onDragOver={(e) => e.preventDefault()} onDrop={(e) => handleDrop(e, 'OPEN')} className="flex-1">
-        <Column status="OPEN" title="A Fazer" icon={Clock} />
+    <>
+      <ConfirmDialog state={confirmState} onAnswer={handleAnswer} />
+      <div className="flex gap-4 p-4 h-full overflow-x-auto">
+        <div onDragOver={(e) => e.preventDefault()} onDrop={(e) => handleDrop(e, 'OPEN')} className="flex-1">
+          <Column status="OPEN" title="A Fazer" icon={Clock} />
+        </div>
+        <div onDragOver={(e) => e.preventDefault()} onDrop={(e) => handleDrop(e, 'IN_PROGRESS')} className="flex-1">
+          <Column status="IN_PROGRESS" title="Em Andamento" icon={AlertTriangle} />
+        </div>
+        <div onDragOver={(e) => e.preventDefault()} onDrop={(e) => handleDrop(e, 'BLOCKED')} className="flex-1">
+          <Column status="BLOCKED" title="Bloqueado" icon={Ban} />
+        </div>
+        <div onDragOver={(e) => e.preventDefault()} onDrop={(e) => handleDrop(e, 'COMPLETED')} className="flex-1">
+          <Column status="COMPLETED" title="Concluído" icon={CheckCircle} />
+        </div>
       </div>
-      <div onDragOver={(e) => e.preventDefault()} onDrop={(e) => handleDrop(e, 'IN_PROGRESS')} className="flex-1">
-        <Column status="IN_PROGRESS" title="Em Andamento" icon={AlertTriangle} />
-      </div>
-      <div onDragOver={(e) => e.preventDefault()} onDrop={(e) => handleDrop(e, 'BLOCKED')} className="flex-1">
-        <Column status="BLOCKED" title="Bloqueado" icon={Ban} />
-      </div>
-      <div onDragOver={(e) => e.preventDefault()} onDrop={(e) => handleDrop(e, 'COMPLETED')} className="flex-1">
-        <Column status="COMPLETED" title="Concluído" icon={CheckCircle} />
-      </div>
-    </div>
+    </>
   );
 };
 
