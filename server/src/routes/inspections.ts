@@ -14,7 +14,7 @@ const router = Router();
 // POST analyze image
 router.post('/analyze', rateLimit(20, 60_000), async (req: Request, res: Response) => {
   const { poleId, image } = req.body;
-  if (!poleId || !image) return res.status(400).json({ error: 'Pole ID and image required' });
+  if (!poleId || !image) return res.status(400).json({ error: 'pole_id e imagem são obrigatórios' });
 
   const safePoleId = parseInt(String(poleId), 10);
   if (isNaN(safePoleId) || safePoleId <= 0) {
@@ -55,7 +55,7 @@ router.post('/analyze', rateLimit(20, 60_000), async (req: Request, res: Respons
     });
   } catch (err) {
     console.error('Analysis error:', err);
-    res.status(500).json({ error: 'AI Analysis Failed' });
+    res.status(500).json({ error: 'Falha na análise de imagem pela IA' });
   }
 });
 
@@ -76,7 +76,7 @@ router.get('/:id/history', rateLimit(60, 60_000), async (req: Request, res: Resp
     `, [id]);
     res.json(history);
   } catch (err) {
-    res.status(500).json({ error: 'History error' });
+    res.status(500).json({ error: 'Erro ao buscar histórico de inspeções' });
   }
 });
 
@@ -103,7 +103,7 @@ router.post('/feedback', rateLimit(30, 60_000), async (req: Request, res: Respon
     );
     res.json({ status: 'Feedback saved' });
   } catch (err) {
-    res.status(500).json({ error: 'Feedback error' });
+    res.status(500).json({ error: 'Erro ao salvar feedback' });
   }
 });
 

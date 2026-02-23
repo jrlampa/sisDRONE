@@ -1,6 +1,6 @@
 # sisDRONE – RAG / Memória de Trabalho
 
-> Última atualização: 2026-02-23 (Phase 14) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
+> Última atualização: 2026-02-23 (Phase 15) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
 
 ---
 
@@ -64,8 +64,8 @@ sisDRONE/
 | **IA / Manutenção** | MaintenancePlan | `/api/ai/*` |
 | **GIS** | GeoJSON | `/api/gis/*` |
 | **Operações** | WorkOrder | `/api/work-orders` |
-| **Usuários** | User | `/api/users` |
-| **Auth** | JWT | `/api/auth/login` |
+| **Usuários** | User | `/api/users`, `/api/users/:id` |
+| **Auth** | JWT | `/api/auth/login`, `/api/auth/register` |
 | **ANEEL** | Agents, Datasets | `/api/aneel/agents`, `/api/aneel/datasets` |
 | **BIM** | StructureData (IFC-lite) | `/api/bim/:poleId` (GET/PUT) |
 | **Relatório** | PdfReport | `/api/report/pole/:id` |
@@ -178,23 +178,23 @@ sisDRONE/
 
 **Meta**: >= 80% de cobertura em código de lógica de negócio
 
-**Situação atual** (Phase 14): 235 server + 11 client = **246 testes no total** ✅
+**Situação atual** (Phase 15): 248 server + 11 client = **259 testes no total** ✅
 
 **Coverage Threshold** configurado em `server/vitest.config.ts`:
 - Lines/Functions/Statements: ≥ 80%
 - Branches: ≥ 70% (atual: 88.75% — muito acima da meta!)
 
-**Coverage por módulo (Phase 14)**:
+**Coverage por módulo (Phase 15)**:
 - `middleware/auth.ts`: 100%
-- `middleware/rateLimit.ts`: **100% branches** (era 77.77%)
-- `services/authService.ts`: 100% stmts, 83.33% branches (line 7: module-level side-effect, untestável)
+- `middleware/rateLimit.ts`: 100%
+- `services/authService.ts`: 100% stmts, 83.33% branches (line 7: module-level console.warn, side-effect de init)
 - `services/chatService.ts`: 100%
-- `services/groqService.ts`: **100% branches** (era 90%)
-- `services/healthService.ts`: **100% branches** (era 84.21%)
-- `services/predictionService.ts`: 100% stmts, 92.85% branches
+- `services/groqService.ts`: 100%
+- `services/healthService.ts`: 100%
+- `services/predictionService.ts`: **100% branches** (era 92.85%)
 - `services/costService.ts`: 100%
 - `utils/geo.ts`: 100%
-- **Total servidor**: **100% statements, 97.5% branches** ✅
+- **Total servidor**: **100% statements, 98.75% branches** ✅
 
 Testes existentes (Phase 9):
 - `predictionService.test.ts` – 8 (+6 edge cases: no date, unknown material, age≤2, age≤5, above failure, clamped years)
@@ -227,6 +227,8 @@ Testes existentes (Phase 9):
 - `tests/tenants.test.ts` – 6 (novo Phase 13: GET /api/tenants e /:id)
 - `tests/predict.test.ts` – 5 (novo Phase 13: GET /api/ai/predict/:id com validação)
 - `tests/polesSummary.test.ts` – 5 (novo Phase 14: GET /api/poles/:id/summary)
+- `tests/authRegister.test.ts` – 8 (novo Phase 15: POST /api/auth/register)
+- `tests/users.test.ts` – 8 (4 originais + 4 novos Phase 15: GET /api/users/:id)
 - `client/utils/eng.test.ts` – 3
 - `client/utils/geo.test.ts` – 2
 - `client/utils/math.test.ts` – 6
@@ -292,6 +294,13 @@ Testes existentes (Phase 9):
 - [x] ~~healthService.ts: branch 'Boa' condition (else sem deduções) — 84.21% → 100% branches~~ — Phase 14
 - [x] ~~PoleDetails.tsx: summary card com inspeção count, última inspeção e plano ativo~~ — Phase 14
 - [x] ~~PoleSummary type extraído para types.ts (single source of truth)~~ — Phase 14
+- [x] ~~inspections.ts + poles.ts: mensagens English → pt-BR (Pole ID required, DB Error, etc.)~~ — Phase 15
+- [x] ~~POST /api/auth/register: registo com validação completa + JWT response~~ — Phase 15
+- [x] ~~GET /api/users/:id: endpoint REST completo para usuário individual~~ — Phase 15
+- [x] ~~predictionService.ts: branch `?? 100` e `currentScore >= 100` — 92.85% → 100% branches~~ — Phase 15
+- [x] ~~PoleDetails.tsx: todas as alert() → useToast (showToast + ToastBanner)~~ — Phase 15
+- [x] ~~Sidebar.tsx: alert() no export CSV → useToast~~ — Phase 15
+- [x] ~~useToast hook + ToastBanner component criados~~ — Phase 15
 
 ---
 

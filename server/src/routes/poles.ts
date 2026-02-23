@@ -28,7 +28,7 @@ router.get('/', rateLimit(100, 60_000), async (req: Request, res: Response) => {
     }
     res.json({ poles, total, page, limit, pages: Math.ceil(total / limit) });
   } catch (err) {
-    res.status(500).json({ error: 'DB Error' });
+    res.status(500).json({ error: 'Erro interno no servidor' });
   }
 });
 
@@ -92,7 +92,7 @@ router.get('/nearby', rateLimit(60, 60_000), async (req: Request, res: Response)
 
     res.json({ lat, lng, radius_m: radius, count: nearby.length, poles: nearby });
   } catch (err) {
-    res.status(500).json({ error: 'DB Error' });
+    res.status(500).json({ error: 'Erro interno no servidor' });
   }
 });
 // GET /api/poles/alerts — postes abaixo do limiar de falha (AHI < 30)
@@ -116,7 +116,7 @@ router.get('/alerts', rateLimit(60, 60_000), async (req: Request, res: Response)
     }
     res.json({ threshold, count: poles.length, poles });
   } catch (err) {
-    res.status(500).json({ error: 'DB Error' });
+    res.status(500).json({ error: 'Erro interno no servidor' });
   }
 });
 
@@ -222,7 +222,7 @@ router.get('/:id/history', rateLimit(60, 60_000), async (req: Request, res: Resp
     `, [id]);
     res.json(history);
   } catch (err) {
-    res.status(500).json({ error: 'History error' });
+    res.status(500).json({ error: 'Erro ao buscar histórico' });
   }
 });
 
@@ -284,7 +284,7 @@ router.get('/:id', rateLimit(120, 60_000), async (req: Request, res: Response) =
     if (!pole) return res.status(404).json({ error: 'Poste não encontrado' });
     res.json(pole);
   } catch (err) {
-    res.status(500).json({ error: 'DB Error' });
+    res.status(500).json({ error: 'Erro interno no servidor' });
   }
 });
 
@@ -320,7 +320,7 @@ router.put('/:id', rateLimit(60, 60_000), async (req: Request, res: Response) =>
     const updated = await db.get('SELECT * FROM poles WHERE id = ?', [id]);
     res.json(updated);
   } catch (err) {
-    res.status(500).json({ error: 'DB Error' });
+    res.status(500).json({ error: 'Erro interno no servidor' });
   }
 });
 
@@ -337,7 +337,7 @@ router.delete('/:id', rateLimit(30, 60_000), async (req: Request, res: Response)
     await db.run('DELETE FROM poles WHERE id = ?', [id]);
     res.json({ message: 'Poste removido com sucesso', id });
   } catch (err) {
-    res.status(500).json({ error: 'DB Error' });
+    res.status(500).json({ error: 'Erro interno no servidor' });
   }
 });
 

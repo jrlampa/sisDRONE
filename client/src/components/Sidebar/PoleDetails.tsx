@@ -4,6 +4,8 @@ import { api } from '../../services/api';
 import type { Pole, AnalysisResult, User, PoleSummary } from '../../types';
 import type { Prediction } from '../../types/prediction';
 import WorkOrderModal from '../WorkOrders/WorkOrderModal';
+import ToastBanner from '../ToastBanner';
+import { useToast } from '../../hooks/useToast';
 
 interface MaintenancePlan {
   id: number;
@@ -37,6 +39,8 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
     if (score < 80) return { color: 'text-warning', bg: 'bg-warning', label: 'Atenção' };
     return { color: 'text-success', bg: 'bg-success', label: 'Saudável' };
   };
+
+  const { toast, showToast, clearToast } = useToast();
 
   const [maintenancePlan, setMaintenancePlan] = useState<MaintenancePlan | null>(null);
   const [history, setHistory] = useState<MaintenancePlan[]>([]);
@@ -112,7 +116,7 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
       onPoleUpdated?.(res.data);
       setIsEditing(false);
     } catch {
-      alert('Erro ao salvar alterações');
+      showToast('Erro ao salvar alterações', 'error');
     } finally {
       setSavingEdit(false);
     }
@@ -124,7 +128,7 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
       await api.deletePole(pole.id);
       onPoleDeleted?.(pole.id);
     } catch {
-      alert('Erro ao excluir poste');
+      showToast('Erro ao excluir poste', 'error');
     }
   };
 
@@ -145,7 +149,7 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
       setHistory(prev => [newPlan, ...prev]);
     } catch (error) {
       console.error('Error generating plan', error);
-      alert('Erro ao gerar plano.');
+      showToast('Erro ao gerar plano de manutenção', 'error');
     } finally {
       setLoadingPlan(false);
     }
@@ -158,12 +162,13 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
       setMaintenancePlan(updated);
       setHistory(prev => prev.map(p => p.id === plan.id ? updated : p));
     } catch {
-      alert('Erro ao atualizar status');
+      showToast('Erro ao atualizar status do plano', 'error');
     }
   };
 
   return (
     <div className="pole-details animate-fade-in">
+      <ToastBanner toast={toast} onDismiss={clearToast} />
       <div className="card">
         <div className="card-header">
           <MapPin size={20} className="text-accent" />
@@ -356,7 +361,7 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
         onClose={() => setIsWOModalOpen(false)}
         pole={pole}
         users={users}
-        onSuccess={() => alert('OS Criada!')}
+        onSuccess={() => showToast('Ordem de Serviço criada com sucesso!', 'success')}
       />
 
       {

@@ -1,9 +1,11 @@
 import { Router, Request, Response } from 'express';
 import { getDb } from '../db';
-import { signToken, comparePassword } from '../services/authService';
+import { signToken, comparePassword, hashPassword } from '../services/authService';
 import { rateLimit } from '../middleware/rateLimit';
 
 const router = Router();
+
+const VALID_ROLES = ['ADMIN', 'ENGINEER', 'VIEWER'] as const;
 
 /**
  * POST /api/auth/login
@@ -52,6 +54,67 @@ router.post('/login', rateLimit(10, 60_000), async (req: Request, res: Response)
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Erro interno no servidor' });
+  }
+});
+
+/**
+ * POST /api/auth/register
+ * Body: { username, password, tenant_id?, role? }
+ * Returns: { token, user }
+ */
+router.post('/register', rateLimit(20, 60_000), async (req: Request, res: Response) => {
+  const { username, password, tenant_id, role } = req.body;
+
+  if (!username || typeof username !== 'string' || username.trim().length < 3) {
+    return res.status(400).json({ error: 'Usuário deve ter pelo menos 3 caracteres' });
+  }
+  if (!password || typeof password !== 'string' || password.length < 8) {
+    return res.status(400).json({ error: 'Senha deve ter pelo menos 8 caracteres' });
+  }
+
+  const safeUsername = username.trim().slice(0, 100).replace(/[^a-zA-Z0-9_.-]/g, '');
+  if (safeUsername.length < 3) {
+    return res.status(400).json({ error: 'Usuário contém caracteres inválidos' });
+  }
+
+  const safeRole = role && VALID_ROLES.includes(role) ? role : 'VIEWER';
+  const safeTenantId = tenant_id ? parseInt(String(tenant_id), 10) : 1;
+  if (isNaN(safeTenantId) || safeTenantId <= 0) {
+    return res.status(400).json({ error: 'tenant_id inválido' });
+  }
+
+  try {
+    const db = await getDb();
+    const existing = await db.get('SELECT id FROM users WHERE username = ?', [safeUsername]);
+    if (existing) {
+      return res.status(409).json({ error: 'Nome de usuário já está em uso' });
+    }
+
+    const password_hash = await hashPassword(password);
+    const result = await db.run(
+      'INSERT INTO users (username, role, tenant_id, password_hash) VALUES (?, ?, ?, ?)',
+      [safeUsername, safeRole, safeTenantId, password_hash]
+    );
+
+    const token = signToken({
+      userId: result.lastID!,
+      username: safeUsername,
+      role: safeRole,
+      tenantId: safeTenantId,
+    });
+
+    res.status(201).json({
+      token,
+      user: {
+        id: result.lastID,
+        username: safeUsername,
+        role: safeRole,
+        tenant_id: safeTenantId,
+      },
+    });
+  } catch (error) {
+    console.error('Register error:', error);
+    res.status(500).json({ error: 'Erro ao registrar usuário' });
   }
 });
 

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Search, FileJson, Globe, FileText, Ruler, LayoutDashboard, Download, X, Zap, ClipboardList, Video, Building2 } from 'lucide-react';
 import PoleDetails from './PoleDetails';
 import { generateInspectionReport } from '../../utils/pdfGenerator';
@@ -9,6 +9,8 @@ import VideoCapturePanel from '../VideoCapture/VideoCapturePanel';
 import BimStructureEditor from './BimStructureEditor';
 import NearbySearchPanel from './NearbySearchPanel';
 import { useTenant } from '../../context/TenantContext';
+import ToastBanner from '../ToastBanner';
+import { useToast } from '../../hooks/useToast';
 import type { Pole, Span, Inspection, AnalysisResult, Stats, Tenant, User } from '../../types';
 import type { FrameAnalysis } from '../../hooks/useVideoCapture';
 
@@ -66,6 +68,7 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
   } = props;
 
   const { activeTenantId, isOnline } = useTenant();
+  const { toast, showToast, clearToast } = useToast();
 
   const handleExportPDF = () => {
     if (!activeTenant) return;
@@ -92,7 +95,7 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
       link.remove();
     } catch (error) {
       console.error('Failed to export CSV', error);
-      alert('Erro ao exportar CSV. Tente novamente.');
+      showToast('Erro ao exportar CSV. Tente novamente.', 'error');
     }
   };
 
@@ -112,6 +115,8 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
           <X size={24} />
         </button>
       </header>
+
+      <ToastBanner toast={toast} onDismiss={clearToast} />
 
       <div className="nav-tools">
         <div className="search-box">

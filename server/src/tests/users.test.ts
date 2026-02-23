@@ -39,3 +39,31 @@ describe('Users Endpoint — GET /api/users', () => {
     }
   });
 });
+
+describe('Users por ID — GET /api/users/:id', () => {
+  it('deve retornar 200 com dados do usuário para id válido', async () => {
+    const res = await request(app).get('/api/users/1');
+    expect(res.status).toBe(200);
+    expect(res.body.id).toBe(1);
+    expect(res.body).toHaveProperty('username');
+    expect(res.body).toHaveProperty('role');
+    expect(res.body).not.toHaveProperty('password_hash');
+  });
+
+  it('deve retornar 400 para id não numérico', async () => {
+    const res = await request(app).get('/api/users/abc');
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty('error');
+  });
+
+  it('deve retornar 400 para id = 0', async () => {
+    const res = await request(app).get('/api/users/0');
+    expect(res.status).toBe(400);
+  });
+
+  it('deve retornar 404 para usuário inexistente', async () => {
+    const res = await request(app).get('/api/users/999999');
+    expect(res.status).toBe(404);
+    expect(res.body).toHaveProperty('error');
+  });
+});

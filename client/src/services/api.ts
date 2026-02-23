@@ -56,6 +56,8 @@ axios.interceptors.response.use(
 export const api = {
   login: (username: string, password: string) =>
     axios.post<{ token: string, user: User }>(`${API_BASE}/api/auth/login`, { username, password }),
+  register: (username: string, password: string, options?: { role?: string; tenant_id?: number }) =>
+    axios.post<{ token: string, user: User }>(`${API_BASE}/api/auth/register`, { username, password, ...options }),
   getPoles: (tenantId?: number, page = 1, limit = 100) =>
     axios.get(`${API_BASE}/api/poles`, { params: { ...(tenantId ? { tenant_id: tenantId } : {}), page, limit } }),
   getAlerts: (tenantId?: number) =>
@@ -75,6 +77,7 @@ export const api = {
   importGis: (geojson: { type: string, features: unknown[] }) => axios.post(`${API_BASE}/api/gis/import/geojson`, { geojson }),
   getTenants: () => axios.get<Tenant[]>(`${API_BASE}/api/tenants`),
   getUsers: () => axios.get<User[]>(`${API_BASE}/api/users`),
+  getUserById: (id: number) => axios.get<User>(`${API_BASE}/api/users/${id}`),
   analyzeImage: (poleId: number, base64Image: string) =>
     axios.post(`${API_BASE}/api/analyze`, { poleId, image: base64Image }),
   sendFeedback: (data: { labelId: number, poleId: number, isCorrect: boolean, correction: string }) =>
