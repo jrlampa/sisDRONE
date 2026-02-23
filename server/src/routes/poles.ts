@@ -1,14 +1,22 @@
 import { Router, Request, Response } from 'express';
 import { getDb } from '../db';
-// import { Parser } from 'json2csv'; // Dynamic import used in route to avoid top-level fail if not installed yet (though it is).
+import { rateLimit } from '../middleware/rateLimit';
+import { haversineMeters } from '../utils/geo';
 
 const router = Router();
 
-// GET all poles
-router.get('/', async (req: Request, res: Response) => {
+// GET all poles (optionally filtered by tenant_id)
+router.get('/', rateLimit(100, 60_000), async (req: Request, res: Response) => {
   try {
     const db = await getDb();
-    const poles = await db.all('SELECT * FROM poles ORDER BY id DESC');
+    const tenantId = req.query.tenant_id ? parseInt(String(req.query.tenant_id), 10) : null;
+
+    let poles;
+    if (tenantId && !isNaN(tenantId) && tenantId > 0) {
+      poles = await db.all('SELECT * FROM poles WHERE tenant_id = ? ORDER BY id DESC', [tenantId]);
+    } else {
+      poles = await db.all('SELECT * FROM poles ORDER BY id DESC');
+    }
     res.json(poles);
   } catch (err) {
     res.status(500).json({ error: 'DB Error' });
@@ -16,21 +24,68 @@ router.get('/', async (req: Request, res: Response) => {
 });
 
 // POST new pole
-router.post('/', async (req: Request, res: Response) => {
-  const { lat, lng, name, utm_x, utm_y } = req.body;
+router.post('/', rateLimit(30, 60_000), async (req: Request, res: Response) => {
+  const { lat, lng, name, utm_x, utm_y, tenant_id } = req.body;
+
+  // Input validation
+  if (typeof lat !== 'number' || typeof lng !== 'number') {
+    return res.status(400).json({ error: 'lat e lng são obrigatórios e devem ser números' });
+  }
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+    return res.status(400).json({ error: 'Coordenadas fora do intervalo válido' });
+  }
+
+  const safeName = String(name || `Poste Sem Nome`).slice(0, 100);
+  const safeTenantId = Number(tenant_id) || 1;
+
   try {
     const db = await getDb();
     const result = await db.run(
-      'INSERT INTO poles (name, lat, lng, utm_x, utm_y) VALUES (?, ?, ?, ?, ?)',
-      [name, lat, lng, utm_x, utm_y]
+      'INSERT INTO poles (name, lat, lng, utm_x, utm_y, tenant_id) VALUES (?, ?, ?, ?, ?, ?)',
+      [safeName, lat, lng, utm_x || null, utm_y || null, safeTenantId]
     );
-    res.json({ id: result.lastID, name, lat, lng, utm_x, utm_y });
+    res.json({ id: result.lastID, name: safeName, lat, lng, utm_x, utm_y, tenant_id: safeTenantId });
   } catch (err) {
     res.status(500).json({ error: 'Failed to create pole' });
   }
 });
 
-// GET stats (Enhanced for Analytics Dashboard)
+// GET nearby poles within a radius (meters)
+router.get('/nearby', rateLimit(60, 60_000), async (req: Request, res: Response) => {
+  const lat = parseFloat(String(req.query.lat));
+  const lng = parseFloat(String(req.query.lng));
+  const radius = parseFloat(String(req.query.radius));
+
+  if (isNaN(lat) || isNaN(lng) || isNaN(radius)) {
+    return res.status(400).json({ error: 'lat, lng e radius são obrigatórios' });
+  }
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+    return res.status(400).json({ error: 'Coordenadas fora do intervalo válido' });
+  }
+  if (radius <= 0 || radius > 50000) {
+    return res.status(400).json({ error: 'Raio deve estar entre 1 e 50000 metros' });
+  }
+
+  try {
+    const db = await getDb();
+    // Bounding box pre-filter to reduce Haversine comparisons
+    // 1 degree latitude ≈ 111,000m; 1 degree longitude ≈ 111,000m * cos(lat)
+    const latDelta = radius / 111000;
+    const lngDelta = radius / (111000 * Math.cos((lat * Math.PI) / 180));
+    const poles = await db.all(
+      'SELECT * FROM poles WHERE lat BETWEEN ? AND ? AND lng BETWEEN ? AND ?',
+      [lat - latDelta, lat + latDelta, lng - lngDelta, lng + lngDelta]
+    );
+    const nearby = poles
+      .map((p: any) => ({ ...p, distance_m: Math.round(haversineMeters(lat, lng, p.lat, p.lng)) }))
+      .filter((p: any) => p.distance_m <= radius)
+      .sort((a: any, b: any) => a.distance_m - b.distance_m);
+
+    res.json({ lat, lng, radius_m: radius, count: nearby.length, poles: nearby });
+  } catch (err) {
+    res.status(500).json({ error: 'DB Error' });
+  }
+});
 router.get('/stats', async (req: Request, res: Response) => {
   try {
     const db = await getDb();
@@ -90,7 +145,7 @@ router.get('/stats', async (req: Request, res: Response) => {
   }
 });
 
-// GET export CSV
+// GET export CSV  (must be before /:id to avoid shadowing)
 router.get('/export', async (req: Request, res: Response) => {
   try {
     const db = await getDb();
@@ -102,11 +157,6 @@ router.get('/export', async (req: Request, res: Response) => {
       'height', 'structure_type', 'tenant_id', 'created_at'
     ];
 
-    // We need to require/import json2csv here or at top. 
-    // Since we are in TS module, we should import at top, but for minimal diff let's try dynamic import or assume I'll add top-level import in next step.
-    // Actually, I should add the import at the top first or use dynamic import.
-    // Let's use dynamic import for cleaner diff or add import in a separate replace call.
-    // Better: I will use a multi-replace to add import and route.
     const { Parser } = await import('json2csv');
     const parser = new Parser({ fields });
     const csv = parser.parse(poles);
@@ -118,6 +168,96 @@ router.get('/export', async (req: Request, res: Response) => {
   } catch (err) {
     console.error('Export error:', err);
     res.status(500).json({ error: 'Failed to export CSV' });
+  }
+});
+
+// GET inspection history for a pole (must be before /:id to avoid shadowing)
+router.get('/:id/history', rateLimit(60, 60_000), async (req: Request, res: Response) => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json({ error: 'ID de poste inválido' });
+  }
+  try {
+    const db = await getDb();
+    const history = await db.all(`
+      SELECT l.*, i.file_path
+      FROM labels l
+      LEFT JOIN images i ON l.image_id = i.id
+      WHERE l.pole_id = ?
+      ORDER BY l.created_at DESC
+    `, [id]);
+    res.json(history);
+  } catch (err) {
+    res.status(500).json({ error: 'History error' });
+  }
+});
+
+// GET single pole by id (must be after all named GET routes)
+router.get('/:id', rateLimit(120, 60_000), async (req: Request, res: Response) => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json({ error: 'id inválido' });
+  }
+  try {
+    const db = await getDb();
+    const pole = await db.get('SELECT * FROM poles WHERE id = ?', [id]);
+    if (!pole) return res.status(404).json({ error: 'Poste não encontrado' });
+    res.json(pole);
+  } catch (err) {
+    res.status(500).json({ error: 'DB Error' });
+  }
+});
+
+// PUT update pole by id (ENGINEER+)
+router.put('/:id', rateLimit(60, 60_000), async (req: Request, res: Response) => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json({ error: 'id inválido' });
+  }
+  const { name, material, height, structure_type, status } = req.body;
+  const VALID_STATUSES = ['pending', 'inspected', 'maintenance', 'critical', 'ok'];
+  if (status && !VALID_STATUSES.includes(status)) {
+    return res.status(400).json({ error: `status inválido. Use: ${VALID_STATUSES.join(', ')}` });
+  }
+  const safeName = name ? String(name).slice(0, 100) : undefined;
+  const safeMaterial = material ? String(material).slice(0, 50) : undefined;
+  const safeHeight = height !== undefined ? Number(height) : undefined;
+  const safeStructureType = structure_type ? String(structure_type).slice(0, 50) : undefined;
+  try {
+    const db = await getDb();
+    const pole = await db.get('SELECT id FROM poles WHERE id = ?', [id]);
+    if (!pole) return res.status(404).json({ error: 'Poste não encontrado' });
+    const updates: string[] = [];
+    const params: unknown[] = [];
+    if (safeName !== undefined) { updates.push('name = ?'); params.push(safeName); }
+    if (safeMaterial !== undefined) { updates.push('material = ?'); params.push(safeMaterial); }
+    if (safeHeight !== undefined && !isNaN(safeHeight)) { updates.push('height = ?'); params.push(safeHeight); }
+    if (safeStructureType !== undefined) { updates.push('structure_type = ?'); params.push(safeStructureType); }
+    if (status) { updates.push('status = ?'); params.push(status); }
+    if (updates.length === 0) return res.status(400).json({ error: 'Nenhum campo para atualizar' });
+    params.push(id);
+    await db.run(`UPDATE poles SET ${updates.join(', ')} WHERE id = ?`, params);
+    const updated = await db.get('SELECT * FROM poles WHERE id = ?', [id]);
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: 'DB Error' });
+  }
+});
+
+// DELETE pole by id (ADMIN only)
+router.delete('/:id', rateLimit(30, 60_000), async (req: Request, res: Response) => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json({ error: 'id inválido' });
+  }
+  try {
+    const db = await getDb();
+    const pole = await db.get('SELECT id FROM poles WHERE id = ?', [id]);
+    if (!pole) return res.status(404).json({ error: 'Poste não encontrado' });
+    await db.run('DELETE FROM poles WHERE id = ?', [id]);
+    res.json({ message: 'Poste removido com sucesso', id });
+  } catch (err) {
+    res.status(500).json({ error: 'DB Error' });
   }
 });
 

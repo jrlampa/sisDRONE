@@ -1,0 +1,32 @@
+version: '3.9'
+
+services:
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: sisdrone-server
+    restart: unless-stopped
+    ports:
+      - '3001:3001'
+    environment:
+      - NODE_ENV=production
+      - GROQ_API_KEY=${GROQ_API_KEY}
+    volumes:
+      - sisdrone-uploads:/app/uploads
+      - sisdrone-db:/app
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: sisdrone-client
+    restart: unless-stopped
+    ports:
+      - '80:80'
+    depends_on:
+      - server
+
+volumes:
+  sisdrone-uploads:
+  sisdrone-db:

@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { getDb } from '../db';
 import { analyzeImage } from '../services/groqService';
+import { rateLimit } from '../middleware/rateLimit';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -11,9 +12,17 @@ const __dirname = path.dirname(__filename);
 const router = Router();
 
 // POST analyze image
-router.post('/analyze', async (req: Request, res: Response) => {
+router.post('/analyze', rateLimit(20, 60_000), async (req: Request, res: Response) => {
   const { poleId, image } = req.body;
   if (!poleId || !image) return res.status(400).json({ error: 'Pole ID and image required' });
+
+  const safePoleId = parseInt(String(poleId), 10);
+  if (isNaN(safePoleId) || safePoleId <= 0) {
+    return res.status(400).json({ error: 'poleId inválido' });
+  }
+  if (typeof image !== 'string' || image.length > 10_000_000) {
+    return res.status(400).json({ error: 'Imagem inválida ou muito grande' });
+  }
 
   try {
     const analysis = await analyzeImage(image);
@@ -29,13 +38,13 @@ router.post('/analyze', async (req: Request, res: Response) => {
 
     const imageResult = await db.run(
       'INSERT INTO images (pole_id, file_path) VALUES (?, ?)',
-      [poleId, `/uploads/${filename}`]
+      [safePoleId, `/uploads/${filename}`]
     );
     const imageId = imageResult.lastID;
 
     const labelResult = await db.run(
       'INSERT INTO labels (pole_id, image_id, label, confidence, source) VALUES (?, ?, ?, ?, ?)',
-      [poleId, imageId, analysis.analysis_summary, analysis.confidence, 'ai']
+      [safePoleId, imageId, analysis.analysis_summary, analysis.confidence, 'ai']
     );
 
     res.json({
@@ -51,8 +60,11 @@ router.post('/analyze', async (req: Request, res: Response) => {
 });
 
 // GET history for a pole
-router.get('/:id/history', async (req: Request, res: Response) => {
-  const { id } = req.params;
+router.get('/:id/history', rateLimit(60, 60_000), async (req: Request, res: Response) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json({ error: 'ID de poste inválido' });
+  }
   try {
     const db = await getDb();
     const history = await db.all(`
@@ -69,17 +81,25 @@ router.get('/:id/history', async (req: Request, res: Response) => {
 });
 
 // POST feedback
-router.post('/feedback', async (req: Request, res: Response) => {
+router.post('/feedback', rateLimit(30, 60_000), async (req: Request, res: Response) => {
   const { labelId, poleId, isCorrect, correction } = req.body;
 
   if (labelId === undefined || poleId === undefined || isCorrect === undefined) {
     return res.status(400).json({ error: 'labelId, poleId, and isCorrect are required' });
   }
+
+  const safePoleId = parseInt(String(poleId), 10);
+  const safeLabelId = parseInt(String(labelId), 10);
+  if (isNaN(safePoleId) || isNaN(safeLabelId)) {
+    return res.status(400).json({ error: 'IDs inválidos' });
+  }
+  const safeCorrection = correction ? String(correction).slice(0, 500) : '';
+
   try {
     const db = await getDb();
     await db.run(
       'INSERT INTO labels (pole_id, label, confidence, source) VALUES (?, ?, ?, ?)',
-      [poleId, isCorrect ? 'Confirmado' : `Correção: ${correction}`, 1.0, 'user']
+      [safePoleId, isCorrect ? 'Confirmado' : `Correção: ${safeCorrection}`, 1.0, 'user']
     );
     res.json({ status: 'Feedback saved' });
   } catch (err) {

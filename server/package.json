@@ -13,16 +13,21 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "@types/pdfkit": "^0.17.5",
     "axios": "^1.13.5",
+    "bcryptjs": "^2.4.3",
     "cors": "^2.8.6",
     "dotenv": "^17.2.4",
     "express": "^5.2.1",
     "groq-sdk": "^0.37.0",
     "json2csv": "^6.0.0-alpha.2",
+    "jsonwebtoken": "^9.0.2",
     "libsql": "^0.5.22",
+    "pdfkit": "^0.17.2",
     "sqlite": "^5.1.1",
     "sqlite-vss": "^0.1.2",
-    "sqlite3": "^5.1.7"
+    "sqlite3": "^5.1.7",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "@types/axios": "^0.9.36",
@@ -32,6 +37,7 @@
     "@types/node": "^25.2.3",
     "@types/sqlite3": "^3.1.11",
     "@types/supertest": "^6.0.3",
+    "@vitest/coverage-v8": "^4.0.18",
     "jest": "^30.2.0",
     "supertest": "^7.2.2",
     "ts-jest": "^29.4.6",

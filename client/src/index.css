@@ -836,3 +836,143 @@ body {
   z-index: -1;
   opacity: 0.4;
 }
+/* ANEEL Search Panel */
+.aneel-panel-container {
+  position: absolute;
+  top: 64px;
+  right: 16px;
+  z-index: 1000;
+  width: 360px;
+  max-height: 70vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* BIM Structure Editor */
+.bim-editor .form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.bim-editor .form-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.bim-editor .form-label span {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* NearbySearchPanel */
+.nearby-search-panel {
+  margin-bottom: 0.5rem;
+}
+
+.nearby-form {
+  padding: 0.5rem;
+  background: rgba(255,255,255,0.04);
+  border-radius: 0.5rem;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.nearby-results {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.nearby-result-item {
+  padding: 0.4rem 0.5rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.06);
+  margin-bottom: 0.25rem;
+  transition: background 0.15s;
+}
+
+.nearby-result-item:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+/* ── Login Page ─────────────────────────────────────────── */
+.login-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: radial-gradient(circle at top right, #1e293b, #0f172a);
+}
+
+.login-card {
+  width: 100%;
+  max-width: 400px;
+  padding: 2.5rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.login-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: center;
+}
+
+.login-subtitle {
+  font-size: 0.7rem;
+  letter-spacing: 0.15em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.form-group label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.form-group .glass-input {
+  width: 100%;
+}
+
+.login-error {
+  color: var(--danger);
+  font-size: 0.85rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 0.375rem;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.login-hint {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  border-top: 1px solid var(--glass-border);
+  padding-top: 1rem;
+}

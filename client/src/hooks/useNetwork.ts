@@ -15,9 +15,8 @@ export function useNetwork() {
 
   const fetchPoles = useCallback(async () => {
     try {
-      const res = await api.getPoles();
-      // Filter by tenant client-side for now
-      setPoles(res.data.filter((p: Pole) => p.tenant_id === activeTenantId));
+      const res = await api.getPoles(activeTenantId);
+      setPoles(res.data);
     } catch (error) {
       console.error('Failed to fetch poles:', error);
     }
@@ -26,7 +25,11 @@ export function useNetwork() {
   const fetchStats = useCallback(async () => {
     try {
       const res = await api.getStats();
-      setStats(res.data);
+      const data = res.data;
+      // Derive Stats from the DashboardData response
+      const critical = data.conditionStats?.find((c: { condition: string }) => c.condition === 'Crítico')?.count || 0;
+      const healthy = data.conditionStats?.find((c: { condition: string }) => c.condition === 'Saudável')?.count || 0;
+      setStats({ total: data.totalPoles || 0, critical, healthy });
     } catch (error) {
       console.error('Failed to fetch stats:', error);
     }

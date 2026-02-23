@@ -5,13 +5,17 @@ import { addToQueue } from '../utils/offlineQueue';
 
 const API_BASE = 'http://localhost:3001';
 
-// Dynamic header injection for RBAC Mock
+// Inject JWT Bearer token (preferred) or mock role header (dev fallback)
 axios.interceptors.request.use(config => {
-  const role = localStorage.getItem('sisdrone_mock_role');
-  if (role) {
-    config.headers['x-user-role'] = role;
+  const token = localStorage.getItem('sisdrone_jwt');
+  if (token) {
+    config.headers['Authorization'] = `Bearer ${token}`;
+  } else {
+    const role = localStorage.getItem('sisdrone_mock_role');
+    if (role) {
+      config.headers['x-user-role'] = role;
+    }
   }
-  return config;
   return config;
 });
 
@@ -50,8 +54,16 @@ axios.interceptors.response.use(
 );
 
 export const api = {
-  getPoles: () => axios.get(`${API_BASE}/api/poles`),
-  getStats: () => axios.get(`${API_BASE}/api/stats`),
+  login: (username: string, password: string) =>
+    axios.post<{ token: string, user: User }>(`${API_BASE}/api/auth/login`, { username, password }),
+  getPoles: (tenantId?: number) => axios.get(`${API_BASE}/api/poles`, { params: tenantId ? { tenant_id: tenantId } : {} }),
+  getPole: (id: number) => axios.get(`${API_BASE}/api/poles/${id}`),
+  updatePole: (id: number, data: { name?: string; material?: string; height?: number; structure_type?: string; status?: string }) =>
+    axios.put(`${API_BASE}/api/poles/${id}`, data),
+  deletePole: (id: number) => axios.delete(`${API_BASE}/api/poles/${id}`),
+  getNearbyPoles: (lat: number, lng: number, radius: number) =>
+    axios.get(`${API_BASE}/api/poles/nearby`, { params: { lat, lng, radius } }),
+  getStats: () => axios.get(`${API_BASE}/api/poles/stats`),
   getHistory: (id: number) => axios.get(`${API_BASE}/api/poles/${id}/history`),
   createPole: (data: { lat: number, lng: number, name: string, utm_x: string, utm_y: string, tenant_id: number }) =>
     axios.post(`${API_BASE}/api/poles`, data),
@@ -78,4 +90,35 @@ export const api = {
     axios.post<WorkOrder>(`${API_BASE}/api/work-orders`, data),
   updateWorkOrder: (id: number, data: Partial<WorkOrder>) =>
     axios.put<WorkOrder>(`${API_BASE}/api/work-orders/${id}`, data),
+
+  // Video Analysis
+  startVideoSession: (poleId: number, tenantId: number, mode: 'frame' | 'recording') =>
+    axios.post<{ sessionId: number; mode: string; status: string }>(
+      `${API_BASE}/api/video/session/start`,
+      { pole_id: poleId, tenant_id: tenantId, mode }
+    ),
+  analyzeVideoFrame: (poleId: number, image: string, sessionId: number | null, sequence: number) =>
+    axios.post(`${API_BASE}/api/video/frame`, { pole_id: poleId, image, sessionId, sequence }),
+  uploadVideoChunk: (data: {
+    sessionId: number; pole_id: number; chunk: string;
+    chunkIndex: number; totalChunks: number; isLast: boolean;
+  }) => axios.post(`${API_BASE}/api/video/upload`, data),
+  completeVideoSession: (sessionId: number) =>
+    axios.post(`${API_BASE}/api/video/session/${sessionId}/complete`),
+  getVideoSessions: (poleId: number) =>
+    axios.get(`${API_BASE}/api/video/sessions/${poleId}`),
+
+  // ANEEL OpenData
+  getAneelAgents: (uf?: string, limit?: number) =>
+    axios.get(`${API_BASE}/api/aneel/agents`, { params: { uf, limit } }),
+
+  // BIM Half-way (IFC-lite)
+  getBimStructure: (poleId: number) =>
+    axios.get(`${API_BASE}/api/bim/${poleId}`),
+  updateBimStructure: (poleId: number, structureData: Record<string, unknown>) =>
+    axios.put(`${API_BASE}/api/bim/${poleId}`, { structure_data: structureData }),
+
+  // PDF Report
+  getPoleReportUrl: (poleId: number) =>
+    `${API_BASE}/api/report/pole/${poleId}`,
 };

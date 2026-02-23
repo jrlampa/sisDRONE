@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import axios from 'axios';
 import { analyzeImage } from '../services/groqService.js';
 
@@ -31,15 +31,29 @@ describe('Groq Service', () => {
     vi.mocked(axios.post).mockResolvedValue(mockResponse as any);
 
     const result = await analyzeImage('dummy_base64');
-    const parsed = JSON.parse(result as string);
 
-    expect(parsed.pole_type).toBe('Concreto');
-    expect(parsed.confidence).toBe(0.95);
+    expect((result as any).pole_type).toBe('Concreto');
+    expect((result as any).confidence).toBe(0.95);
   });
 
   it('should throw error if API fails', async () => {
     vi.mocked(axios.post).mockRejectedValue(new Error('API Error'));
 
     await expect(analyzeImage('dummy_base64')).rejects.toThrow('Failed to analyze image');
+  });
+
+  describe('when GROQ_API_KEY is not set', () => {
+    let originalKey: string | undefined;
+    beforeEach(() => {
+      originalKey = process.env.GROQ_API_KEY;
+      delete process.env.GROQ_API_KEY;
+    });
+    afterEach(() => {
+      if (originalKey !== undefined) process.env.GROQ_API_KEY = originalKey;
+    });
+
+    it('analyzeImage should throw GROQ_API_KEY is not defined', async () => {
+      await expect(analyzeImage('test_b64')).rejects.toThrow('GROQ_API_KEY is not defined');
+    });
   });
 });

@@ -3,10 +3,10 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 export async function analyzeImage(imageBase64: string) {
+  const GROQ_API_KEY = process.env.GROQ_API_KEY;
   if (!GROQ_API_KEY) {
     throw new Error('GROQ_API_KEY is not defined');
   }
@@ -59,7 +59,8 @@ export async function analyzeImage(imageBase64: string) {
       }
     );
 
-    return (response.data as any).choices[0].message.content;
+    const rawContent = (response.data as any).choices[0].message.content;
+    return typeof rawContent === 'string' ? JSON.parse(rawContent) : rawContent;
   } catch (error: any) {
     console.error('Error analyzing image with Groq:', error.response?.data || error.message);
     throw new Error('Failed to analyze image');
@@ -67,6 +68,7 @@ export async function analyzeImage(imageBase64: string) {
 }
 
 export async function generateMaintenancePlan(analysis: any) {
+  const GROQ_API_KEY = process.env.GROQ_API_KEY;
   if (!GROQ_API_KEY) {
     throw new Error('GROQ_API_KEY is not defined');
   }

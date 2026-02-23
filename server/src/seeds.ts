@@ -5,7 +5,7 @@ export const tenants = [
 
 export const users = [
   { username: 'admin_eq', role: 'ADMIN', tenant_id: 1 },
-  { username: 'eng_eq', 'ENGINEER': 1, tenant_id: 1 }, // Typo fix: role: 'ENGINEER' in actual code
+  { username: 'eng_eq', role: 'ENGINEER', tenant_id: 1 },
   { username: 'viewer_eq', role: 'VIEWER', tenant_id: 1 },
   { username: 'admin_cemig', role: 'ADMIN', tenant_id: 2 },
   { username: 'eng_cemig', role: 'ENGINEER', tenant_id: 2 },

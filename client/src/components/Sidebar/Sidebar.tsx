@@ -1,11 +1,16 @@
 import React from 'react';
-import { Search, FileJson, Globe, FileText, Ruler, LayoutDashboard, Download, X, Zap } from 'lucide-react';
+import { Search, FileJson, Globe, FileText, Ruler, LayoutDashboard, Download, X, Zap, ClipboardList, Video, Building2 } from 'lucide-react';
 import PoleDetails from './PoleDetails';
 import { generateInspectionReport } from '../../utils/pdfGenerator';
 import { api } from '../../services/api';
 import InspectionHistory from './InspectionHistory';
 import EngineeringTools from './EngineeringTools';
+import VideoCapturePanel from '../VideoCapture/VideoCapturePanel';
+import BimStructureEditor from './BimStructureEditor';
+import NearbySearchPanel from './NearbySearchPanel';
+import { useTenant } from '../../context/TenantContext';
 import type { Pole, Span, Inspection, AnalysisResult, Stats, Tenant, User } from '../../types';
+import type { FrameAnalysis } from '../../hooks/useVideoCapture';
 
 interface SidebarProps {
   searchQuery: string;
@@ -19,8 +24,8 @@ interface SidebarProps {
   setFilterCondition: (c: 'All' | 'Critical' | 'Warning' | 'Good') => void;
   selectedPole: Pole | null;
   activeSpan: Span | null;
-  activeTab: 'details' | 'history' | 'eng';
-  setActiveTab: (t: 'details' | 'history' | 'eng') => void;
+  activeTab: 'details' | 'history' | 'eng' | 'video' | 'bim';
+  setActiveTab: (t: 'details' | 'history' | 'eng' | 'video' | 'bim') => void;
   isCapturing: boolean;
   onAnalyze: () => void;
   analysis: AnalysisResult | null;
@@ -41,7 +46,11 @@ interface SidebarProps {
   onClose: () => void;
   viewMode: 'MAP' | 'ANALYTICS' | 'WORK_ORDERS' | 'DRONE_LIVE';
   setViewMode: (mode: 'MAP' | 'ANALYTICS' | 'WORK_ORDERS' | 'DRONE_LIVE') => void;
-  users: User[]; // New prop
+  users: User[];
+  onVideoFrameAnalyzed: (result: FrameAnalysis) => void;
+  onSelectPole: (pole: Pole) => void;
+  onPoleUpdated?: (pole: Pole) => void;
+  onPoleDeleted?: (id: number) => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = (props) => {
@@ -52,8 +61,11 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
     activeTab, setActiveTab, isCapturing, onAnalyze, analysis, onFeedback,
     history, stats, conductorWeight, setConductorWeight, tension, setTension,
     apiBase, userRole, showHeatmap, setShowHeatmap, activeTenant, poles,
-    isOpen, onClose, viewMode, setViewMode, users
+    isOpen, onClose, viewMode, setViewMode, users, onVideoFrameAnalyzed,
+    onSelectPole, onPoleUpdated, onPoleDeleted,
   } = props;
+
+  const { activeTenantId, isOnline } = useTenant();
 
   const handleExportPDF = () => {
     if (!activeTenant) return;
@@ -113,6 +125,8 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
           />
         </div>
 
+        <NearbySearchPanel onSelectPole={onSelectPole} />
+
         <div className="tools-grid">
           <button
             className={`btn btn-outline ${isMeasuring ? 'active' : ''}`}
@@ -143,6 +157,13 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
             disabled={userRole === 'VIEWER'}
           >
             <FileText size={14} /> Relatório
+          </button>
+          <button
+            className={`btn btn-outline ${viewMode === 'WORK_ORDERS' ? 'active' : ''}`}
+            onClick={() => setViewMode(viewMode === 'WORK_ORDERS' ? 'MAP' : 'WORK_ORDERS')}
+            title="Ordens de Serviço"
+          >
+            <ClipboardList size={14} /> Ordens de Serviço
           </button>
           <button
             className={`btn btn-outline ${viewMode === 'DRONE_LIVE' ? 'active' : ''}`}
@@ -196,6 +217,24 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
             >
               Histórico
             </button>
+            {selectedPole && userRole !== 'VIEWER' && (
+              <button
+                onClick={() => setActiveTab('bim')}
+                className={activeTab === 'bim' ? 'active' : ''}
+                title="Estrutura BIM / IFC-lite"
+              >
+                <Building2 size={12} className="inline mr-1" />BIM
+              </button>
+            )}
+            {selectedPole && userRole !== 'VIEWER' && (
+              <button
+                onClick={() => setActiveTab('video')}
+                className={activeTab === 'video' ? 'active' : ''}
+                title="Captura de Vídeo / Frames"
+              >
+                <Video size={12} className="inline mr-1" />Vídeo
+              </button>
+            )}
             {activeSpan && userRole !== 'VIEWER' && (
               <button
                 onClick={() => setActiveTab('eng')}
@@ -215,11 +254,26 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
               onFeedback={onFeedback}
               apiBase={apiBase}
               users={users}
+              onPoleUpdated={onPoleUpdated}
+              onPoleDeleted={onPoleDeleted}
             />
           )}
 
           {activeTab === 'history' && (
             <InspectionHistory history={history} apiBase={apiBase} />
+          )}
+
+          {activeTab === 'video' && selectedPole && (
+            <VideoCapturePanel
+              pole={selectedPole}
+              tenantId={activeTenantId}
+              isOnline={isOnline}
+              onFrameAnalyzed={onVideoFrameAnalyzed}
+            />
+          )}
+
+          {activeTab === 'bim' && selectedPole && (
+            <BimStructureEditor pole={selectedPole} />
           )}
 
           {activeTab === 'eng' && activeSpan && (
@@ -242,7 +296,7 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
       <div className="stats-dashboard">
         <h3 className="stats-title">Health Monitor</h3>
         <div className="analytics-section">
-          <h3>Sáude da Rede</h3>
+          <h3>Saúde da Rede</h3>
           <div className="card analytics-card">
             <div className="flex justify-between items-center mb-2">
               <span className="text-sm font-medium">Mapa de Calor (Riscos)</span>

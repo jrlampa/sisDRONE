@@ -1,8 +1,11 @@
+import dotenv from 'dotenv';
+dotenv.config();
 import sqlite3 from 'sqlite3';
 import { open, Database } from 'sqlite';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import * as seeds from './seeds';
+import { hashPassword } from './services/authService';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -51,6 +54,7 @@ async function initDb(database: Database) {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       tenant_id INTEGER DEFAULT 1,
       external_id TEXT,
+      name TEXT,
       lat REAL,
       lng REAL,
       utm_x REAL,
@@ -92,6 +96,7 @@ async function initDb(database: Database) {
       username TEXT NOT NULL,
       role TEXT NOT NULL,
       tenant_id INTEGER NOT NULL,
+      password_hash TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (tenant_id) REFERENCES tenants(id)
     );
@@ -122,7 +127,35 @@ async function initDb(database: Database) {
     );
   `);
 
-  // Seed default tenants if empty
+  // ── Migrations (run before seeding so seeds see up-to-date schema) ──
+  // AHI fields
+  try { await database.exec(`ALTER TABLE poles ADD COLUMN ahi_score INTEGER DEFAULT 100`); } catch {}
+  try { await database.exec(`ALTER TABLE poles ADD COLUMN installation_date DATETIME DEFAULT '2020-01-01'`); } catch {}
+  // name column
+  try { await database.exec(`ALTER TABLE poles ADD COLUMN name TEXT`); } catch {}
+  // password_hash column (for DBs created before this column was added)
+  try { await database.exec(`ALTER TABLE users ADD COLUMN password_hash TEXT`); } catch {}
+  // structure_data column for BIM Half-way (Phase 5)
+  try { await database.exec(`ALTER TABLE poles ADD COLUMN structure_data TEXT`); } catch {}
+  // video_sessions table (Phase 4)
+  await database.exec(`
+    CREATE TABLE IF NOT EXISTS video_sessions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      pole_id INTEGER,
+      tenant_id INTEGER DEFAULT 1,
+      mode TEXT NOT NULL DEFAULT 'frame',
+      status TEXT NOT NULL DEFAULT 'recording',
+      frame_count INTEGER DEFAULT 0,
+      blob_path TEXT,
+      started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      completed_at DATETIME,
+      FOREIGN KEY (pole_id) REFERENCES poles(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_vsessions_pole ON video_sessions(pole_id);
+    CREATE INDEX IF NOT EXISTS idx_vsessions_status ON video_sessions(status);
+  `);
+
+  // ── Seeds ──
   const tenantRes = await database.get('SELECT COUNT(*) as count FROM tenants');
   if (tenantRes && tenantRes.count === 0) {
     for (const t of seeds.tenants) {
@@ -133,10 +166,13 @@ async function initDb(database: Database) {
   // Seed mock users if empty
   const userRes = await database.get('SELECT COUNT(*) as count FROM users');
   if (userRes && userRes.count === 0) {
+    const defaultPasswordHash = await hashPassword('sisdrone123');
     for (const u of seeds.users) {
-      // Fix user seed structure if generic
       const role = (u as any).role || 'ENGINEER';
-      await database.run('INSERT INTO users (username, role, tenant_id) VALUES (?, ?, ?)', [u.username, role, u.tenant_id]);
+      await database.run(
+        'INSERT INTO users (username, role, tenant_id, password_hash) VALUES (?, ?, ?, ?)',
+        [u.username, role, u.tenant_id, defaultPasswordHash]
+      );
     }
   }
 
@@ -157,12 +193,11 @@ async function initDb(database: Database) {
     CREATE INDEX IF NOT EXISTS idx_wo_assignee ON work_orders(assignee_id);
   `);
 
-  // Migration for AHI fields
-  try {
-    await database.exec(`ALTER TABLE poles ADD COLUMN ahi_score INTEGER DEFAULT 100`);
-    await database.exec(`ALTER TABLE poles ADD COLUMN installation_date DATETIME DEFAULT '2020-01-01'`);
-    console.log('Migrated poles table with AHI columns');
-  } catch (e) {
-    // Ignore error if columns already exist
+  // Backfill password_hash for existing users who don't have one
+  const usersWithoutHash = await database.all('SELECT id FROM users WHERE password_hash IS NULL');
+  if (usersWithoutHash.length > 0) {
+    const defaultHash = await hashPassword('sisdrone123');
+    await database.run('UPDATE users SET password_hash = ? WHERE password_hash IS NULL', [defaultHash]);
+    console.log(`Backfilled password_hash for ${usersWithoutHash.length} existing users`);
   }
 }

@@ -5,10 +5,11 @@ import { calculatePlanCost } from '../services/costService';
 import { chatWithData } from '../services/chatService';
 import { calculateAHI } from '../services/healthService';
 import { predictLifespan } from '../services/predictionService';
+import { rateLimit } from '../middleware/rateLimit';
 
 const router = Router();
 
-router.get('/predict/:id', async (req, res) => {
+router.get('/predict/:id', rateLimit(30, 60_000), async (req, res) => {
   try {
     const db = await getDb();
     const pole = await db.get('SELECT * FROM poles WHERE id = ?', [req.params.id]);
@@ -25,12 +26,17 @@ router.get('/predict/:id', async (req, res) => {
   }
 });
 
-router.post('/plan', async (req, res) => {
+router.post('/plan', rateLimit(10, 60_000), async (req, res) => {
   try {
     const { analysis, poleId } = req.body;
 
     if (!analysis) {
       return res.status(400).json({ error: 'Analysis data is required' });
+    }
+
+    const safePoleId = poleId !== undefined ? parseInt(String(poleId), 10) : NaN;
+    if (poleId !== undefined && (isNaN(safePoleId) || safePoleId <= 0)) {
+      return res.status(400).json({ error: 'poleId inválido' });
     }
 
     console.log(`[AI] Generating maintenance plan for Pole ${poleId}...`);
@@ -40,13 +46,13 @@ router.post('/plan', async (req, res) => {
     const db = await getDb();
 
     // Calculate AHI
-    const pole = await db.get('SELECT * FROM poles WHERE id = ?', [poleId]);
+    const pole = await db.get('SELECT * FROM poles WHERE id = ?', [safePoleId]);
     const ahi = calculateAHI(pole, analysis);
-    await db.run('UPDATE poles SET ahi_score = ? WHERE id = ?', [ahi, poleId]);
+    await db.run('UPDATE poles SET ahi_score = ? WHERE id = ?', [ahi, safePoleId]);
 
     const result = await db.run(
       'INSERT INTO maintenance_plans (pole_id, plan_text, status, estimated_cost) VALUES (?, ?, ?, ?)',
-      [poleId, planText, 'PENDING', estimatedCost]
+      [safePoleId, planText, 'PENDING', estimatedCost]
     );
 
     res.json({ plan: planText, planId: result.lastID, estimatedCost });
@@ -56,10 +62,14 @@ router.post('/plan', async (req, res) => {
   }
 });
 
-router.post('/chat', async (req, res) => {
+router.post('/chat', rateLimit(20, 60_000), async (req, res) => {
+  const { message, context } = req.body;
+  if (!message || typeof message !== 'string') {
+    return res.status(400).json({ error: 'message é obrigatório' });
+  }
+  const safeMessage = message.slice(0, 2000);
   try {
-    const { message, context } = req.body;
-    const response = await chatWithData(message, context);
+    const response = await chatWithData(safeMessage, context);
     res.json({ response });
   } catch (error) {
     console.error('Chat error:', error);

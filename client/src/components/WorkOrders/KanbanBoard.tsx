@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import type { WorkOrder, User } from '../../types';
-import { Clock, AlertTriangle, CheckCircle, User as UserIcon } from 'lucide-react';
+import { Clock, AlertTriangle, CheckCircle, User as UserIcon, Ban } from 'lucide-react';
 
 interface KanbanBoardProps {
   currentUser: User | null;
@@ -110,6 +110,14 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ users }) => {
         className="flex-1"
       >
         <Column status="IN_PROGRESS" title="Em Andamento" icon={AlertTriangle} />
+      </div>
+
+      <div
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => handleDrop(e, 'BLOCKED')}
+        className="flex-1"
+      >
+        <Column status="BLOCKED" title="Bloqueado" icon={Ban} />
       </div>
 
       <div
