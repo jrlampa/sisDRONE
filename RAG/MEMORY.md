@@ -1,6 +1,6 @@
 # sisDRONE – RAG / Memória de Trabalho
 
-> Última atualização: 2026-02-23 (Phase 17) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
+> Última atualização: 2026-02-23 (Phase 18) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
 
 ---
 
@@ -178,7 +178,7 @@ sisDRONE/
 
 **Meta**: >= 80% de cobertura em código de lógica de negócio
 
-**Situação atual** (Phase 17): 267 server + 11 client = **278 testes no total** ✅ | Coverage: **100% stmts + 100% branches** 🎯
+**Situação atual** (Phase 18): 280 server + 11 client = **291 testes no total** ✅ | Coverage: **100% stmts + 100% branches** 🎯
 
 **Coverage Threshold** configurado em `server/vitest.config.ts`:
 - Lines/Functions/Statements: ≥ 80%
@@ -227,7 +227,7 @@ Testes existentes (Phase 9):
 - `tests/tenants.test.ts` – 6 (novo Phase 13: GET /api/tenants e /:id)
 - `tests/predict.test.ts` – 5 (novo Phase 13: GET /api/ai/predict/:id com validação)
 - `tests/polesSummary.test.ts` – 5 (novo Phase 14: GET /api/poles/:id/summary)
-- `tests/inspectionsList.test.ts` – 6 (novo Phase 17: GET /api/inspections — paginação, filtro pole_id, limit max)
+- `tests/maintenance.test.ts` – 13 (novo Phase 18: CRUD completo GET/PATCH/DELETE com 404, 400 e happy path)
 - `services/authServiceBranch.test.ts` – 2 (novo Phase 17: branch JWT_SECRET set via vi.resetModules → 100% branches)
 - `tests/users.test.ts` – 19 (4 GET / + 4 GET /:id + 6 PUT /:id + 5 DELETE /:id — Phase 16)
 - `client/utils/eng.test.ts` – 3
@@ -318,6 +318,13 @@ Testes existentes (Phase 9):
 - [x] ~~PoleEditForm.tsx: extraído de PoleDetails (edit form + status labels pt-BR) — 472→368 linhas~~ — Phase 17
 - [x] ~~api.getInspections(poleId?, page?, limit?) adicionado em api.ts~~ — Phase 17
 - [x] ~~Coverage: 100% stmts + 100% branches~~ — Phase 17 🎯
+- [x] ~~DB: 8 novos índices (idx_poles_ahi, idx_labels_pole, idx_labels_created, idx_images_pole, idx_users_tenant, idx_users_username, idx_maintenance_status, idx_wo_pole)~~ — Phase 18
+- [x] ~~aiRoutes.ts: 3 mensagens English → pt-BR ("Dados de análise são obrigatórios", "Falha ao gerar plano", "Falha ao processar chat")~~ — Phase 18
+- [x] ~~maintenance.ts: 2 "Failed to..." → pt-BR + 404 guard no PATCH + DELETE /api/maintenance/:planId adicionado~~ — Phase 18
+- [x] ~~tests/maintenance.test.ts: 13 testes CRUD completo (GET, PATCH status, DELETE com 400/404/200)~~ — Phase 18
+- [x] ~~usePoleSearch hook extraído de App.tsx (SRP) — App.tsx remove useMemo import~~ — Phase 18
+- [x] ~~AnalyticsDashboard.tsx: console.error English → pt-BR~~ — Phase 18
+- [x] ~~api.deleteMaintenancePlan(planId) adicionado em api.ts~~ — Phase 18
 
 ---
 

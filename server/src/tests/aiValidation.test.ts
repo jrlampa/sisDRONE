@@ -18,7 +18,7 @@ describe('AI Routes — Validation & Rate Limiting', () => {
   it('POST /api/ai/plan should return 400 when analysis is missing', async () => {
     const res = await request(app).post('/api/ai/plan').send({ poleId: 1 });
     expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/Analysis data is required/i);
+    expect(res.body.error).toMatch(/análise são obrigatórios/i);
   });
 
   it('POST /api/ai/plan should return 400 when poleId is not a valid integer', async () => {

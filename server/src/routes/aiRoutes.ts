@@ -35,7 +35,7 @@ router.post('/plan', rateLimit(10, 60_000), async (req, res) => {
     const { analysis, poleId } = req.body;
 
     if (!analysis) {
-      return res.status(400).json({ error: 'Analysis data is required' });
+      return res.status(400).json({ error: 'Dados de análise são obrigatórios' });
     }
 
     const safePoleId = poleId !== undefined ? parseInt(String(poleId), 10) : NaN;
@@ -62,7 +62,7 @@ router.post('/plan', rateLimit(10, 60_000), async (req, res) => {
     res.json({ plan: planText, planId: result.lastID, estimatedCost });
   } catch (error) {
     console.error('Failed to generate plan:', error);
-    res.status(500).json({ error: 'Failed to generate maintenance plan' });
+    res.status(500).json({ error: 'Falha ao gerar plano de manutenção' });
   }
 });
 
@@ -77,7 +77,7 @@ router.post('/chat', rateLimit(20, 60_000), async (req, res) => {
     res.json({ response });
   } catch (error) {
     console.error('Chat error:', error);
-    res.status(500).json({ error: 'Failed to process chat message' });
+    res.status(500).json({ error: 'Falha ao processar mensagem de chat' });
   }
 });
 

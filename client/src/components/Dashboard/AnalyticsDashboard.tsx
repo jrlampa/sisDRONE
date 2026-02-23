@@ -18,7 +18,7 @@ const AnalyticsDashboard: React.FC = () => {
         const res = await api.getStats();
         setData(res.data);
       } catch (error) {
-        console.error('Failed to load stats', error);
+        console.error('Falha ao carregar estatísticas:', error);
       }
     };
     loadStats();

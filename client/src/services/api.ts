@@ -93,6 +93,8 @@ export const api = {
   getMaintenancePlans: (poleId: number) => axios.get(`${API_BASE}/api/maintenance/${poleId}`),
   updateMaintenanceStatus: (planId: number, status: string) =>
     axios.patch(`${API_BASE}/api/maintenance/${planId}/status`, { status }),
+  deleteMaintenancePlan: (planId: number) =>
+    axios.delete(`${API_BASE}/api/maintenance/${planId}`),
   chatWithAI: (message: string, context: { pole: Pole | null, analysis: AnalysisResult | null }) =>
     axios.post(`${API_BASE}/api/ai/chat`, { message, context }),
   getPrediction: (id: number) => axios.get<Prediction>(`${API_BASE}/api/ai/predict/${id}`),

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import Map from './components/Map';
 import Sidebar from './components/Sidebar/Sidebar';
 import MobileFab from './components/MobileFab';
@@ -9,6 +9,7 @@ import { Zap, Menu, Building, LogOut } from 'lucide-react';
 import { api } from './services/api';
 import { useNetwork } from './hooks/useNetwork';
 import { useAppHandlers } from './hooks/useAppHandlers';
+import { usePoleSearch } from './hooks/usePoleSearch';
 import { TenantProvider } from './context/TenantContext';
 import { WifiOff, RefreshCw } from 'lucide-react';
 import type { Pole, Span, Inspection, AnalysisResult, Tenant, User } from './types';
@@ -122,16 +123,8 @@ const App: React.FC = () => {
     }
   }, [selectedPole]);
 
-  // ── Filtered poles (memoized) ──
-  const filteredPoles = useMemo(() => poles.filter(pole => {
-    const matchesSearch = pole.name.toLowerCase().includes(searchQuery.toLowerCase())
-      || pole.id.toString().includes(searchQuery);
-    if (filterCondition === 'All') return matchesSearch;
-    const score = pole.ahi_score ?? 100;
-    if (filterCondition === 'Critical') return matchesSearch && score < 50;
-    if (filterCondition === 'Warning') return matchesSearch && score >= 50 && score < 80;
-    return matchesSearch && score >= 80;
-  }), [poles, searchQuery, filterCondition]);
+  // ── Filtered poles (via usePoleSearch hook — SRP) ──
+  const filteredPoles = usePoleSearch(poles, searchQuery, filterCondition);
 
   return (
     <TenantProvider value={{ activeTenantId, setActiveTenantId, currentUser, setCurrentUser, isOnline }}>
