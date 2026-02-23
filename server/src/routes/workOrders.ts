@@ -8,6 +8,24 @@ const VALID_PRIORITIES: WorkOrder['priority'][] = ['LOW', 'MED', 'HIGH', 'CRITIC
 
 const router = Router();
 
+// GET /api/work-orders/stats - Aggregate KPIs by status
+router.get('/stats', rateLimit(60, 60_000), async (_req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    const rows = await db.all(
+      `SELECT status, COUNT(*) as count FROM work_orders GROUP BY status`
+    );
+    const counts: Record<string, number> = { OPEN: 0, IN_PROGRESS: 0, BLOCKED: 0, COMPLETED: 0 };
+    for (const row of rows) {
+      counts[row.status] = row.count;
+    }
+    const total = await db.get('SELECT COUNT(*) as count FROM work_orders');
+    res.json({ total: total?.count ?? 0, ...counts });
+  } catch (err) {
+    res.status(500).json({ error: 'Falha ao buscar estatísticas de ordens de serviço' });
+  }
+});
+
 // GET /api/work-orders - List all work orders
 router.get('/', rateLimit(60, 60_000), async (req: Request, res: Response) => {
   try {

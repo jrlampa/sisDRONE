@@ -118,4 +118,50 @@ router.post('/register', rateLimit(20, 60_000), async (req: Request, res: Respon
   }
 });
 
+/**
+ * POST /api/auth/change-password
+ * Body: { username, currentPassword, newPassword }
+ * Returns: { message }
+ */
+router.post('/change-password', rateLimit(10, 60_000), async (req: Request, res: Response) => {
+  const { username, currentPassword, newPassword } = req.body;
+
+  if (!username || typeof username !== 'string') {
+    return res.status(400).json({ error: 'Usuário é obrigatório' });
+  }
+  if (!currentPassword || typeof currentPassword !== 'string') {
+    return res.status(400).json({ error: 'Senha atual é obrigatória' });
+  }
+  if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 8) {
+    return res.status(400).json({ error: 'Nova senha deve ter pelo menos 8 caracteres' });
+  }
+  if (currentPassword === newPassword) {
+    return res.status(400).json({ error: 'Nova senha deve ser diferente da senha atual' });
+  }
+
+  const safeUsername = username.trim().slice(0, 100);
+
+  try {
+    const db = await getDb();
+    const user = await db.get('SELECT * FROM users WHERE username = ?', [safeUsername]);
+
+    if (!user || !user.password_hash) {
+      return res.status(401).json({ error: 'Credenciais inválidas' });
+    }
+
+    const isValid = await comparePassword(currentPassword, user.password_hash);
+    if (!isValid) {
+      return res.status(401).json({ error: 'Senha atual incorreta' });
+    }
+
+    const newHash = await hashPassword(newPassword);
+    await db.run('UPDATE users SET password_hash = ? WHERE id = ?', [newHash, user.id]);
+
+    res.json({ message: 'Senha alterada com sucesso' });
+  } catch (error) {
+    console.error('Erro ao alterar senha:', error);
+    res.status(500).json({ error: 'Erro interno no servidor' });
+  }
+});
+
 export default router;

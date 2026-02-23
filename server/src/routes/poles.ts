@@ -174,7 +174,7 @@ router.get('/stats', rateLimit(60, 60_000), async (req: Request, res: Response) 
       ahiHistogram
     });
   } catch (err) {
-    console.error('Stats error:', err);
+    console.error('Erro de estatísticas:', err);
     res.status(500).json({ error: 'Stats error' });
   }
 });
@@ -200,7 +200,7 @@ router.get('/export', rateLimit(10, 60_000), async (req: Request, res: Response)
     return res.send(csv);
 
   } catch (err) {
-    console.error('Export error:', err);
+    console.error('Erro de exportação:', err);
     res.status(500).json({ error: 'Falha ao exportar CSV' });
   }
 });
@@ -267,7 +267,7 @@ router.get('/:id/summary', rateLimit(120, 60_000), async (req: Request, res: Res
       inspection_count: inspectionCountRow?.count ?? 0,
     });
   } catch (err) {
-    console.error('Summary error:', err);
+    console.error('Erro de resumo:', err);
     res.status(500).json({ error: 'Erro ao buscar resumo do poste' });
   }
 });

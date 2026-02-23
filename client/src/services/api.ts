@@ -58,6 +58,8 @@ export const api = {
     axios.post<{ token: string, user: User }>(`${API_BASE}/api/auth/login`, { username, password }),
   register: (username: string, password: string, options?: { role?: string; tenant_id?: number }) =>
     axios.post<{ token: string, user: User }>(`${API_BASE}/api/auth/register`, { username, password, ...options }),
+  changePassword: (username: string, currentPassword: string, newPassword: string) =>
+    axios.post<{ message: string }>(`${API_BASE}/api/auth/change-password`, { username, currentPassword, newPassword }),
   getPoles: (tenantId?: number, page = 1, limit = 100) =>
     axios.get(`${API_BASE}/api/poles`, { params: { ...(tenantId ? { tenant_id: tenantId } : {}), page, limit } }),
   getAlerts: (tenantId?: number) =>
@@ -101,6 +103,8 @@ export const api = {
   exportCSV: () => axios.get(`${API_BASE}/api/poles/export`, { responseType: 'blob' }),
   getWorkOrders: (params?: { status?: string, assignee_id?: number }) =>
     axios.get<WorkOrder[]>(`${API_BASE}/api/work-orders`, { params }),
+  getWorkOrderStats: () =>
+    axios.get<{ total: number; OPEN: number; IN_PROGRESS: number; BLOCKED: number; COMPLETED: number }>(`${API_BASE}/api/work-orders/stats`),
   createWorkOrder: (data: Partial<WorkOrder>) =>
     axios.post<WorkOrder>(`${API_BASE}/api/work-orders`, data),
   updateWorkOrder: (id: number, data: Partial<WorkOrder>) =>

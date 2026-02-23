@@ -73,11 +73,13 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
       // summary is optional enhancement, fail silently
     }
   }, [pole.id]);
+
+  const loadPrediction = React.useCallback(async () => {
     try {
       const res = await api.getPrediction(pole.id);
       setPrediction(res.data);
     } catch (e) {
-      console.error('Failed to load prediction', e);
+      console.error('Falha ao carregar previsão', e);
     }
   }, [pole.id]);
 
@@ -93,7 +95,7 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
         setHistory([]);
       }
     } catch (error) {
-      console.error('Failed to load history', error);
+      console.error('Falha ao carregar histórico', error);
     }
   }, [pole.id]);
 
@@ -158,7 +160,7 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
       setMaintenancePlan(newPlan);
       setHistory(prev => [newPlan, ...prev]);
     } catch (error) {
-      console.error('Error generating plan', error);
+      console.error('Erro ao gerar plano', error);
       showToast('Erro ao gerar plano de manutenção', 'error');
     } finally {
       setLoadingPlan(false);

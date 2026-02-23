@@ -10,6 +10,14 @@ interface KanbanBoardProps {
   users: User[];
 }
 
+interface WorkOrderStats {
+  total: number;
+  OPEN: number;
+  IN_PROGRESS: number;
+  BLOCKED: number;
+  COMPLETED: number;
+}
+
 const PRIORITY_COLORS: Record<string, string> = {
   CRITICAL: 'border-l-4 border-red-500',
   HIGH: 'border-l-4 border-orange-500',
@@ -63,14 +71,24 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({ task, assignee, onDelete
 const KanbanBoard: React.FC<KanbanBoardProps> = ({ users }) => {
   const [tasks, setTasks] = useState<WorkOrder[]>([]);
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<WorkOrderStats | null>(null);
   const { confirmState, confirm, handleAnswer } = useConfirm();
+
+  const fetchStats = useCallback(async () => {
+    try {
+      const res = await api.getWorkOrderStats();
+      setStats(res.data);
+    } catch (err) {
+      console.error('Falha ao carregar estatísticas de ordens de serviço', err);
+    }
+  }, []);
 
   const fetchTasks = useCallback(async () => {
     try {
       const res = await api.getWorkOrders();
       setTasks(res.data);
     } catch (error) {
-      console.error('Failed to fetch tasks', error);
+      console.error('Falha ao carregar ordens de serviço', error);
     } finally {
       setLoading(false);
     }
@@ -78,14 +96,15 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ users }) => {
 
   useEffect(() => {
     fetchTasks();
-  }, [fetchTasks]);
+    fetchStats();
+  }, [fetchTasks, fetchStats]);
 
   const handleStatusChange = useCallback(async (taskId: number, newStatus: WorkOrder['status']) => {
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
     try {
       await api.updateWorkOrder(taskId, { status: newStatus });
     } catch (error) {
-      console.error('Failed to update status', error);
+      console.error('Falha ao atualizar status', error);
       fetchTasks();
     }
   }, [fetchTasks]);
@@ -100,11 +119,12 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ users }) => {
     setTasks(prev => prev.filter(t => t.id !== taskId));
     try {
       await api.deleteWorkOrder(taskId);
+      fetchStats();
     } catch (error) {
-      console.error('Failed to delete work order', error);
+      console.error('Falha ao excluir ordem de serviço', error);
       fetchTasks();
     }
-  }, [fetchTasks]);
+  }, [fetchTasks, fetchStats]);
 
   const Column = useCallback(({ status, title, icon: Icon }: { status: string, title: string, icon: React.ElementType }) => (
     <div className="flex-1 min-w-[300px] bg-white/5 rounded-lg p-4 flex flex-col gap-3">
@@ -139,6 +159,15 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ users }) => {
   return (
     <>
       <ConfirmDialog state={confirmState} onAnswer={handleAnswer} />
+      {stats && (
+        <div className="flex gap-6 px-4 pt-3 pb-1 text-sm border-b border-white/10 text-muted">
+          <span className="font-bold text-light">Total: {stats.total}</span>
+          <span className="text-blue-400">● A Fazer: {stats.OPEN}</span>
+          <span className="text-yellow-400">● Em Andamento: {stats.IN_PROGRESS}</span>
+          <span className="text-red-400">● Bloqueado: {stats.BLOCKED}</span>
+          <span className="text-green-400">● Concluído: {stats.COMPLETED}</span>
+        </div>
+      )}
       <div className="flex gap-4 p-4 h-full overflow-x-auto">
         <div onDragOver={(e) => e.preventDefault()} onDrop={(e) => handleDrop(e, 'OPEN')} className="flex-1">
           <Column status="OPEN" title="A Fazer" icon={Clock} />

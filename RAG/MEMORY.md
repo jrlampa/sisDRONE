@@ -1,6 +1,6 @@
 # sisDRONE – RAG / Memória de Trabalho
 
-> Última atualização: 2026-02-23 (Phase 18) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
+> Última atualização: 2026-02-23 (Phase 19) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
 
 ---
 
@@ -178,7 +178,7 @@ sisDRONE/
 
 **Meta**: >= 80% de cobertura em código de lógica de negócio
 
-**Situação atual** (Phase 18): 280 server + 11 client = **291 testes no total** ✅ | Coverage: **100% stmts + 100% branches** 🎯
+**Situação atual** (Phase 19): 291 server + 11 client = **302 testes no total** ✅ | Coverage: **100% stmts + 100% branches** 🎯
 
 **Coverage Threshold** configurado em `server/vitest.config.ts`:
 - Lines/Functions/Statements: ≥ 80%
@@ -325,6 +325,16 @@ Testes existentes (Phase 9):
 - [x] ~~usePoleSearch hook extraído de App.tsx (SRP) — App.tsx remove useMemo import~~ — Phase 18
 - [x] ~~AnalyticsDashboard.tsx: console.error English → pt-BR~~ — Phase 18
 - [x] ~~api.deleteMaintenancePlan(planId) adicionado em api.ts~~ — Phase 18
+- [x] ~~BUGFIX CRÍTICO: loadPrediction useCallback declaration ausente em PoleDetails.tsx (ReferenceError em runtime)~~ — Phase 19
+- [x] ~~PoleDetails.tsx: 3 console.error em inglês → pt-BR ('Falha ao carregar previsão', 'Falha ao carregar histórico', 'Erro ao gerar plano')~~ — Phase 19
+- [x] ~~poles.ts: 3 console.error em inglês → pt-BR ('Erro de estatísticas', 'Erro de exportação', 'Erro de resumo')~~ — Phase 19
+- [x] ~~GET /api/work-orders/stats: novo endpoint de KPIs agregados por status (OPEN/IN_PROGRESS/BLOCKED/COMPLETED/total)~~ — Phase 19
+- [x] ~~POST /api/auth/change-password: troca de senha com validação bcrypt, rateLimit 10/min, 400/401/200~~ — Phase 19
+- [x] ~~KanbanBoard.tsx: stats bar com contadores por status usando api.getWorkOrderStats()~~ — Phase 19
+- [x] ~~KanbanBoard.tsx: 3 console.error em inglês → pt-BR~~ — Phase 19
+- [x] ~~api.getWorkOrderStats() + api.changePassword() adicionados em api.ts~~ — Phase 19
+- [x] ~~tests/workOrderStats.test.ts: 4 testes (200, inteiro, soma=total, OPEN≥2)~~ — Phase 19
+- [x] ~~tests/changePassword.test.ts: 7 testes (400 ausente, 400 curto, 400 igual, 401 errado, 200 sucesso, login nova, login antiga)~~ — Phase 19
 
 ---
 
