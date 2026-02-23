@@ -1,6 +1,6 @@
 # sisDRONE – RAG / Memória de Trabalho
 
-> Última atualização: 2026-02-22 (Phase 10) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
+> Última atualização: 2026-02-23 (Phase 11) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
 
 ---
 
@@ -141,6 +141,7 @@ sisDRONE/
 | 22 | `aiRoutes.ts` /plan: poleId não validado | ✅ Corrigido | `routes/aiRoutes.ts` (Phase 10) |
 | 23 | `groqService.ts` GROQ_API_KEY capturada no módulo (não testável) | ✅ Corrigido | `services/groqService.ts` (Phase 10) |
 | 24 | `Sidebar.tsx` typo "Sáude" → "Saúde" | ✅ Corrigido | `components/Sidebar/Sidebar.tsx` (Phase 10) |
+| 25 | `GET /api/poles/stats` e `/export` sem rateLimit | ✅ Corrigido | `routes/poles.ts` (Phase 11) |
 
 ---
 
@@ -167,7 +168,7 @@ sisDRONE/
 
 **Meta**: >= 80% de cobertura em código de lógica de negócio
 
-**Situação atual** (Phase 10): 177 server + 11 client = **188 testes no total** ✅
+**Situação atual** (Phase 11): 185 server + 11 client = **196 testes no total** ✅
 
 **Coverage Threshold** configurado em `server/vitest.config.ts`:
 - Lines/Functions/Statements: ≥ 80%
@@ -208,6 +209,7 @@ Testes existentes (Phase 9):
 - `tests/aiValidation.test.ts` – 6
 - `tests/health.test.ts` – 5 (novo Phase 9: GET /health com DB status)
 - `tests/maintenancePlans.test.ts` – 6 (novo Phase 9: GET /:poleId, PATCH /:planId/status)
+- `tests/polesAlerts.test.ts` – 8 (novo Phase 11: GET /alerts + paginação de poles)
 - `client/utils/eng.test.ts` – 3
 - `client/utils/geo.test.ts` – 2
 - `client/utils/math.test.ts` – 6
@@ -250,6 +252,11 @@ Testes existentes (Phase 9):
 - [x] ~~aiRoutes.ts /plan: poleId sem validação de inteiro — corrigido~~ — Phase 10
 - [x] ~~groqService.ts: GROQ_API_KEY lida no módulo (não testável) → movida para dentro das funções~~ — Phase 10
 - [x] ~~Sidebar.tsx: typo "Sáude" → "Saúde"~~ — Phase 10
+- [x] ~~GET /api/poles/stats e /export sem rateLimit — adicionados~~ — Phase 11
+- [x] ~~GET /api/poles/alerts: endpoint de alertas críticos (AHI < 30)~~ — Phase 11
+- [x] ~~Paginação em GET /api/poles (page + limit, max 200)~~ — Phase 11
+- [x] ~~AlertBanner component: banner de alertas críticos no mapa~~ — Phase 11
+- [x] ~~api.getAlerts() + useNetwork.fetchAlerts() integrados ao App.tsx~~ — Phase 11
 
 ---
 
@@ -281,4 +288,4 @@ Testes existentes (Phase 9):
 - bcrypt hash de senhas (rounds=10)
 - Rate limiting em todos os endpoints (custom middleware `rateLimit.ts`)
 - Input sanitization: enum whitelists, length caps, parseInt/parseFloat guards
-- Nota: CodeQL `js/missing-rate-limiting` detecta falsos positivos pois não reconhece o custom middleware. Todos os 6 alertas de Phase 9 são falsos positivos — `rateLimit()` é aplicado em todos os handlers indicados.
+- Nota: CodeQL `js/missing-rate-limiting` detecta falsos positivos pois não reconhece o custom middleware. Todos os alertas de Phase 9–11 são falsos positivos — `rateLimit()` é aplicado em todos os handlers indicados.

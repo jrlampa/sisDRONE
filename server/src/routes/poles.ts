@@ -5,19 +5,28 @@ import { haversineMeters } from '../utils/geo';
 
 const router = Router();
 
-// GET all poles (optionally filtered by tenant_id)
+// GET all poles (optionally filtered by tenant_id, with pagination)
 router.get('/', rateLimit(100, 60_000), async (req: Request, res: Response) => {
   try {
     const db = await getDb();
     const tenantId = req.query.tenant_id ? parseInt(String(req.query.tenant_id), 10) : null;
 
+    const page = Math.max(1, parseInt(String(req.query.page || '1'), 10) || 1);
+    const limit = Math.min(200, Math.max(1, parseInt(String(req.query.limit || '100'), 10) || 100));
+    const offset = (page - 1) * limit;
+
     let poles;
+    let total: number;
     if (tenantId && !isNaN(tenantId) && tenantId > 0) {
-      poles = await db.all('SELECT * FROM poles WHERE tenant_id = ? ORDER BY id DESC', [tenantId]);
+      const countRow = await db.get('SELECT COUNT(*) as count FROM poles WHERE tenant_id = ?', [tenantId]);
+      total = countRow?.count ?? 0;
+      poles = await db.all('SELECT * FROM poles WHERE tenant_id = ? ORDER BY id DESC LIMIT ? OFFSET ?', [tenantId, limit, offset]);
     } else {
-      poles = await db.all('SELECT * FROM poles ORDER BY id DESC');
+      const countRow = await db.get('SELECT COUNT(*) as count FROM poles');
+      total = countRow?.count ?? 0;
+      poles = await db.all('SELECT * FROM poles ORDER BY id DESC LIMIT ? OFFSET ?', [limit, offset]);
     }
-    res.json(poles);
+    res.json({ poles, total, page, limit, pages: Math.ceil(total / limit) });
   } catch (err) {
     res.status(500).json({ error: 'DB Error' });
   }
@@ -86,7 +95,32 @@ router.get('/nearby', rateLimit(60, 60_000), async (req: Request, res: Response)
     res.status(500).json({ error: 'DB Error' });
   }
 });
-router.get('/stats', async (req: Request, res: Response) => {
+// GET /api/poles/alerts — postes abaixo do limiar de falha (AHI < 30)
+router.get('/alerts', rateLimit(60, 60_000), async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    const tenantId = req.query.tenant_id ? parseInt(String(req.query.tenant_id), 10) : null;
+    const threshold = 30;
+
+    let poles;
+    if (tenantId && !isNaN(tenantId) && tenantId > 0) {
+      poles = await db.all(
+        'SELECT * FROM poles WHERE ahi_score < ? AND tenant_id = ? ORDER BY ahi_score ASC',
+        [threshold, tenantId]
+      );
+    } else {
+      poles = await db.all(
+        'SELECT * FROM poles WHERE ahi_score < ? ORDER BY ahi_score ASC',
+        [threshold]
+      );
+    }
+    res.json({ threshold, count: poles.length, poles });
+  } catch (err) {
+    res.status(500).json({ error: 'DB Error' });
+  }
+});
+
+router.get('/stats', rateLimit(60, 60_000), async (req: Request, res: Response) => {
   try {
     const db = await getDb();
 
@@ -146,7 +180,7 @@ router.get('/stats', async (req: Request, res: Response) => {
 });
 
 // GET export CSV  (must be before /:id to avoid shadowing)
-router.get('/export', async (req: Request, res: Response) => {
+router.get('/export', rateLimit(10, 60_000), async (req: Request, res: Response) => {
   try {
     const db = await getDb();
     const poles = await db.all('SELECT * FROM poles ORDER BY id ASC');

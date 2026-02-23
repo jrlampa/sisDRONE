@@ -56,7 +56,10 @@ axios.interceptors.response.use(
 export const api = {
   login: (username: string, password: string) =>
     axios.post<{ token: string, user: User }>(`${API_BASE}/api/auth/login`, { username, password }),
-  getPoles: (tenantId?: number) => axios.get(`${API_BASE}/api/poles`, { params: tenantId ? { tenant_id: tenantId } : {} }),
+  getPoles: (tenantId?: number, page = 1, limit = 100) =>
+    axios.get(`${API_BASE}/api/poles`, { params: { ...(tenantId ? { tenant_id: tenantId } : {}), page, limit } }),
+  getAlerts: (tenantId?: number) =>
+    axios.get<{ threshold: number; count: number; poles: Pole[] }>(`${API_BASE}/api/poles/alerts`, { params: tenantId ? { tenant_id: tenantId } : {} }),
   getPole: (id: number) => axios.get(`${API_BASE}/api/poles/${id}`),
   updatePole: (id: number, data: { name?: string; material?: string; height?: number; structure_type?: string; status?: string }) =>
     axios.put(`${API_BASE}/api/poles/${id}`, data),

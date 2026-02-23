@@ -10,15 +10,27 @@ export function useNetwork() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [poles, setPoles] = useState<Pole[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
+  const [alerts, setAlerts] = useState<Pole[]>([]);
   const [activeTenantId, setActiveTenantId] = useState<number>(1);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   const fetchPoles = useCallback(async () => {
     try {
       const res = await api.getPoles(activeTenantId);
-      setPoles(res.data);
+      // Suporta resposta paginada { poles, total, ... } ou array legado
+      const data = res.data;
+      setPoles(Array.isArray(data) ? data : (data.poles ?? []));
     } catch (error) {
       console.error('Failed to fetch poles:', error);
+    }
+  }, [activeTenantId]);
+
+  const fetchAlerts = useCallback(async () => {
+    try {
+      const res = await api.getAlerts(activeTenantId);
+      setAlerts(res.data.poles ?? []);
+    } catch (error) {
+      console.error('Failed to fetch alerts:', error);
     }
   }, [activeTenantId]);
 
@@ -85,12 +97,14 @@ export function useNetwork() {
     const init = async () => {
       await fetchPoles();
       await fetchStats();
+      await fetchAlerts();
     };
     init();
-  }, [fetchPoles, fetchStats]);
+  }, [fetchPoles, fetchStats, fetchAlerts]);
 
   return {
     poles, setPoles, stats, fetchStats, fetchPoles,
+    alerts, fetchAlerts,
     activeTenantId, setActiveTenantId,
     currentUser, setCurrentUser,
     isOnline, isSyncing

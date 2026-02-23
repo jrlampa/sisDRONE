@@ -4,6 +4,7 @@ import Sidebar from './components/Sidebar/Sidebar';
 import MobileFab from './components/MobileFab';
 import LoginPage from './components/LoginPage';
 import AneelSearchPanel from './components/AneelSearchPanel';
+import AlertBanner from './components/AlertBanner';
 import { Zap, Menu, Building, LogOut } from 'lucide-react';
 import { api } from './services/api';
 import { useNetwork } from './hooks/useNetwork';
@@ -25,6 +26,7 @@ const App: React.FC = () => {
 
   const {
     poles, setPoles, stats, fetchStats, fetchPoles,
+    alerts, fetchAlerts,
     activeTenantId, setActiveTenantId,
     currentUser, setCurrentUser,
     isOnline, isSyncing
@@ -66,7 +68,8 @@ const App: React.FC = () => {
     setIsAuthenticated(true);
     fetchPoles();
     fetchStats();
-  }, [setCurrentUser, setActiveTenantId, fetchPoles, fetchStats]);
+    fetchAlerts();
+  }, [setCurrentUser, setActiveTenantId, fetchPoles, fetchStats, fetchAlerts]);
 
   const handleLogout = useCallback(() => {
     localStorage.removeItem('sisdrone_jwt');
@@ -239,21 +242,25 @@ const App: React.FC = () => {
               structures: [],
             });
             fetchStats();
+            fetchAlerts();
           }}
           onSelectPole={handleMarkerClick}
           onPoleUpdated={(updated) => {
             setPoles(prev => prev.map(p => p.id === updated.id ? { ...p, ...updated } : p));
             setSelectedPole(prev => prev?.id === updated.id ? { ...prev, ...updated } : prev);
             showNotification(`Poste "${updated.name}" atualizado com sucesso`);
+            fetchAlerts();
           }}
           onPoleDeleted={(id) => {
             setPoles(prev => prev.filter(p => p.id !== id));
             setSelectedPole(null);
             showNotification('Poste removido com sucesso');
+            fetchAlerts();
           }}
         />
 
         <div className="map-container glass-panel">
+          <AlertBanner alerts={alerts} onSelectPole={handleMarkerClick} />
           {notification && (
             <div className="notification-overlay animate-fade-in">
               <Zap size={16} className="text-primary" /><span>{notification}</span>
