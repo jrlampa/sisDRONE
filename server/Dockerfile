@@ -12,6 +12,9 @@ ENV NODE_ENV=production
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY package.json ./
-RUN mkdir -p uploads
+RUN addgroup -S sisdrone && adduser -S sisdrone -G sisdrone \
+    && mkdir -p uploads \
+    && chown -R sisdrone:sisdrone /app
+USER sisdrone
 EXPOSE 3001
 CMD ["node", "dist/index.js"]

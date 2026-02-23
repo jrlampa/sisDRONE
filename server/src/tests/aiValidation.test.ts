@@ -9,9 +9,10 @@ describe('AI Routes — Validation & Rate Limiting', () => {
     expect(res.body).toHaveProperty('error');
   });
 
-  it('GET /api/ai/predict/:id should return 404 for string id (treated as no match)', async () => {
+  it('GET /api/ai/predict/:id should return 400 for non-numeric id', async () => {
     const res = await request(app).get('/api/ai/predict/abc');
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty('error');
   });
 
   it('POST /api/ai/plan should return 400 when analysis is missing', async () => {

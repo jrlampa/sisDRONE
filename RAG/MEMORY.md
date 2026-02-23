@@ -1,6 +1,6 @@
 # sisDRONE – RAG / Memória de Trabalho
 
-> Última atualização: 2026-02-23 (Phase 12) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
+> Última atualização: 2026-02-23 (Phase 13) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
 
 ---
 
@@ -147,6 +147,11 @@ sisDRONE/
 | 28 | `GET /api/users` retornava `password_hash` | ✅ Corrigido | `routes/users.ts` (Phase 12) |
 | 29 | `POST /api/gis/import` sem validação de features (OOB, tipo errado) | ✅ Corrigido | `routes/gis.ts` (Phase 12) |
 | 30 | "Unassigned" em inglês no KanbanBoard | ✅ Corrigido | `KanbanBoard.tsx` (Phase 12) |
+| 31 | `GET /api/ai/predict/:id` sem validação de id — passava string ao DB | ✅ Corrigido | `routes/aiRoutes.ts` (Phase 13) |
+| 32 | `WorkOrderModal.tsx` usava `alert()` nativo (UX ruim) | ✅ Corrigido | `WorkOrderModal.tsx` (Phase 13) |
+| 33 | `docker-compose.yml` sem JWT_SECRET e sem healthcheck | ✅ Corrigido | `docker-compose.yml` (Phase 13) |
+| 34 | `server/Dockerfile` rodava como root | ✅ Corrigido | `server/Dockerfile` (Phase 13) |
+| 35 | `client/nginx.conf` sem headers de segurança e sem X-Forwarded-For | ✅ Corrigido | `nginx.conf` (Phase 13) |
 
 ---
 
@@ -173,23 +178,23 @@ sisDRONE/
 
 **Meta**: >= 80% de cobertura em código de lógica de negócio
 
-**Situação atual** (Phase 12): 215 server + 11 client = **226 testes no total** ✅
+**Situação atual** (Phase 13): 226 server + 11 client = **237 testes no total** ✅
 
 **Coverage Threshold** configurado em `server/vitest.config.ts`:
 - Lines/Functions/Statements: ≥ 80%
 - Branches: ≥ 70% (atual: 88.75% — muito acima da meta!)
 
-**Coverage por módulo (Phase 10)**:
+**Coverage por módulo (Phase 13)**:
 - `middleware/auth.ts`: 100%
 - `middleware/rateLimit.ts`: 100%
 - `services/authService.ts`: 100%
-- `services/chatService.ts`: **100%** (era 75% stmts, 33% branches — Phase 10 fix)
-- `services/groqService.ts`: **100% stmts, 90% branches** (era 90%/70% — Phase 10 fix)
+- `services/chatService.ts`: 100%
+- `services/groqService.ts`: 100% stmts, 90% branches
 - `services/healthService.ts`: 100%
-- `services/predictionService.ts`: 85.71% branches
-- `services/costService.ts`: 85.71%
+- `services/predictionService.ts`: 100% stmts, 92.85% branches
+- `services/costService.ts`: **100% stmts + 100% branches** (era 85.71%)
 - `utils/geo.ts`: 100%
-- **Total servidor**: **98.7% statements, 88.75% branches** ✅
+- **Total servidor**: **100% statements, 90% branches** ✅
 
 Testes existentes (Phase 9):
 - `predictionService.test.ts` – 8 (+6 edge cases: no date, unknown material, age≤2, age≤5, above failure, clamped years)
@@ -218,6 +223,9 @@ Testes existentes (Phase 9):
 - `tests/workOrders.test.ts` – 20 (novo Phase 12: CRUD completo incl. DELETE)
 - `tests/gis.test.ts` – 8 (novo Phase 12: export + import com validações)
 - `tests/users.test.ts` – 4 (novo Phase 12: GET /api/users, verifica sem password_hash)
+- `services/costServiceError.test.ts` – 1 (novo Phase 13: cobertura do catch branch)
+- `tests/tenants.test.ts` – 6 (novo Phase 13: GET /api/tenants e /:id)
+- `tests/predict.test.ts` – 5 (novo Phase 13: GET /api/ai/predict/:id com validação)
 - `client/utils/eng.test.ts` – 3
 - `client/utils/geo.test.ts` – 2
 - `client/utils/math.test.ts` – 6
@@ -270,6 +278,13 @@ Testes existentes (Phase 9):
 - [x] ~~DELETE /api/work-orders/:id endpoint ausente — adicionado~~ — Phase 12
 - [x] ~~KanbanBoard "Unassigned" → "Não atribuído" (pt-BR) + botão excluir OS~~ — Phase 12
 - [x] ~~api.deleteWorkOrder() + KanbanBoard refatorado com TaskCard + useCallback~~ — Phase 12
+- [x] ~~GET /api/ai/predict/:id: sem validação de id — retornava 404 em vez de 400 para string~~ — Phase 13
+- [x] ~~WorkOrderModal.tsx: alert() → notificação inline com ícones e auto-close~~ — Phase 13
+- [x] ~~docker-compose.yml: JWT_SECRET + JWT_EXPIRES_IN + healthcheck com node native~~ — Phase 13
+- [x] ~~server/Dockerfile: usuário não-root sisdrone com chown correto~~ — Phase 13
+- [x] ~~client/nginx.conf: headers de segurança + X-Forwarded-For + gzip + proxy /uploads~~ — Phase 13
+- [x] ~~costService.ts: cobertura de catch branch (100% statements + branches)~~ — Phase 13
+- [x] ~~tests/tenants.test.ts + tests/predict.test.ts: 11 novos testes~~ — Phase 13
 
 ---
 

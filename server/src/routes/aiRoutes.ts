@@ -10,19 +10,23 @@ import { rateLimit } from '../middleware/rateLimit';
 const router = Router();
 
 router.get('/predict/:id', rateLimit(30, 60_000), async (req, res) => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json({ error: 'ID de poste inválido' });
+  }
   try {
     const db = await getDb();
-    const pole = await db.get('SELECT * FROM poles WHERE id = ?', [req.params.id]);
+    const pole = await db.get('SELECT * FROM poles WHERE id = ?', [id]);
 
     if (!pole) {
-      return res.status(404).json({ error: 'Pole not found' });
+      return res.status(404).json({ error: 'Poste não encontrado' });
     }
 
     const prediction = predictLifespan(pole);
     res.json(prediction);
   } catch (error) {
     console.error('Prediction error:', error);
-    res.status(500).json({ error: 'Failed to generate prediction' });
+    res.status(500).json({ error: 'Falha ao gerar previsão' });
   }
 });
 
