@@ -1,6 +1,6 @@
 # sisDRONE – RAG / Memória de Trabalho
 
-> Última atualização: 2026-02-23 (Phase 19) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
+> Última atualização: 2026-02-23 (Phase 20) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
 
 ---
 
@@ -58,7 +58,7 @@ sisDRONE/
 
 | Domínio | Entidades | Rotas |
 |---------|-----------|-------|
-| **Infraestrutura** | Pole, Tenant | `/api/poles`, `/api/poles/:id` (GET/PUT/DELETE), `/api/poles/:id/summary`, `/api/tenants` |
+| **Infraestrutura** | Pole, Tenant | `/api/poles` (filtros: ahi_min, ahi_max, status, paginação), `/api/poles/:id` (GET/PUT/DELETE), `/api/poles/:id/summary`, `/api/poles/heatmap`, `/api/tenants` |
 | **Inspeção** | Inspection (Label), Image | `/api/analyze`, `/api/feedback`, `/:id/history` |
 | **Vídeo / Captura** | VideoSession, Frame | `/api/video/*` |
 | **IA / Manutenção** | MaintenancePlan | `/api/ai/*` |
@@ -178,7 +178,7 @@ sisDRONE/
 
 **Meta**: >= 80% de cobertura em código de lógica de negócio
 
-**Situação atual** (Phase 19): 291 server + 11 client = **302 testes no total** ✅ | Coverage: **100% stmts + 100% branches** 🎯
+**Situação atual** (Phase 20): 300 server + 11 client = **311 testes no total** ✅ | Coverage: **100% stmts + 100% branches** 🎯
 
 **Coverage Threshold** configurado em `server/vitest.config.ts`:
 - Lines/Functions/Statements: ≥ 80%
@@ -335,6 +335,15 @@ Testes existentes (Phase 9):
 - [x] ~~api.getWorkOrderStats() + api.changePassword() adicionados em api.ts~~ — Phase 19
 - [x] ~~tests/workOrderStats.test.ts: 4 testes (200, inteiro, soma=total, OPEN≥2)~~ — Phase 19
 - [x] ~~tests/changePassword.test.ts: 7 testes (400 ausente, 400 curto, 400 igual, 401 errado, 200 sucesso, login nova, login antiga)~~ — Phase 19
+- [x] ~~GET /api/poles — filtros ahi_min, ahi_max, status query params adicionados (query builder dinâmico com conditions[])~~ — Phase 20
+- [x] ~~GET /api/poles/heatmap — endpoint leve (id, lat, lng, ahi_score, name) para mapa de calor sem sobrecarga~~ — Phase 20
+- [x] ~~poles.ts: "Stats error" → "Erro interno nas estatísticas" (pt-BR total)~~ — Phase 20
+- [x] ~~tests/polesFilter.test.ts: 9 testes (ahi_min, ahi_max, combinado, status, tenant+ahi_min, lista vazia, heatmap 3 testes)~~ — Phase 20
+- [x] ~~Map.tsx: centro do mapa corrigido de São Paulo (-23.5505, -46.6333) → Nova Friburgo (-22.15018, -42.92185, zoom 14)~~ — Phase 20
+- [x] ~~useDashboard hook criado (client/src/hooks/useDashboard.ts) — loading/error states + reload()~~ — Phase 20
+- [x] ~~AnalyticsDashboard.tsx: refatorado para usar useDashboard (SRP — extrai data fetching do componente)~~ — Phase 20
+- [x] ~~api.getHeatmapData(tenantId?) adicionado em api.ts~~ — Phase 20
+- [x] ~~api.getPoles() atualizado para aceitar filters?: \{ ahi_min?, ahi_max?, status? \} em api.ts~~ — Phase 20
 
 ---
 

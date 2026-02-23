@@ -60,8 +60,13 @@ export const api = {
     axios.post<{ token: string, user: User }>(`${API_BASE}/api/auth/register`, { username, password, ...options }),
   changePassword: (username: string, currentPassword: string, newPassword: string) =>
     axios.post<{ message: string }>(`${API_BASE}/api/auth/change-password`, { username, currentPassword, newPassword }),
-  getPoles: (tenantId?: number, page = 1, limit = 100) =>
-    axios.get(`${API_BASE}/api/poles`, { params: { ...(tenantId ? { tenant_id: tenantId } : {}), page, limit } }),
+  getPoles: (tenantId?: number, page = 1, limit = 100, filters?: { ahi_min?: number; ahi_max?: number; status?: string }) =>
+    axios.get(`${API_BASE}/api/poles`, { params: { ...(tenantId ? { tenant_id: tenantId } : {}), page, limit, ...filters } }),
+  getHeatmapData: (tenantId?: number) =>
+    axios.get<{ count: number; points: Array<{ id: number; lat: number; lng: number; ahi_score: number | null; name: string }> }>(
+      `${API_BASE}/api/poles/heatmap`,
+      { params: tenantId ? { tenant_id: tenantId } : {} }
+    ),
   getAlerts: (tenantId?: number) =>
     axios.get<{ threshold: number; count: number; poles: Pole[] }>(`${API_BASE}/api/poles/alerts`, { params: tenantId ? { tenant_id: tenantId } : {} }),
   getPole: (id: number) => axios.get(`${API_BASE}/api/poles/${id}`),

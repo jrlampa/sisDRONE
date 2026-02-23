@@ -5,27 +5,47 @@ import { haversineMeters } from '../utils/geo';
 
 const router = Router();
 
-// GET all poles (optionally filtered by tenant_id, with pagination)
+// GET all poles (optionally filtered by tenant_id, ahi_min, ahi_max, status, with pagination)
 router.get('/', rateLimit(100, 60_000), async (req: Request, res: Response) => {
   try {
     const db = await getDb();
     const tenantId = req.query.tenant_id ? parseInt(String(req.query.tenant_id), 10) : null;
+    const ahiMin = req.query.ahi_min !== undefined ? parseFloat(String(req.query.ahi_min)) : null;
+    const ahiMax = req.query.ahi_max !== undefined ? parseFloat(String(req.query.ahi_max)) : null;
+    const statusFilter = req.query.status ? String(req.query.status) : null;
 
     const page = Math.max(1, parseInt(String(req.query.page || '1'), 10) || 1);
     const limit = Math.min(200, Math.max(1, parseInt(String(req.query.limit || '100'), 10) || 100));
     const offset = (page - 1) * limit;
 
-    let poles;
-    let total: number;
+    const conditions: string[] = [];
+    const params: (string | number)[] = [];
+
     if (tenantId && !isNaN(tenantId) && tenantId > 0) {
-      const countRow = await db.get('SELECT COUNT(*) as count FROM poles WHERE tenant_id = ?', [tenantId]);
-      total = countRow?.count ?? 0;
-      poles = await db.all('SELECT * FROM poles WHERE tenant_id = ? ORDER BY id DESC LIMIT ? OFFSET ?', [tenantId, limit, offset]);
-    } else {
-      const countRow = await db.get('SELECT COUNT(*) as count FROM poles');
-      total = countRow?.count ?? 0;
-      poles = await db.all('SELECT * FROM poles ORDER BY id DESC LIMIT ? OFFSET ?', [limit, offset]);
+      conditions.push('tenant_id = ?');
+      params.push(tenantId);
     }
+    if (ahiMin !== null && !isNaN(ahiMin)) {
+      conditions.push('ahi_score >= ?');
+      params.push(ahiMin);
+    }
+    if (ahiMax !== null && !isNaN(ahiMax)) {
+      conditions.push('ahi_score <= ?');
+      params.push(ahiMax);
+    }
+    if (statusFilter) {
+      conditions.push('status = ?');
+      params.push(statusFilter);
+    }
+
+    const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+    const countRow = await db.get(`SELECT COUNT(*) as count FROM poles ${whereClause}`, params);
+    const total: number = countRow?.count ?? 0;
+    const poles = await db.all(
+      `SELECT * FROM poles ${whereClause} ORDER BY id DESC LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
+    );
+
     res.json({ poles, total, page, limit, pages: Math.ceil(total / limit) });
   } catch (err) {
     res.status(500).json({ error: 'Erro interno no servidor' });
@@ -120,6 +140,27 @@ router.get('/alerts', rateLimit(60, 60_000), async (req: Request, res: Response)
   }
 });
 
+// GET /api/poles/heatmap — lightweight endpoint for heatmap layer (id, lat, lng, ahi_score, name only)
+router.get('/heatmap', rateLimit(60, 60_000), async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    const tenantId = req.query.tenant_id ? parseInt(String(req.query.tenant_id), 10) : null;
+
+    let points;
+    if (tenantId && !isNaN(tenantId) && tenantId > 0) {
+      points = await db.all(
+        'SELECT id, lat, lng, ahi_score, name FROM poles WHERE tenant_id = ? ORDER BY id ASC',
+        [tenantId]
+      );
+    } else {
+      points = await db.all('SELECT id, lat, lng, ahi_score, name FROM poles ORDER BY id ASC');
+    }
+    res.json({ count: points.length, points });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro interno no servidor' });
+  }
+});
+
 router.get('/stats', rateLimit(60, 60_000), async (req: Request, res: Response) => {
   try {
     const db = await getDb();
@@ -175,7 +216,7 @@ router.get('/stats', rateLimit(60, 60_000), async (req: Request, res: Response) 
     });
   } catch (err) {
     console.error('Erro de estatísticas:', err);
-    res.status(500).json({ error: 'Stats error' });
+    res.status(500).json({ error: 'Erro interno nas estatísticas' });
   }
 });
 
