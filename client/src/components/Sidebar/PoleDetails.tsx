@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { MapPin, Upload, Activity, CheckCircle, AlertTriangle, FileText, Loader, Clock, Archive, Download, Edit2, Trash2, Save, X } from 'lucide-react';
 import { api } from '../../services/api';
-import type { Pole, AnalysisResult, User } from '../../types';
+import type { Pole, AnalysisResult, User, PoleSummary } from '../../types';
 import type { Prediction } from '../../types/prediction';
 import WorkOrderModal from '../WorkOrders/WorkOrderModal';
 
@@ -54,7 +54,16 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
   );
   const [savingEdit, setSavingEdit] = useState(false);
 
-  const loadPrediction = React.useCallback(async () => {
+  const [summary, setSummary] = useState<PoleSummary | null>(null);
+
+  const loadSummary = React.useCallback(async () => {
+    try {
+      const res = await api.getPoleSummary(pole.id);
+      setSummary(res.data);
+    } catch {
+      // summary is optional enhancement, fail silently
+    }
+  }, [pole.id]);
     try {
       const res = await api.getPrediction(pole.id);
       setPrediction(res.data);
@@ -83,13 +92,14 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
     if (pole.id) {
       loadHistory();
       loadPrediction();
+      loadSummary();
       setMaintenancePlan(null);
       setIsEditing(false);
       setEditName(pole.name);
       setEditMaterial(pole.material || '');
       setEditStatus(VALID_STATUSES.includes(pole.status as typeof VALID_STATUSES[number]) ? pole.status as typeof VALID_STATUSES[number] : 'pending');
     }
-  }, [pole.id, loadHistory, loadPrediction]);
+  }, [pole.id, loadHistory, loadPrediction, loadSummary]);
 
   const handleSaveEdit = async () => {
     setSavingEdit(true);
@@ -249,6 +259,24 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
               style={{ width: `${pole.ahi_score ?? 100}%` }}
             />
           </div>
+          {summary && (
+            <div className="grid grid-cols-2 gap-2 mt-2 text-xs text-muted">
+              <span>
+                🔍 <strong>{summary.inspection_count}</strong> inspeção{summary.inspection_count !== 1 ? 'ões' : ''}
+              </span>
+              <span>
+                {summary.last_inspection
+                  ? `📅 ${new Date(summary.last_inspection.created_at).toLocaleDateString('pt-BR')}`
+                  : '📅 Sem inspeção'}
+              </span>
+              {summary.active_plan && (
+                <span className="col-span-2 text-yellow-400">
+                  ⚠️ Plano ativo: {summary.active_plan.status}
+                  {summary.active_plan.estimated_cost ? ` · R$ ${summary.active_plan.estimated_cost.toFixed(2)}` : ''}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Prediction Section */}

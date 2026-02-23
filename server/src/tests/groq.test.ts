@@ -5,7 +5,7 @@ import { analyzeImage } from '../services/groqService.js';
 vi.mock('axios');
 
 describe('Groq Service', () => {
-  it('should process AI response correctly', async () => {
+  it('should process AI response correctly when content is a JSON string', async () => {
     const mockResponse = {
       data: {
         choices: [
@@ -34,6 +34,37 @@ describe('Groq Service', () => {
 
     expect((result as any).pole_type).toBe('Concreto');
     expect((result as any).confidence).toBe(0.95);
+  });
+
+  it('should process AI response correctly when content is already an object', async () => {
+    const mockResponse = {
+      data: {
+        choices: [
+          {
+            message: {
+              content: {
+                pole_type: "Madeira",
+                structures: ["Isolador"],
+                condition: "Atenção",
+                confidence: 0.75,
+                analysis_summary: "Poste de madeira com desgaste."
+              }
+            }
+          }
+        ]
+      },
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config: {}
+    };
+
+    vi.mocked(axios.post).mockResolvedValue(mockResponse as any);
+
+    const result = await analyzeImage('dummy_base64');
+
+    expect((result as any).pole_type).toBe('Madeira');
+    expect((result as any).condition).toBe('Atenção');
   });
 
   it('should throw error if API fails', async () => {

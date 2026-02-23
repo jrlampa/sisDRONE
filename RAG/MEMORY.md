@@ -1,6 +1,6 @@
 # sisDRONE – RAG / Memória de Trabalho
 
-> Última atualização: 2026-02-23 (Phase 13) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
+> Última atualização: 2026-02-23 (Phase 14) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
 
 ---
 
@@ -58,7 +58,7 @@ sisDRONE/
 
 | Domínio | Entidades | Rotas |
 |---------|-----------|-------|
-| **Infraestrutura** | Pole, Tenant | `/api/poles`, `/api/poles/:id` (GET/PUT/DELETE), `/api/tenants` |
+| **Infraestrutura** | Pole, Tenant | `/api/poles`, `/api/poles/:id` (GET/PUT/DELETE), `/api/poles/:id/summary`, `/api/tenants` |
 | **Inspeção** | Inspection (Label), Image | `/api/analyze`, `/api/feedback`, `/:id/history` |
 | **Vídeo / Captura** | VideoSession, Frame | `/api/video/*` |
 | **IA / Manutenção** | MaintenancePlan | `/api/ai/*` |
@@ -178,23 +178,23 @@ sisDRONE/
 
 **Meta**: >= 80% de cobertura em código de lógica de negócio
 
-**Situação atual** (Phase 13): 226 server + 11 client = **237 testes no total** ✅
+**Situação atual** (Phase 14): 235 server + 11 client = **246 testes no total** ✅
 
 **Coverage Threshold** configurado em `server/vitest.config.ts`:
 - Lines/Functions/Statements: ≥ 80%
 - Branches: ≥ 70% (atual: 88.75% — muito acima da meta!)
 
-**Coverage por módulo (Phase 13)**:
+**Coverage por módulo (Phase 14)**:
 - `middleware/auth.ts`: 100%
-- `middleware/rateLimit.ts`: 100%
-- `services/authService.ts`: 100%
+- `middleware/rateLimit.ts`: **100% branches** (era 77.77%)
+- `services/authService.ts`: 100% stmts, 83.33% branches (line 7: module-level side-effect, untestável)
 - `services/chatService.ts`: 100%
-- `services/groqService.ts`: 100% stmts, 90% branches
-- `services/healthService.ts`: 100%
+- `services/groqService.ts`: **100% branches** (era 90%)
+- `services/healthService.ts`: **100% branches** (era 84.21%)
 - `services/predictionService.ts`: 100% stmts, 92.85% branches
-- `services/costService.ts`: **100% stmts + 100% branches** (era 85.71%)
+- `services/costService.ts`: 100%
 - `utils/geo.ts`: 100%
-- **Total servidor**: **100% statements, 90% branches** ✅
+- **Total servidor**: **100% statements, 97.5% branches** ✅
 
 Testes existentes (Phase 9):
 - `predictionService.test.ts` – 8 (+6 edge cases: no date, unknown material, age≤2, age≤5, above failure, clamped years)
@@ -226,6 +226,7 @@ Testes existentes (Phase 9):
 - `services/costServiceError.test.ts` – 1 (novo Phase 13: cobertura do catch branch)
 - `tests/tenants.test.ts` – 6 (novo Phase 13: GET /api/tenants e /:id)
 - `tests/predict.test.ts` – 5 (novo Phase 13: GET /api/ai/predict/:id com validação)
+- `tests/polesSummary.test.ts` – 5 (novo Phase 14: GET /api/poles/:id/summary)
 - `client/utils/eng.test.ts` – 3
 - `client/utils/geo.test.ts` – 2
 - `client/utils/math.test.ts` – 6
@@ -285,6 +286,12 @@ Testes existentes (Phase 9):
 - [x] ~~client/nginx.conf: headers de segurança + X-Forwarded-For + gzip + proxy /uploads~~ — Phase 13
 - [x] ~~costService.ts: cobertura de catch branch (100% statements + branches)~~ — Phase 13
 - [x] ~~tests/tenants.test.ts + tests/predict.test.ts: 11 novos testes~~ — Phase 13
+- [x] ~~GET /api/poles/:id/summary: AHI + last_inspection + active_plan + inspection_count~~ — Phase 14
+- [x] ~~groqService.ts: branch linha 63 (rawContent object) — 90% → 100% branches~~ — Phase 14
+- [x] ~~rateLimit.ts: branch socket.remoteAddress + unknown fallback — 77.77% → 100% branches~~ — Phase 14
+- [x] ~~healthService.ts: branch 'Boa' condition (else sem deduções) — 84.21% → 100% branches~~ — Phase 14
+- [x] ~~PoleDetails.tsx: summary card com inspeção count, última inspeção e plano ativo~~ — Phase 14
+- [x] ~~PoleSummary type extraído para types.ts (single source of truth)~~ — Phase 14
 
 ---
 

@@ -226,6 +226,52 @@ router.get('/:id/history', rateLimit(60, 60_000), async (req: Request, res: Resp
   }
 });
 
+// GET condensed summary for a pole: AHI + last inspection + active maintenance plan
+router.get('/:id/summary', rateLimit(120, 60_000), async (req: Request, res: Response) => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json({ error: 'ID de poste inválido' });
+  }
+  try {
+    const db = await getDb();
+    const pole = await db.get(
+      'SELECT id, name, ahi_score, status, material, installation_date, tenant_id FROM poles WHERE id = ?',
+      [id]
+    );
+    if (!pole) return res.status(404).json({ error: 'Poste não encontrado' });
+
+    const lastInspection = await db.get(`
+      SELECT l.label, l.confidence, l.source, l.created_at, i.file_path
+      FROM labels l
+      LEFT JOIN images i ON l.image_id = i.id
+      WHERE l.pole_id = ?
+      ORDER BY l.created_at DESC LIMIT 1
+    `, [id]);
+
+    const activePlan = await db.get(
+      `SELECT id, status, estimated_cost, created_at FROM maintenance_plans
+       WHERE pole_id = ? AND status IN ('PENDING','APPROVED')
+       ORDER BY created_at DESC LIMIT 1`,
+      [id]
+    );
+
+    const inspectionCountRow = await db.get(
+      'SELECT COUNT(*) as count FROM labels WHERE pole_id = ?',
+      [id]
+    );
+
+    res.json({
+      pole,
+      last_inspection: lastInspection ?? null,
+      active_plan: activePlan ?? null,
+      inspection_count: inspectionCountRow?.count ?? 0,
+    });
+  } catch (err) {
+    console.error('Summary error:', err);
+    res.status(500).json({ error: 'Erro ao buscar resumo do poste' });
+  }
+});
+
 // GET single pole by id (must be after all named GET routes)
 router.get('/:id', rateLimit(120, 60_000), async (req: Request, res: Response) => {
   const id = parseInt(String(req.params.id), 10);

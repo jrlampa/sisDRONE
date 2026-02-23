@@ -48,4 +48,18 @@ describe('HealthService', () => {
     const pole: Pole = { id: 2 }; // Even ID = Coastal = -5
     expect(calculateAHI(pole)).toBe(95);
   });
+
+  it('should not deduct for Good condition (no match)', () => {
+    const pole: Pole = { id: 3 };
+    const analysis: AnalysisResult = {
+      labelId: 1,
+      pole_type: 'Concreto',
+      structures: [],
+      condition: 'Boa',
+      confidence: 0.98,
+      analysis_summary: 'Excelente estado.'
+    };
+    // 100 - 0 = 100 (neither critical nor warning keyword)
+    expect(calculateAHI(pole, analysis)).toBe(100);
+  });
 });

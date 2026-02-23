@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Tenant, User, WorkOrder, Pole, AnalysisResult } from '../types';
+import type { Tenant, User, WorkOrder, Pole, AnalysisResult, PoleSummary } from '../types';
 import type { Prediction } from '../types/prediction';
 import { addToQueue } from '../utils/offlineQueue';
 
@@ -68,6 +68,7 @@ export const api = {
     axios.get(`${API_BASE}/api/poles/nearby`, { params: { lat, lng, radius } }),
   getStats: () => axios.get(`${API_BASE}/api/poles/stats`),
   getHistory: (id: number) => axios.get(`${API_BASE}/api/poles/${id}/history`),
+  getPoleSummary: (id: number) => axios.get<PoleSummary>(`${API_BASE}/api/poles/${id}/summary`),
   createPole: (data: { lat: number, lng: number, name: string, utm_x: string, utm_y: string, tenant_id: number }) =>
     axios.post(`${API_BASE}/api/poles`, data),
   exportGis: () => axios.get(`${API_BASE}/api/gis/export/geojson`),
