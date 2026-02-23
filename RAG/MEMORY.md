@@ -1,6 +1,6 @@
 # sisDRONE – RAG / Memória de Trabalho
 
-> Última atualização: 2026-02-23 (Phase 11) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
+> Última atualização: 2026-02-23 (Phase 12) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
 
 ---
 
@@ -142,6 +142,11 @@ sisDRONE/
 | 23 | `groqService.ts` GROQ_API_KEY capturada no módulo (não testável) | ✅ Corrigido | `services/groqService.ts` (Phase 10) |
 | 24 | `Sidebar.tsx` typo "Sáude" → "Saúde" | ✅ Corrigido | `components/Sidebar/Sidebar.tsx` (Phase 10) |
 | 25 | `GET /api/poles/stats` e `/export` sem rateLimit | ✅ Corrigido | `routes/poles.ts` (Phase 11) |
+| 26 | `GET /api/users` sem rateLimit — exposição de dados | ✅ Corrigido | `routes/users.ts` (Phase 12) |
+| 27 | `GET/POST /api/gis` sem rateLimit | ✅ Corrigido | `routes/gis.ts` (Phase 12) |
+| 28 | `GET /api/users` retornava `password_hash` | ✅ Corrigido | `routes/users.ts` (Phase 12) |
+| 29 | `POST /api/gis/import` sem validação de features (OOB, tipo errado) | ✅ Corrigido | `routes/gis.ts` (Phase 12) |
+| 30 | "Unassigned" em inglês no KanbanBoard | ✅ Corrigido | `KanbanBoard.tsx` (Phase 12) |
 
 ---
 
@@ -168,7 +173,7 @@ sisDRONE/
 
 **Meta**: >= 80% de cobertura em código de lógica de negócio
 
-**Situação atual** (Phase 11): 185 server + 11 client = **196 testes no total** ✅
+**Situação atual** (Phase 12): 215 server + 11 client = **226 testes no total** ✅
 
 **Coverage Threshold** configurado em `server/vitest.config.ts`:
 - Lines/Functions/Statements: ≥ 80%
@@ -210,6 +215,9 @@ Testes existentes (Phase 9):
 - `tests/health.test.ts` – 5 (novo Phase 9: GET /health com DB status)
 - `tests/maintenancePlans.test.ts` – 6 (novo Phase 9: GET /:poleId, PATCH /:planId/status)
 - `tests/polesAlerts.test.ts` – 8 (novo Phase 11: GET /alerts + paginação de poles)
+- `tests/workOrders.test.ts` – 20 (novo Phase 12: CRUD completo incl. DELETE)
+- `tests/gis.test.ts` – 8 (novo Phase 12: export + import com validações)
+- `tests/users.test.ts` – 4 (novo Phase 12: GET /api/users, verifica sem password_hash)
 - `client/utils/eng.test.ts` – 3
 - `client/utils/geo.test.ts` – 2
 - `client/utils/math.test.ts` – 6
@@ -257,6 +265,11 @@ Testes existentes (Phase 9):
 - [x] ~~Paginação em GET /api/poles (page + limit, max 200)~~ — Phase 11
 - [x] ~~AlertBanner component: banner de alertas críticos no mapa~~ — Phase 11
 - [x] ~~api.getAlerts() + useNetwork.fetchAlerts() integrados ao App.tsx~~ — Phase 11
+- [x] ~~GET /api/users sem rateLimit + expondo password_hash — corrigidos~~ — Phase 12
+- [x] ~~GET/POST /api/gis sem rateLimit + import sem validação — corrigidos~~ — Phase 12
+- [x] ~~DELETE /api/work-orders/:id endpoint ausente — adicionado~~ — Phase 12
+- [x] ~~KanbanBoard "Unassigned" → "Não atribuído" (pt-BR) + botão excluir OS~~ — Phase 12
+- [x] ~~api.deleteWorkOrder() + KanbanBoard refatorado com TaskCard + useCallback~~ — Phase 12
 
 ---
 

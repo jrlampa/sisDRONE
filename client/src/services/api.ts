@@ -93,6 +93,8 @@ export const api = {
     axios.post<WorkOrder>(`${API_BASE}/api/work-orders`, data),
   updateWorkOrder: (id: number, data: Partial<WorkOrder>) =>
     axios.put<WorkOrder>(`${API_BASE}/api/work-orders/${id}`, data),
+  deleteWorkOrder: (id: number) =>
+    axios.delete<{ message: string; id: number }>(`${API_BASE}/api/work-orders/${id}`),
 
   // Video Analysis
   startVideoSession: (poleId: number, tenantId: number, mode: 'frame' | 'recording') =>

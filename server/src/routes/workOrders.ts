@@ -181,4 +181,22 @@ router.put('/:id', rateLimit(30, 60_000), async (req: Request, res: Response) =>
   }
 });
 
+// DELETE /api/work-orders/:id - Remove a work order
+router.delete('/:id', rateLimit(20, 60_000), async (req: Request, res: Response) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json({ error: 'ID inválido' });
+  }
+  try {
+    const db = await getDb();
+    const order = await db.get('SELECT id FROM work_orders WHERE id = ?', [id]);
+    if (!order) return res.status(404).json({ error: 'Ordem de serviço não encontrada' });
+    await db.run('DELETE FROM work_orders WHERE id = ?', [id]);
+    res.json({ message: 'Ordem de serviço removida com sucesso', id });
+  } catch (error) {
+    console.error('Error deleting work order:', error);
+    res.status(500).json({ error: 'Falha ao remover ordem de serviço' });
+  }
+});
+
 export default router;
