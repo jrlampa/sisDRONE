@@ -53,7 +53,8 @@ app.use('/api/auth', authRouter);
 
 // Routes
 app.use('/api/poles', polesRouter);
-app.use('/api', inspectionsRouter);
+app.use('/api/inspections', inspectionsRouter); // new: GET /api/inspections (list)
+app.use('/api', inspectionsRouter);             // legacy: /api/analyze, /api/feedback, /api/:id/history
 app.use('/api/gis', gisRouter);
 app.use('/api/tenants', tenantsRouter);
 app.use('/api/users', usersRouter);

@@ -11,6 +11,43 @@ const __dirname = path.dirname(__filename);
 
 const router = Router();
 
+// GET all inspection labels with optional pole_id filter and pagination
+router.get('/', rateLimit(60, 60_000), async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    const poleId = req.query.pole_id ? parseInt(String(req.query.pole_id), 10) : null;
+    const page = Math.max(1, parseInt(String(req.query.page || '1'), 10) || 1);
+    const limit = Math.min(200, Math.max(1, parseInt(String(req.query.limit || '50'), 10) || 50));
+    const offset = (page - 1) * limit;
+
+    let rows: unknown[], total: number;
+    const baseQuery = `
+      SELECT l.*, i.file_path
+      FROM labels l
+      LEFT JOIN images i ON l.image_id = i.id
+    `;
+
+    if (poleId && !isNaN(poleId) && poleId > 0) {
+      const countRow = await db.get('SELECT COUNT(*) as count FROM labels WHERE pole_id = ?', [poleId]);
+      total = countRow?.count ?? 0;
+      rows = await db.all(
+        baseQuery + ' WHERE l.pole_id = ? ORDER BY l.created_at DESC LIMIT ? OFFSET ?',
+        [poleId, limit, offset]
+      );
+    } else {
+      const countRow = await db.get('SELECT COUNT(*) as count FROM labels');
+      total = countRow?.count ?? 0;
+      rows = await db.all(
+        baseQuery + ' ORDER BY l.created_at DESC LIMIT ? OFFSET ?',
+        [limit, offset]
+      );
+    }
+    res.json({ inspections: rows, total, page, limit, pages: Math.ceil(total / limit) });
+  } catch (err) {
+    res.status(500).json({ error: 'Falha ao buscar inspeções' });
+  }
+});
+
 // POST analyze image
 router.post('/analyze', rateLimit(20, 60_000), async (req: Request, res: Response) => {
   const { poleId, image } = req.body;
@@ -85,7 +122,7 @@ router.post('/feedback', rateLimit(30, 60_000), async (req: Request, res: Respon
   const { labelId, poleId, isCorrect, correction } = req.body;
 
   if (labelId === undefined || poleId === undefined || isCorrect === undefined) {
-    return res.status(400).json({ error: 'labelId, poleId, and isCorrect are required' });
+    return res.status(400).json({ error: 'labelId, poleId e isCorrect são obrigatórios' });
   }
 
   const safePoleId = parseInt(String(poleId), 10);

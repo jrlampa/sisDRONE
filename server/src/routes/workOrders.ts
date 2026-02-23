@@ -48,7 +48,7 @@ router.get('/', rateLimit(60, 60_000), async (req: Request, res: Response) => {
     res.json(workOrders);
   } catch (error) {
     console.error('Error fetching work orders:', error);
-    res.status(500).json({ error: 'Failed to fetch work orders' });
+    res.status(500).json({ error: 'Falha ao buscar ordens de serviço' });
   }
 });
 
@@ -92,7 +92,7 @@ router.post('/', rateLimit(20, 60_000), async (req: Request, res: Response) => {
     res.status(201).json(newOrder);
   } catch (error) {
     console.error('Error creating work order:', error);
-    res.status(500).json({ error: 'Failed to create work order' });
+    res.status(500).json({ error: 'Falha ao criar ordem de serviço' });
   }
 });
 
@@ -115,7 +115,7 @@ router.get('/:id', rateLimit(60, 60_000), async (req: Request, res: Response) =>
     res.json(order);
   } catch (error) {
     console.error('Error fetching work order:', error);
-    res.status(500).json({ error: 'Failed to fetch work order' });
+    res.status(500).json({ error: 'Falha ao buscar ordem de serviço' });
   }
 });
 
@@ -177,7 +177,7 @@ router.put('/:id', rateLimit(30, 60_000), async (req: Request, res: Response) =>
     res.json(updatedOrder);
   } catch (error) {
     console.error('Error updating work order:', error);
-    res.status(500).json({ error: 'Failed to update work order' });
+    res.status(500).json({ error: 'Falha ao atualizar ordem de serviço' });
   }
 });
 

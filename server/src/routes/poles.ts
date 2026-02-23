@@ -55,7 +55,7 @@ router.post('/', rateLimit(30, 60_000), async (req: Request, res: Response) => {
     );
     res.json({ id: result.lastID, name: safeName, lat, lng, utm_x, utm_y, tenant_id: safeTenantId });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to create pole' });
+    res.status(500).json({ error: 'Falha ao criar poste' });
   }
 });
 
@@ -201,7 +201,7 @@ router.get('/export', rateLimit(10, 60_000), async (req: Request, res: Response)
 
   } catch (err) {
     console.error('Export error:', err);
-    res.status(500).json({ error: 'Failed to export CSV' });
+    res.status(500).json({ error: 'Falha ao exportar CSV' });
   }
 });
 

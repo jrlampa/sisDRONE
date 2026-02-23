@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MapPin, Upload, FileText, Loader, Download, Edit2, Trash2, Save, X } from 'lucide-react';
+import { MapPin, Upload, FileText, Loader, Download, Edit2, Trash2, X } from 'lucide-react';
 import { api } from '../../services/api';
 import type { Pole, AnalysisResult, User, PoleSummary } from '../../types';
 import type { Prediction } from '../../types/prediction';
@@ -7,6 +7,7 @@ import WorkOrderModal from '../WorkOrders/WorkOrderModal';
 import ToastBanner from '../ToastBanner';
 import ConfirmDialog from '../ConfirmDialog';
 import PoleAnalysisResult from './PoleAnalysisResult';
+import PoleEditForm from './PoleEditForm';
 import { useToast } from '../../hooks/useToast';
 import { useConfirm } from '../../hooks/useConfirm';
 
@@ -204,46 +205,17 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
         </div>
 
         {isEditing ? (
-          <div className="edit-form mt-2">
-            <div className="form-group mb-2">
-              <label className="text-xs text-muted">Nome</label>
-              <input
-                className="glass-input w-full mt-1"
-                value={editName}
-                onChange={e => setEditName(e.target.value.slice(0, 100))}
-                placeholder="Nome do poste"
-              />
-            </div>
-            <div className="form-group mb-2">
-              <label className="text-xs text-muted">Material</label>
-              <input
-                className="glass-input w-full mt-1"
-                value={editMaterial}
-                onChange={e => setEditMaterial(e.target.value.slice(0, 50))}
-                placeholder="Concreto, Madeira, Metal..."
-              />
-            </div>
-            <div className="form-group mb-2">
-              <label className="text-xs text-muted">Status</label>
-              <select
-                className="glass-input w-full mt-1"
-                value={editStatus}
-                onChange={e => setEditStatus(e.target.value as typeof VALID_STATUSES[number])}
-              >
-                {VALID_STATUSES.map(s => (
-                  <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
-                ))}
-              </select>
-            </div>
-            <button
-              className="btn btn-primary btn-full mt-1"
-              onClick={handleSaveEdit}
-              disabled={savingEdit || !editName.trim()}
-            >
-              {savingEdit ? <Loader size={14} className="spin" /> : <Save size={14} />}
-              {savingEdit ? 'Salvando...' : 'Salvar Alterações'}
-            </button>
-          </div>
+          <PoleEditForm
+            editName={editName}
+            editMaterial={editMaterial}
+            editStatus={editStatus}
+            validStatuses={VALID_STATUSES}
+            savingEdit={savingEdit}
+            onChangeName={setEditName}
+            onChangeMaterial={setEditMaterial}
+            onChangeStatus={(v) => setEditStatus(v as typeof VALID_STATUSES[number])}
+            onSave={handleSaveEdit}
+          />
         ) : (
           <>
             <div className="stats-row">

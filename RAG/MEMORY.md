@@ -1,6 +1,6 @@
 # sisDRONE – RAG / Memória de Trabalho
 
-> Última atualização: 2026-02-23 (Phase 16) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
+> Última atualização: 2026-02-23 (Phase 17) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
 
 ---
 
@@ -178,7 +178,7 @@ sisDRONE/
 
 **Meta**: >= 80% de cobertura em código de lógica de negócio
 
-**Situação atual** (Phase 16): 259 server + 11 client = **270 testes no total** ✅
+**Situação atual** (Phase 17): 267 server + 11 client = **278 testes no total** ✅ | Coverage: **100% stmts + 100% branches** 🎯
 
 **Coverage Threshold** configurado em `server/vitest.config.ts`:
 - Lines/Functions/Statements: ≥ 80%
@@ -227,7 +227,8 @@ Testes existentes (Phase 9):
 - `tests/tenants.test.ts` – 6 (novo Phase 13: GET /api/tenants e /:id)
 - `tests/predict.test.ts` – 5 (novo Phase 13: GET /api/ai/predict/:id com validação)
 - `tests/polesSummary.test.ts` – 5 (novo Phase 14: GET /api/poles/:id/summary)
-- `tests/authRegister.test.ts` – 8 (novo Phase 15: POST /api/auth/register)
+- `tests/inspectionsList.test.ts` – 6 (novo Phase 17: GET /api/inspections — paginação, filtro pole_id, limit max)
+- `services/authServiceBranch.test.ts` – 2 (novo Phase 17: branch JWT_SECRET set via vi.resetModules → 100% branches)
 - `tests/users.test.ts` – 19 (4 GET / + 4 GET /:id + 6 PUT /:id + 5 DELETE /:id — Phase 16)
 - `client/utils/eng.test.ts` – 3
 - `client/utils/geo.test.ts` – 2
@@ -310,6 +311,13 @@ Testes existentes (Phase 9):
 - [x] ~~KanbanBoard.tsx: handleDelete usa useConfirm em vez de window.confirm~~ — Phase 16
 - [x] ~~LoginPage.tsx: tab "Registrar" com formulário + validação + api.register()~~ — Phase 16
 - [x] ~~api.updateUser() + api.deleteUser() adicionados em api.ts~~ — Phase 16
+- [x] ~~authService.ts: branch JWT_SECRET set coberto com vi.resetModules → 83.33% → 100% branches~~ — Phase 17
+- [x] ~~workOrders.ts: 4 "Failed to..." → pt-BR; poles.ts: 2 mensagens → pt-BR; inspections.ts: 1 → pt-BR~~ — Phase 17
+- [x] ~~GET /api/inspections: nova rota listagem paginada (pole_id opcional, limit max 200)~~ — Phase 17
+- [x] ~~inspectionsList.test.ts: 6 testes (paginação, filtro, NaN, limit max, campos)~~ — Phase 17
+- [x] ~~PoleEditForm.tsx: extraído de PoleDetails (edit form + status labels pt-BR) — 472→368 linhas~~ — Phase 17
+- [x] ~~api.getInspections(poleId?, page?, limit?) adicionado em api.ts~~ — Phase 17
+- [x] ~~Coverage: 100% stmts + 100% branches~~ — Phase 17 🎯
 
 ---
 
