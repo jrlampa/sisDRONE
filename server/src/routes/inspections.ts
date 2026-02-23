@@ -117,6 +117,44 @@ router.get('/:id/history', rateLimit(60, 60_000), async (req: Request, res: Resp
   }
 });
 
+// GET single inspection label by id
+router.get('/:id', rateLimit(120, 60_000), async (req: Request, res: Response) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json({ error: 'ID de inspeção inválido' });
+  }
+  try {
+    const db = await getDb();
+    const inspection = await db.get(`
+      SELECT l.*, i.file_path
+      FROM labels l
+      LEFT JOIN images i ON l.image_id = i.id
+      WHERE l.id = ?
+    `, [id]);
+    if (!inspection) return res.status(404).json({ error: 'Inspeção não encontrada' });
+    res.json(inspection);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar inspeção' });
+  }
+});
+
+// DELETE single inspection label by id
+router.delete('/:id', rateLimit(30, 60_000), async (req: Request, res: Response) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json({ error: 'ID de inspeção inválido' });
+  }
+  try {
+    const db = await getDb();
+    const inspection = await db.get('SELECT id FROM labels WHERE id = ?', [id]);
+    if (!inspection) return res.status(404).json({ error: 'Inspeção não encontrada' });
+    await db.run('DELETE FROM labels WHERE id = ?', [id]);
+    res.json({ message: 'Inspeção removida com sucesso', id });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao remover inspeção' });
+  }
+});
+
 // POST feedback
 router.post('/feedback', rateLimit(30, 60_000), async (req: Request, res: Response) => {
   const { labelId, poleId, isCorrect, correction } = req.body;

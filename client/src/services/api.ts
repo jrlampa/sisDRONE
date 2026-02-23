@@ -82,8 +82,12 @@ export const api = {
     axios.get<{ pole_id: number; count: number; images: Array<{ id: number; file_path: string; captured_at: string }> }>(
       `${API_BASE}/api/poles/${id}/images`
     ),
+  getInspection: (id: number) => axios.get(`${API_BASE}/api/inspections/${id}`),
+  deleteInspection: (id: number) => axios.delete<{ message: string; id: number }>(`${API_BASE}/api/inspections/${id}`),
   getInspections: (poleId?: number, page = 1, limit = 50) =>
     axios.get(`${API_BASE}/api/inspections`, { params: { ...(poleId ? { pole_id: poleId } : {}), page, limit } }),
+  getPoleWorkOrders: (poleId: number) =>
+    axios.get<{ pole_id: number; count: number; work_orders: WorkOrder[] }>(`${API_BASE}/api/poles/${poleId}/work-orders`),
   createPole: (data: { lat: number, lng: number, name: string, utm_x: string, utm_y: string, tenant_id: number }) =>
     axios.post(`${API_BASE}/api/poles`, data),
   exportGis: () => axios.get(`${API_BASE}/api/gis/export/geojson`),
@@ -110,8 +114,8 @@ export const api = {
     axios.post(`${API_BASE}/api/ai/chat`, { message, context }),
   getPrediction: (id: number) => axios.get<Prediction>(`${API_BASE}/api/ai/predict/${id}`),
   exportCSV: () => axios.get(`${API_BASE}/api/poles/export`, { responseType: 'blob' }),
-  getWorkOrders: (params?: { status?: string, assignee_id?: number }) =>
-    axios.get<WorkOrder[]>(`${API_BASE}/api/work-orders`, { params }),
+  getWorkOrders: (params?: { status?: string; assignee_id?: number; page?: number; limit?: number }) =>
+    axios.get<{ work_orders: WorkOrder[]; total: number; page: number; limit: number; pages: number }>(`${API_BASE}/api/work-orders`, { params }),
   getWorkOrderStats: () =>
     axios.get<{ total: number; OPEN: number; IN_PROGRESS: number; BLOCKED: number; COMPLETED: number }>(`${API_BASE}/api/work-orders/stats`),
   createWorkOrder: (data: Partial<WorkOrder>) =>

@@ -52,7 +52,7 @@ router.post('/login', rateLimit(10, 60_000), async (req: Request, res: Response)
       }
     });
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('Erro ao fazer login:', error);
     res.status(500).json({ error: 'Erro interno no servidor' });
   }
 });
@@ -113,7 +113,7 @@ router.post('/register', rateLimit(20, 60_000), async (req: Request, res: Respon
       },
     });
   } catch (error) {
-    console.error('Register error:', error);
+    console.error('Erro ao registrar usuário:', error);
     res.status(500).json({ error: 'Erro ao registrar usuário' });
   }
 });

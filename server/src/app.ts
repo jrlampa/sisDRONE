@@ -51,10 +51,9 @@ app.get('/health', rateLimit(60, 60_000), async (_req, res) => {
 // Auth (no role required)
 app.use('/api/auth', authRouter);
 
-// Routes
+// Routes (specific prefixes must come before the legacy /api catch-all)
 app.use('/api/poles', polesRouter);
-app.use('/api/inspections', inspectionsRouter); // new: GET /api/inspections (list)
-app.use('/api', inspectionsRouter);             // legacy: /api/analyze, /api/feedback, /api/:id/history
+app.use('/api/inspections', inspectionsRouter);
 app.use('/api/gis', gisRouter);
 app.use('/api/tenants', tenantsRouter);
 app.use('/api/users', usersRouter);
@@ -65,6 +64,10 @@ app.use('/api/video', videoRouter);
 app.use('/api/aneel', aneelRouter);
 app.use('/api/bim', bimRouter);
 app.use('/api/report', reportRouter);
+
+// Legacy inspect routes: /api/analyze, /api/feedback, /api/:id/history
+// MUST be last: /:id wildcard would shadow all /api/* routes if registered earlier
+app.use('/api', inspectionsRouter);
 
 // Global Guard Example: Only ADMIN can export GIS
 app.get('/api/gis/export/geojson', checkPermission(['ADMIN']));

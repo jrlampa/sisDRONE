@@ -334,6 +334,30 @@ router.get('/:id/summary', rateLimit(120, 60_000), async (req: Request, res: Res
   }
 });
 
+// GET work orders for a pole (convenience endpoint)
+router.get('/:id/work-orders', rateLimit(60, 60_000), async (req: Request, res: Response) => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json({ error: 'ID de poste inválido' });
+  }
+  try {
+    const db = await getDb();
+    const pole = await db.get('SELECT id FROM poles WHERE id = ?', [id]);
+    if (!pole) return res.status(404).json({ error: 'Poste não encontrado' });
+    const workOrders = await db.all(
+      `SELECT w.*, u.username as assignee_name
+       FROM work_orders w
+       LEFT JOIN users u ON w.assignee_id = u.id
+       WHERE w.pole_id = ? ORDER BY w.created_at DESC`,
+      [id]
+    );
+    res.json({ pole_id: id, count: workOrders.length, work_orders: workOrders });
+  } catch (err) {
+    console.error('Erro ao buscar ordens de serviço do poste:', err);
+    res.status(500).json({ error: 'Erro ao buscar ordens de serviço do poste' });
+  }
+});
+
 // GET single pole by id (must be after all named GET routes)
 router.get('/:id', rateLimit(120, 60_000), async (req: Request, res: Response) => {
   const id = parseInt(String(req.params.id), 10);

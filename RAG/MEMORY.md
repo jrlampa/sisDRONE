@@ -1,6 +1,6 @@
 # sisDRONE – RAG / Memória de Trabalho
 
-> Última atualização: 2026-02-23 (Phase 21) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
+> Última atualização: 2026-02-23 (Phase 22) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
 
 ---
 
@@ -59,11 +59,11 @@ sisDRONE/
 | Domínio | Entidades | Rotas |
 |---------|-----------|-------|
 | **Infraestrutura** | Pole, Tenant | `/api/poles` (filtros: ahi_min, ahi_max, status, paginação), `/api/poles/:id` (GET/PUT/DELETE cascade), `/api/poles/:id/summary`, `/api/poles/:id/images`, `/api/poles/:id/history`, `/api/poles/heatmap`, `/api/poles/alerts`, `/api/tenants` |
-| **Inspeção** | Inspection (Label), Image | `/api/analyze`, `/api/feedback`, `/:id/history` |
+| **Inspeção** | Inspection (Label), Image | `/api/inspections` (paginado + filtro pole_id), `/api/inspections/:id` (GET/DELETE), `/api/analyze`, `/api/feedback`, `/:id/history` |
 | **Vídeo / Captura** | VideoSession, Frame | `/api/video/*` |
 | **IA / Manutenção** | MaintenancePlan | `/api/ai/*` |
 | **GIS** | GeoJSON | `/api/gis/*` |
-| **Operações** | WorkOrder | `/api/work-orders` |
+| **Operações** | WorkOrder | `/api/work-orders` (paginado + filtros status/assignee_id), `/api/work-orders/stats`, `/api/work-orders/:id` (GET/PUT/DELETE), `/api/poles/:id/work-orders` |
 | **Usuários** | User | `/api/users`, `/api/users/:id` (GET/PUT/DELETE) |
 | **Auth** | JWT | `/api/auth/login`, `/api/auth/register` |
 | **ANEEL** | Agents, Datasets | `/api/aneel/agents`, `/api/aneel/datasets` |
@@ -152,6 +152,7 @@ sisDRONE/
 | 33 | `docker-compose.yml` sem JWT_SECRET e sem healthcheck | ✅ Corrigido | `docker-compose.yml` (Phase 13) |
 | 34 | `server/Dockerfile` rodava como root | ✅ Corrigido | `server/Dockerfile` (Phase 13) |
 | 35 | `client/nginx.conf` sem headers de segurança e sem X-Forwarded-For | ✅ Corrigido | `nginx.conf` (Phase 13) |
+| 36 | `app.ts` legacy `/api` mount intercept `/api/tenants`, `/api/users`, `/api/work-orders` com /:id do inspections router (novo em Phase 22) | ✅ Corrigido | `app.ts` (Phase 22) |
 
 ---
 
@@ -178,7 +179,7 @@ sisDRONE/
 
 **Meta**: >= 80% de cobertura em código de lógica de negócio
 
-**Situação atual** (Phase 21): 309 server + 11 client = **320 testes no total** ✅ | Coverage: **100% stmts + 100% branches** 🎯
+**Situação atual** (Phase 22): 316 server + 11 client = **327 testes no total** ✅ | Coverage: **100% stmts + 100% branches** 🎯
 
 **Coverage Threshold** configurado em `server/vitest.config.ts`:
 - Lines/Functions/Statements: ≥ 80%
@@ -357,6 +358,21 @@ Testes existentes (Phase 9):
 - [x] ~~tests/polesCascade.test.ts: 5 testes (DELETE cascadeia work_orders + images + pole → 404)~~ — Phase 21
 - [x] ~~tests/polesImages.test.ts: 4 testes (400/404/200 + campos corretos)~~ — Phase 21
 - [x] ~~Total: 309 server + 11 client = 320 testes ✅ | Coverage: 100% stmts + 100% branches 🎯 (mantido)~~ — Phase 21
+- [x] ~~GET /api/inspections/:id + DELETE /api/inspections/:id — REST completeness do domínio Inspeção~~ — Phase 22
+- [x] ~~GET /api/work-orders paginado (page, limit, pages, total) — paridade com /poles e /inspections~~ — Phase 22
+- [x] ~~GET /api/poles/:id/work-orders — endpoint de conveniência (lista OS por poste, 400/404/200)~~ — Phase 22
+- [x] ~~authRoutes.ts: 'Login error:' + 'Register error:' → pt-BR total~~ — Phase 22
+- [x] ~~app.ts: legacy '/api' mount movido para depois das rotas específicas (bug crítico de shadowing!)~~ — Phase 22
+- [x] ~~api.ts: getInspection(id) + deleteInspection(id) + getPoleWorkOrders(poleId) adicionados~~ — Phase 22
+- [x] ~~api.ts: getWorkOrders() atualizado para retornar tipo paginado { work_orders, total, page, limit, pages }~~ — Phase 22
+- [x] ~~KanbanBoard.tsx: fetchTasks usa res.data.work_orders (novo paginated response)~~ — Phase 22
+- [x] ~~Map.tsx: marcador selecionado com anel visual (20px, borda branca, shadow dupla) vs não-selecionado (14px)~~ — Phase 22
+- [x] ~~E2E: terceiro teste preenchido com asserção real (hasMap || hasLogin = true)~~ — Phase 22
+- [x] ~~tests/inspectionsCrud.test.ts: 8 testes (GET/:id 400/404/200 + DELETE/:id 400/404/200 + verify gone)~~ — Phase 22
+- [x] ~~tests/polesWorkOrders.test.ts: 8 testes (GET/:id/work-orders 400/404/200/campos + GET paginação 3 testes)~~ — Phase 22
+- [x] ~~workOrders.test.ts: 2 testes atualizados (GET retorna objeto paginado, não array direto)~~ — Phase 22
+- [x] ~~api.test.ts: teste GET /api/work-orders atualizado para esperar objeto paginado~~ — Phase 22
+- [x] ~~Total: 316 server + 11 client = 327 testes ✅ | Coverage: 100% stmts + 100% branches 🎯 (mantido)~~ — Phase 22
 
 ---
 

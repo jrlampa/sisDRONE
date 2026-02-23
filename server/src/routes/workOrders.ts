@@ -26,16 +26,17 @@ router.get('/stats', rateLimit(60, 60_000), async (_req: Request, res: Response)
   }
 });
 
-// GET /api/work-orders - List all work orders
+// GET /api/work-orders - List all work orders (with pagination + filters)
 router.get('/', rateLimit(60, 60_000), async (req: Request, res: Response) => {
   try {
     const db = await getDb();
     const { status, assignee_id } = req.query;
 
-    let query = `
-      SELECT w.*, 
-             u.username as assignee_name, 
-             p.name as pole_name 
+    const page = Math.max(1, parseInt(String(req.query.page || '1'), 10) || 1);
+    const limit = Math.min(200, Math.max(1, parseInt(String(req.query.limit || '50'), 10) || 50));
+    const offset = (page - 1) * limit;
+
+    const baseJoin = `
       FROM work_orders w
       LEFT JOIN users u ON w.assignee_id = u.id
       LEFT JOIN poles p ON w.pole_id = p.id
@@ -43,11 +44,12 @@ router.get('/', rateLimit(60, 60_000), async (req: Request, res: Response) => {
     `;
     const params: any[] = [];
 
+    let filterClause = '';
     if (status) {
       if (!VALID_STATUSES.includes(status as WorkOrder['status'])) {
         return res.status(400).json({ error: 'Status inválido' });
       }
-      query += ` AND w.status = ?`;
+      filterClause += ` AND w.status = ?`;
       params.push(status);
     }
 
@@ -56,14 +58,18 @@ router.get('/', rateLimit(60, 60_000), async (req: Request, res: Response) => {
       if (isNaN(safeAssigneeId) || safeAssigneeId <= 0) {
         return res.status(400).json({ error: 'assignee_id inválido' });
       }
-      query += ` AND w.assignee_id = ?`;
+      filterClause += ` AND w.assignee_id = ?`;
       params.push(safeAssigneeId);
     }
 
-    query += ` ORDER BY w.created_at DESC`;
+    const countRow = await db.get(`SELECT COUNT(*) as count ${baseJoin}${filterClause}`, params);
+    const total: number = countRow?.count ?? 0;
 
-    const workOrders = await db.all(query, params);
-    res.json(workOrders);
+    const workOrders = await db.all(
+      `SELECT w.*, u.username as assignee_name, p.name as pole_name ${baseJoin}${filterClause} ORDER BY w.created_at DESC LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
+    );
+    res.json({ work_orders: workOrders, total, page, limit, pages: Math.ceil(total / limit) });
   } catch (error) {
     console.error('Erro ao buscar ordens de serviço:', error);
     res.status(500).json({ error: 'Falha ao buscar ordens de serviço' });

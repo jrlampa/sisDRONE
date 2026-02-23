@@ -36,17 +36,21 @@ describe('Work Orders CRUD — /api/work-orders', () => {
   });
 
   // ── GET / ─────────────────────────────────────────────────────────
-  it('GET /api/work-orders deve retornar array', async () => {
+  it('GET /api/work-orders deve retornar objeto paginado', async () => {
     const res = await request(app).get('/api/work-orders');
     expect(res.status).toBe(200);
-    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body).toHaveProperty('work_orders');
+    expect(Array.isArray(res.body.work_orders)).toBe(true);
+    expect(res.body).toHaveProperty('total');
+    expect(res.body).toHaveProperty('page', 1);
+    expect(res.body).toHaveProperty('limit', 50);
   });
 
   it('GET /api/work-orders?status=OPEN deve filtrar por status', async () => {
     const res = await request(app).get('/api/work-orders?status=OPEN');
     expect(res.status).toBe(200);
-    expect(Array.isArray(res.body)).toBe(true);
-    for (const order of res.body) {
+    expect(Array.isArray(res.body.work_orders)).toBe(true);
+    for (const order of res.body.work_orders) {
       expect(order.status).toBe('OPEN');
     }
   });

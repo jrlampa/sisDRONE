@@ -86,7 +86,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ users }) => {
   const fetchTasks = useCallback(async () => {
     try {
       const res = await api.getWorkOrders();
-      setTasks(res.data);
+      setTasks(res.data.work_orders);
     } catch (error) {
       console.error('Falha ao carregar ordens de serviço', error);
     } finally {

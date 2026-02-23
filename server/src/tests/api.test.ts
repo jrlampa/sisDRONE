@@ -112,10 +112,12 @@ describe('API Endpoints', () => {
 });
 
 describe('Work Orders API', () => {
-  it('GET /api/work-orders should return an array', async () => {
+  it('GET /api/work-orders should return paginated shape', async () => {
     const res = await request(app).get('/api/work-orders');
     expect(res.status).toBe(200);
-    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body).toHaveProperty('work_orders');
+    expect(Array.isArray(res.body.work_orders)).toBe(true);
+    expect(res.body).toHaveProperty('total');
   });
 
   it('POST /api/work-orders should return 400 if title is missing', async () => {
