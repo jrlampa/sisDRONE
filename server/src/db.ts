@@ -27,7 +27,7 @@ export async function getDb() {
     await initDb(db);
     return db;
   } catch (error) {
-    console.error('Failed to initialize database:', error);
+    console.error('Falha ao inicializar banco de dados:', error);
     throw error;
   }
 }

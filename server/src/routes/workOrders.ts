@@ -65,7 +65,7 @@ router.get('/', rateLimit(60, 60_000), async (req: Request, res: Response) => {
     const workOrders = await db.all(query, params);
     res.json(workOrders);
   } catch (error) {
-    console.error('Error fetching work orders:', error);
+    console.error('Erro ao buscar ordens de serviço:', error);
     res.status(500).json({ error: 'Falha ao buscar ordens de serviço' });
   }
 });
@@ -109,7 +109,7 @@ router.post('/', rateLimit(20, 60_000), async (req: Request, res: Response) => {
     const newOrder = await db.get('SELECT * FROM work_orders WHERE id = ?', result.lastID);
     res.status(201).json(newOrder);
   } catch (error) {
-    console.error('Error creating work order:', error);
+    console.error('Erro ao criar ordem de serviço:', error);
     res.status(500).json({ error: 'Falha ao criar ordem de serviço' });
   }
 });
@@ -132,7 +132,7 @@ router.get('/:id', rateLimit(60, 60_000), async (req: Request, res: Response) =>
     if (!order) return res.status(404).json({ error: 'Ordem de serviço não encontrada' });
     res.json(order);
   } catch (error) {
-    console.error('Error fetching work order:', error);
+    console.error('Erro ao buscar ordem de serviço:', error);
     res.status(500).json({ error: 'Falha ao buscar ordem de serviço' });
   }
 });
@@ -194,7 +194,7 @@ router.put('/:id', rateLimit(30, 60_000), async (req: Request, res: Response) =>
     if (!updatedOrder) return res.status(404).json({ error: 'Ordem de serviço não encontrada' });
     res.json(updatedOrder);
   } catch (error) {
-    console.error('Error updating work order:', error);
+    console.error('Erro ao atualizar ordem de serviço:', error);
     res.status(500).json({ error: 'Falha ao atualizar ordem de serviço' });
   }
 });
@@ -212,7 +212,7 @@ router.delete('/:id', rateLimit(20, 60_000), async (req: Request, res: Response)
     await db.run('DELETE FROM work_orders WHERE id = ?', [id]);
     res.json({ message: 'Ordem de serviço removida com sucesso', id });
   } catch (error) {
-    console.error('Error deleting work order:', error);
+    console.error('Erro ao remover ordem de serviço:', error);
     res.status(500).json({ error: 'Falha ao remover ordem de serviço' });
   }
 });

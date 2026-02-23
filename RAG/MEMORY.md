@@ -1,6 +1,6 @@
 # sisDRONE – RAG / Memória de Trabalho
 
-> Última atualização: 2026-02-23 (Phase 20) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
+> Última atualização: 2026-02-23 (Phase 21) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
 
 ---
 
@@ -58,7 +58,7 @@ sisDRONE/
 
 | Domínio | Entidades | Rotas |
 |---------|-----------|-------|
-| **Infraestrutura** | Pole, Tenant | `/api/poles` (filtros: ahi_min, ahi_max, status, paginação), `/api/poles/:id` (GET/PUT/DELETE), `/api/poles/:id/summary`, `/api/poles/heatmap`, `/api/tenants` |
+| **Infraestrutura** | Pole, Tenant | `/api/poles` (filtros: ahi_min, ahi_max, status, paginação), `/api/poles/:id` (GET/PUT/DELETE cascade), `/api/poles/:id/summary`, `/api/poles/:id/images`, `/api/poles/:id/history`, `/api/poles/heatmap`, `/api/poles/alerts`, `/api/tenants` |
 | **Inspeção** | Inspection (Label), Image | `/api/analyze`, `/api/feedback`, `/:id/history` |
 | **Vídeo / Captura** | VideoSession, Frame | `/api/video/*` |
 | **IA / Manutenção** | MaintenancePlan | `/api/ai/*` |
@@ -178,7 +178,7 @@ sisDRONE/
 
 **Meta**: >= 80% de cobertura em código de lógica de negócio
 
-**Situação atual** (Phase 20): 300 server + 11 client = **311 testes no total** ✅ | Coverage: **100% stmts + 100% branches** 🎯
+**Situação atual** (Phase 21): 309 server + 11 client = **320 testes no total** ✅ | Coverage: **100% stmts + 100% branches** 🎯
 
 **Coverage Threshold** configurado em `server/vitest.config.ts`:
 - Lines/Functions/Statements: ≥ 80%
@@ -344,6 +344,19 @@ Testes existentes (Phase 9):
 - [x] ~~AnalyticsDashboard.tsx: refatorado para usar useDashboard (SRP — extrai data fetching do componente)~~ — Phase 20
 - [x] ~~api.getHeatmapData(tenantId?) adicionado em api.ts~~ — Phase 20
 - [x] ~~api.getPoles() atualizado para aceitar filters?: \{ ahi_min?, ahi_max?, status? \} em api.ts~~ — Phase 20
+- [x] ~~workOrders.ts: 5 console.error English → pt-BR ('Erro ao buscar/criar/atualizar/remover ordem de serviço')~~ — Phase 21
+- [x] ~~inspections.ts: console.error 'Analysis error' → 'Erro de análise'; 'Feedback saved' → 'Feedback salvo'~~ — Phase 21
+- [x] ~~db.ts: 'Failed to initialize database' → 'Falha ao inicializar banco de dados' (pt-BR 100%)~~ — Phase 21
+- [x] ~~DELETE /api/poles/:id: cascade delete — labels, images, maintenance_plans, work_orders, video_sessions (integridade referencial)~~ — Phase 21
+- [x] ~~GET /api/poles/:id/images: novo endpoint lista imagens por poste (count + id + file_path + captured_at)~~ — Phase 21
+- [x] ~~poles.ts GET /:id/images: console.error adicionado no catch (consistente com workOrders.ts)~~ — Phase 21
+- [x] ~~Map.tsx: marcadores coloridos por AHI via L.divIcon (verde ≥80, amarelo 50–79, vermelho <50, cinza=sem AHI)~~ — Phase 21
+- [x] ~~Map.tsx popup: AHI null exibe 'N/A' em vez de 100 (comportamento correto)~~ — Phase 21
+- [x] ~~MobileFab.tsx: 'Scan IA' → 'Analisar IA'; 'Add Poste' → 'Adicionar Poste' (pt-BR)~~ — Phase 21
+- [x] ~~api.getPoleImages(id) adicionado em api.ts com tipo completo~~ — Phase 21
+- [x] ~~tests/polesCascade.test.ts: 5 testes (DELETE cascadeia work_orders + images + pole → 404)~~ — Phase 21
+- [x] ~~tests/polesImages.test.ts: 4 testes (400/404/200 + campos corretos)~~ — Phase 21
+- [x] ~~Total: 309 server + 11 client = 320 testes ✅ | Coverage: 100% stmts + 100% branches 🎯 (mantido)~~ — Phase 21
 
 ---
 

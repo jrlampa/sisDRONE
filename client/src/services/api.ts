@@ -78,6 +78,10 @@ export const api = {
   getStats: () => axios.get(`${API_BASE}/api/poles/stats`),
   getHistory: (id: number) => axios.get(`${API_BASE}/api/poles/${id}/history`),
   getPoleSummary: (id: number) => axios.get<PoleSummary>(`${API_BASE}/api/poles/${id}/summary`),
+  getPoleImages: (id: number) =>
+    axios.get<{ pole_id: number; count: number; images: Array<{ id: number; file_path: string; captured_at: string }> }>(
+      `${API_BASE}/api/poles/${id}/images`
+    ),
   getInspections: (poleId?: number, page = 1, limit = 50) =>
     axios.get(`${API_BASE}/api/inspections`, { params: { ...(poleId ? { pole_id: poleId } : {}), page, limit } }),
   createPole: (data: { lat: number, lng: number, name: string, utm_x: string, utm_y: string, tenant_id: number }) =>

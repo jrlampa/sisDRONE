@@ -246,6 +246,27 @@ router.get('/export', rateLimit(10, 60_000), async (req: Request, res: Response)
   }
 });
 
+// GET images for a pole (must be before /:id to avoid shadowing)
+router.get('/:id/images', rateLimit(60, 60_000), async (req: Request, res: Response) => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json({ error: 'ID de poste inválido' });
+  }
+  try {
+    const db = await getDb();
+    const pole = await db.get('SELECT id FROM poles WHERE id = ?', [id]);
+    if (!pole) return res.status(404).json({ error: 'Poste não encontrado' });
+    const images = await db.all(
+      'SELECT id, file_path, captured_at FROM images WHERE pole_id = ? ORDER BY captured_at DESC',
+      [id]
+    );
+    res.json({ pole_id: id, count: images.length, images });
+  } catch (err) {
+    console.error('Erro ao buscar imagens do poste:', err);
+    res.status(500).json({ error: 'Erro ao buscar imagens do poste' });
+  }
+});
+
 // GET inspection history for a pole (must be before /:id to avoid shadowing)
 router.get('/:id/history', rateLimit(60, 60_000), async (req: Request, res: Response) => {
   const id = parseInt(String(req.params.id), 10);
@@ -365,7 +386,7 @@ router.put('/:id', rateLimit(60, 60_000), async (req: Request, res: Response) =>
   }
 });
 
-// DELETE pole by id (ADMIN only)
+// DELETE pole by id (ADMIN only) — cascades to labels, images, maintenance_plans, work_orders, video_sessions
 router.delete('/:id', rateLimit(30, 60_000), async (req: Request, res: Response) => {
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id) || id <= 0) {
@@ -375,6 +396,12 @@ router.delete('/:id', rateLimit(30, 60_000), async (req: Request, res: Response)
     const db = await getDb();
     const pole = await db.get('SELECT id FROM poles WHERE id = ?', [id]);
     if (!pole) return res.status(404).json({ error: 'Poste não encontrado' });
+    // Cascade delete related records before removing the pole
+    await db.run('DELETE FROM labels WHERE pole_id = ?', [id]);
+    await db.run('DELETE FROM images WHERE pole_id = ?', [id]);
+    await db.run('DELETE FROM maintenance_plans WHERE pole_id = ?', [id]);
+    await db.run('DELETE FROM work_orders WHERE pole_id = ?', [id]);
+    await db.run('DELETE FROM video_sessions WHERE pole_id = ?', [id]);
     await db.run('DELETE FROM poles WHERE id = ?', [id]);
     res.json({ message: 'Poste removido com sucesso', id });
   } catch (err) {

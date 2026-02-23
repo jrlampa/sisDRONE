@@ -18,6 +18,22 @@ const DefaultIcon = L.icon({
 
 L.Marker.prototype.options.icon = DefaultIcon;
 
+/** Returns a colored circular divIcon based on AHI score:
+ *  AHI ≥ 80 → verde | 50–79 → amarelo | < 50 → vermelho | sem AHI → cinza */
+function getAhiIcon(ahi: number | null): L.DivIcon {
+  const isUnknown = ahi === null || ahi === undefined;
+  const score = ahi ?? 0;
+  const bg = isUnknown ? '#9ca3af' : score < 50 ? '#ef4444' : score < 80 ? '#f59e0b' : '#10b981';
+  const border = isUnknown ? '#6b7280' : score < 50 ? '#b91c1c' : score < 80 ? '#b45309' : '#065f46';
+  return L.divIcon({
+    className: '',
+    html: `<div style="width:14px;height:14px;border-radius:50%;background:${bg};border:2.5px solid ${border};box-shadow:0 2px 5px rgba(0,0,0,0.45);"></div>`,
+    iconSize: [14, 14],
+    iconAnchor: [7, 7],
+    popupAnchor: [0, -10],
+  });
+}
+
 interface MapProps {
   poles: Pole[];
   selectedPole: Pole | null;
@@ -66,17 +82,18 @@ const Map: React.FC<MapProps> = ({
         <Marker
           key={pole.id}
           position={[pole.lat, pole.lng]}
+          icon={getAhiIcon(pole.ahi_score ?? null)}
           eventHandlers={{
             click: () => onMarkerClick(pole),
           }}
-          opacity={selectedPole?.id === pole.id ? 1 : 0.8}
+          opacity={selectedPole?.id === pole.id ? 1 : 0.85}
         >
           <Popup>
             <div className="popup-content">
               <strong>{pole.name || `Poste ${pole.id}`}</strong>
               <p>Coords: {pole.lat.toFixed(6)}, {pole.lng.toFixed(6)}</p>
-              <p>AHI: <span className={`status-badge ${(pole.ahi_score || 100) < 50 ? 'critical' : ((pole.ahi_score || 100) < 80 ? 'warning' : 'saudavel')}`}>
-                {pole.ahi_score ?? 100}
+              <p>AHI: <span className={`status-badge ${pole.ahi_score === null || pole.ahi_score === undefined ? 'warning' : pole.ahi_score < 50 ? 'critical' : pole.ahi_score < 80 ? 'warning' : 'saudavel'}`}>
+                {pole.ahi_score ?? 'N/A'}
               </span></p>
             </div>
           </Popup>

@@ -91,7 +91,7 @@ router.post('/analyze', rateLimit(20, 60_000), async (req: Request, res: Respons
       imageUrl: `/uploads/${filename}`
     });
   } catch (err) {
-    console.error('Analysis error:', err);
+    console.error('Erro de análise:', err);
     res.status(500).json({ error: 'Falha na análise de imagem pela IA' });
   }
 });
@@ -138,7 +138,7 @@ router.post('/feedback', rateLimit(30, 60_000), async (req: Request, res: Respon
       'INSERT INTO labels (pole_id, label, confidence, source) VALUES (?, ?, ?, ?)',
       [safePoleId, isCorrect ? 'Confirmado' : `Correção: ${safeCorrection}`, 1.0, 'user']
     );
-    res.json({ status: 'Feedback saved' });
+    res.json({ status: 'Feedback salvo' });
   } catch (err) {
     res.status(500).json({ error: 'Erro ao salvar feedback' });
   }

@@ -42,7 +42,7 @@ const MobileFab: React.FC<MobileFabProps> = ({ onAddPole, onCameraCapture, isCap
             disabled={isCapturing}
           >
             <Camera size={20} />
-            <span>Scan IA</span>
+            <span>Analisar IA</span>
           </button>
 
           <button
@@ -50,7 +50,7 @@ const MobileFab: React.FC<MobileFabProps> = ({ onAddPole, onCameraCapture, isCap
             onClick={() => { onAddPole(); setIsOpen(false); }}
           >
             <Plus size={20} />
-            <span>Add Poste</span>
+            <span>Adicionar Poste</span>
           </button>
         </div>
       )}
