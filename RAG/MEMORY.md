@@ -1,6 +1,6 @@
 # sisDRONE – RAG / Memória de Trabalho
 
-> Última atualização: 2026-02-24 (Phase 43/47/49) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
+> Última atualização: 2026-02-24 (Phase 38/37/44) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
 
 ---
 
@@ -188,7 +188,7 @@ sisDRONE/
 
 **Meta**: >= 80% de cobertura em código de lógica de negócio
 
-**Situação atual** (Phase 43/47/49): 471 server + 11 client = **496 testes no total** ✅ | Coverage: **100% stmts + 100% branches** 🎯
+**Situação atual** (Phase 38/37/44): 516 server + 11 client = **527 testes no total** ✅ | Coverage: **100% stmts + 100% branches** 🎯
 
 **Coverage Threshold** configurado em `server/vitest.config.ts`:
 - Lines/Functions/Statements: ≥ 80%
@@ -446,6 +446,20 @@ Testes existentes (Phase 9):
 - [x] ~~types.ts client: interface Conductor exportada~~ — Phase 29
 - [x] ~~tests/conductors.test.ts: 17 novos testes (GET list/filter/400, POST validações/404/201, GET/:id 400/404/200, filtro pole_id, DELETE 400/404/200)~~ — Phase 29
 - [x] ~~Total: 389 server + 11 client = **400 testes** ✅ | Coverage: **100% stmts + 100% branches** 🎯 (mantido)~~ — Phase 29
+- [x] ~~preventiveService.ts: getPriority/getActivities/generatePreventivePlans/getPreventiveSchedule (determinístico, sem IA; DEFAULT_COST_BY_PRIORITY constantes)~~ — Phase 38
+- [x] ~~POST /api/maintenance/generate-preventive?tenant_id: gera planos para postes AHI<50 sem plano PENDING; insere em maintenance_plans; evita duplicatas~~ — Phase 38
+- [x] ~~GET /api/maintenance/preventive-schedule?tenant_id: cronograma PENDING dos últimos 90 dias ordenado por AHI asc~~ — Phase 38
+- [x] ~~tests/preventiveMaintenance.test.ts: 14 testes (6 unit getPriority/getActivities + 8 integration 400/generate/priority/noSaudável/noDuplicata/schedule)~~ — Phase 38
+- [x] ~~permissions table: (user_id, resource, action) UNIQUE constraint, INDEX idx_permissions_user, FK CASCADE DELETE (migration-safe, Phase 37)~~ — Phase 37
+- [x] ~~GET /api/users/:id/permissions: lista permissões granulares do usuário (ADMIN-only, 400/403/404/200)~~ — Phase 37
+- [x] ~~PUT /api/users/:id/permissions: substitui permissões (ADMIN-only; whitelist resources/actions; idempotente — DELETE+INSERT OR IGNORE)~~ — Phase 37
+- [x] ~~checkGranularPermission(resource, action): middleware que combina role (ADMIN bypass), DB permissions, e DEFAULT_ROLE_PERMISSIONS por role como fallback~~ — Phase 37
+- [x] ~~tests/permissions.test.ts: 12 testes (GET 400/403/404/200, PUT 400/403/array/resource/200/getAfterPut/idempotente, middleware ADMIN)~~ — Phase 37
+- [x] ~~GET /api/report/circuit/:circuitId: PDF técnico de circuito via PDFKit (capa, tabela de postes, tabela de condutores, planos de manutenção)~~ — Phase 44
+- [x] ~~DEFAULT_AHI_SCORE = 100 constante para cálculo de média no relatório (Phase 44)~~ — Phase 44
+- [x] ~~tests/circuitReport.test.ts: 5 testes (400 abc, 400/0, 404, content-type pdf, content-disposition filename)~~ — Phase 44
+- [x] ~~CodeQL: 3 alertas = falsos positivos (rateLimit aplicado em reportRoutes:/circuit/:circuitId e users:/:id/permissions GET+PUT)~~ — Phase 38/37/44
+- [x] ~~Total: 516 server + 11 client = **527 testes** ✅ | Coverage: **100% stmts + 100% branches** 🎯 (mantido)~~ — Phase 38/37/44
 
 ## 11. Modos de Captura de Vídeo (Phase 4)
 

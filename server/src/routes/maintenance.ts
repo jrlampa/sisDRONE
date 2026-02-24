@@ -1,10 +1,49 @@
 import { Router } from 'express';
 import { getDb } from '../db';
 import { rateLimit } from '../middleware/rateLimit';
+import { generatePreventivePlans, getPreventiveSchedule } from '../services/preventiveService';
 
 const VALID_PLAN_STATUSES = ['PENDING', 'APPROVED', 'COMPLETED'] as const;
 
 const router = Router();
+
+// ── Phase 38: Manutenção Preventiva Automática ──────────────────────────────
+
+/**
+ * POST /api/maintenance/generate-preventive?tenant_id=
+ * Gera planos de manutenção preventiva para postes com AHI < 50 sem plano PENDING.
+ */
+router.post('/generate-preventive', rateLimit(10, 60_000), async (req, res) => {
+  const tenantId = parseInt(String(req.query.tenant_id || '1'), 10);
+  if (isNaN(tenantId) || tenantId <= 0) {
+    return res.status(400).json({ error: 'tenant_id inválido' });
+  }
+  try {
+    const result = await generatePreventivePlans(tenantId);
+    res.status(200).json(result);
+  } catch (error) {
+    console.error('Falha ao gerar planos preventivos:', error);
+    res.status(500).json({ error: 'Falha ao gerar planos preventivos' });
+  }
+});
+
+/**
+ * GET /api/maintenance/preventive-schedule?tenant_id=
+ * Retorna agenda de manutenção preventiva dos próximos 90 dias.
+ */
+router.get('/preventive-schedule', rateLimit(30, 60_000), async (req, res) => {
+  const tenantId = parseInt(String(req.query.tenant_id || '1'), 10);
+  if (isNaN(tenantId) || tenantId <= 0) {
+    return res.status(400).json({ error: 'tenant_id inválido' });
+  }
+  try {
+    const schedule = await getPreventiveSchedule(tenantId);
+    res.json({ schedule, total: schedule.length });
+  } catch (error) {
+    console.error('Falha ao buscar agenda preventiva:', error);
+    res.status(500).json({ error: 'Falha ao buscar agenda preventiva' });
+  }
+});
 
 // GET /api/maintenance/plan/:planId — single plan by ID
 router.get('/plan/:planId', rateLimit(60, 60_000), async (req, res) => {

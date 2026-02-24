@@ -214,6 +214,19 @@ async function initDb(database: Database) {
   try { await database.exec(`ALTER TABLE poles ADD COLUMN circuit_id INTEGER REFERENCES circuits(id) ON DELETE SET NULL`); } catch {}
   try { await database.exec(`ALTER TABLE conductors ADD COLUMN circuit_id INTEGER REFERENCES circuits(id) ON DELETE SET NULL`); } catch {}
 
+  // permissions table (Phase 37) — RBAC Granular por recurso/ação
+  await database.exec(`
+    CREATE TABLE IF NOT EXISTS permissions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      resource TEXT NOT NULL,
+      action TEXT NOT NULL,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      UNIQUE(user_id, resource, action)
+    );
+    CREATE INDEX IF NOT EXISTS idx_permissions_user ON permissions(user_id);
+  `);
+
   // ── Seeds ──
   const tenantRes = await database.get('SELECT COUNT(*) as count FROM tenants');
   if (tenantRes && tenantRes.count === 0) {
