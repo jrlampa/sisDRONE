@@ -163,7 +163,7 @@ export const api = {
   getPoleReportUrl: (poleId: number) =>
     `${API_BASE}/api/report/pole/${poleId}`,
 
-  // Condutores Elétricos (Phase 29)
+  // Condutores Elétricos (Phase 29/32)
   getConductors: (params?: { tenant_id?: number; pole_id?: number }) =>
     axios.get<{ count: number; conductors: import('../types').Conductor[] }>(`${API_BASE}/api/conductors`, { params }),
   getConductor: (id: number) =>
@@ -173,6 +173,22 @@ export const api = {
     network_type?: 'MT' | 'BT' | 'ramal';
     cable_type?: string; voltage_kv?: number; length_m?: number; notes?: string; tenant_id?: number;
   }) => axios.post<import('../types').Conductor>(`${API_BASE}/api/conductors`, data),
+  updateConductor: (id: number, data: {
+    network_type?: 'MT' | 'BT' | 'ramal'; cable_type?: string;
+    voltage_kv?: number; length_m?: number; notes?: string;
+  }) => axios.put<import('../types').Conductor>(`${API_BASE}/api/conductors/${id}`, data),
   deleteConductor: (id: number) =>
     axios.delete<{ message: string; id: number }>(`${API_BASE}/api/conductors/${id}`),
+
+  // Rede Elétrica — Topologia (Phase 30)
+  getNetworkGraph: (tenantId?: number) =>
+    axios.get<import('../types').NetworkGraph>(`${API_BASE}/api/network/graph`, { params: tenantId ? { tenant_id: tenantId } : {} }),
+  getNetworkSegments: (tenantId?: number) =>
+    axios.get<{ segment_count: number; segments: import('../types').NetworkSegment[] }>(`${API_BASE}/api/network/segments`, { params: tenantId ? { tenant_id: tenantId } : {} }),
+  getNetworkIsolated: (tenantId?: number) =>
+    axios.get<{ count: number; poles: import('../types').Pole[] }>(`${API_BASE}/api/network/isolated`, { params: tenantId ? { tenant_id: tenantId } : {} }),
+
+  // Croqui Digital SVG (Phase 31)
+  getCroquiUrl: (tenantId: number) =>
+    `${API_BASE}/api/report/croqui/${tenantId}`,
 };

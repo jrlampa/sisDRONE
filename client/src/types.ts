@@ -114,6 +114,7 @@ export interface Conductor {
   cable_type?: string;
   voltage_kv?: number;
   length_m?: number;
+  computed_length_m?: number;
   notes?: string;
   created_at: string;
   from_lat: number;
@@ -122,4 +123,17 @@ export interface Conductor {
   to_lat: number;
   to_lng: number;
   to_name: string;
+}
+
+export interface NetworkSegment {
+  segment_id: number;
+  pole_ids: number[];
+  size: number;
+}
+
+export interface NetworkGraph {
+  node_count: number;
+  edge_count: number;
+  nodes: Pole[];
+  edges: Conductor[];
 }

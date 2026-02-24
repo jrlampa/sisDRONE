@@ -220,7 +220,10 @@ const ConductorPanel: React.FC<ConductorPanelProps> = ({ pole, allPoles }) => {
                     <div className="text-xs text-muted mt-1">
                       {c.cable_type && <span>{c.cable_type} </span>}
                       {c.voltage_kv !== undefined && c.voltage_kv !== null && <span>· {c.voltage_kv} kV </span>}
-                      {c.length_m !== undefined && c.length_m !== null && <span>· {c.length_m} m</span>}
+                      {c.length_m !== undefined && c.length_m !== null && <span>· {c.length_m} m (manual) </span>}
+                      {c.computed_length_m !== undefined && c.computed_length_m !== null && (
+                        <span title="Comprimento calculado via Haversine">· <strong>{c.computed_length_m.toFixed(0)} m</strong> ↯</span>
+                      )}
                     </div>
                     {c.notes && <div className="text-xs text-muted">{c.notes}</div>}
                   </div>

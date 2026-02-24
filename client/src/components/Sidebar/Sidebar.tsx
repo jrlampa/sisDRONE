@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, FileJson, Globe, FileText, Ruler, LayoutDashboard, Download, X, Zap, ClipboardList, Video, Building2, Cable } from 'lucide-react';
+import { Search, FileJson, Globe, FileText, Ruler, LayoutDashboard, Download, X, Zap, ClipboardList, Video, Building2, Cable, Network } from 'lucide-react';
 import PoleDetails from './PoleDetails';
 import { generateInspectionReport } from '../../utils/pdfGenerator';
 import { api } from '../../services/api';
@@ -8,6 +8,7 @@ import EngineeringTools from './EngineeringTools';
 import VideoCapturePanel from '../VideoCapture/VideoCapturePanel';
 import BimStructureEditor from './BimStructureEditor';
 import ConductorPanel from './ConductorPanel';
+import TopologyPanel from './TopologyPanel';
 import NearbySearchPanel from './NearbySearchPanel';
 import FilterChips from '../FilterChips';
 import { useTenant } from '../../context/TenantContext';
@@ -28,8 +29,8 @@ interface SidebarProps {
   setFilterCondition: (c: 'All' | 'Critical' | 'Warning' | 'Good') => void;
   selectedPole: Pole | null;
   activeSpan: Span | null;
-  activeTab: 'details' | 'history' | 'eng' | 'video' | 'bim' | 'conductors';
-  setActiveTab: (t: 'details' | 'history' | 'eng' | 'video' | 'bim' | 'conductors') => void;
+  activeTab: 'details' | 'history' | 'eng' | 'video' | 'bim' | 'conductors' | 'topology';
+  setActiveTab: (t: 'details' | 'history' | 'eng' | 'video' | 'bim' | 'conductors' | 'topology') => void;
   isCapturing: boolean;
   onAnalyze: () => void;
   analysis: AnalysisResult | null;
@@ -165,6 +166,17 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
           >
             <FileText size={14} /> Relatório
           </button>
+          {activeTenant && (
+            <a
+              href={api.getCroquiUrl(activeTenant.id)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-outline"
+              title="Abrir Croqui Digital da Rede (SVG)"
+            >
+              <Network size={14} /> Croqui
+            </a>
+          )}
           <button
             className={`btn btn-outline ${viewMode === 'WORK_ORDERS' ? 'active' : ''}`}
             onClick={() => setViewMode(viewMode === 'WORK_ORDERS' ? 'MAP' : 'WORK_ORDERS')}
@@ -232,6 +244,13 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
                 <Cable size={12} className="inline mr-1" />Condutores
               </button>
             )}
+            <button
+              onClick={() => setActiveTab('topology')}
+              className={activeTab === 'topology' ? 'active' : ''}
+              title="Topologia da Rede (Phase 30)"
+            >
+              <Network size={12} className="inline mr-1" />Rede
+            </button>
             {selectedPole && userRole !== 'VIEWER' && (
               <button
                 onClick={() => setActiveTab('video')}
@@ -284,6 +303,10 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
 
           {activeTab === 'conductors' && selectedPole && (
             <ConductorPanel pole={selectedPole} allPoles={poles} />
+          )}
+
+          {activeTab === 'topology' && (
+            <TopologyPanel tenantId={activeTenantId || undefined} onSelectPole={onSelectPole} />
           )}
 
           {activeTab === 'eng' && activeSpan && (

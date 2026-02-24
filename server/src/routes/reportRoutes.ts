@@ -10,6 +10,7 @@ import { Router, Request, Response } from 'express';
 import PDFDocument from 'pdfkit';
 import { getDb } from '../db';
 import { rateLimit } from '../middleware/rateLimit';
+import { buildCroquiSvg } from '../services/croquiService';
 
 const router = Router();
 
@@ -185,6 +186,54 @@ router.get('/pole/:id', rateLimit(10, 60_000), async (req: Request, res: Respons
   } catch (err) {
     console.error('Erro ao gerar relatório PDF:', err);
     if (!res.headersSent) res.status(500).json({ error: 'Erro ao gerar relatório PDF' });
+  }
+});
+
+/**
+ * GET /api/report/croqui/:tenantId  (Phase 31)
+ * Gera e retorna o Croqui Digital da rede como SVG.
+ */
+router.get('/croqui/:tenantId', rateLimit(20, 60_000), async (req: Request, res: Response) => {
+  const tenantId = parseInt(req.params.tenantId, 10);
+  if (isNaN(tenantId) || tenantId <= 0) {
+    return res.status(400).json({ error: 'tenantId inválido' });
+  }
+
+  try {
+    const db = await getDb();
+    const tenant = await db.get('SELECT name FROM tenants WHERE id = ?', [tenantId]);
+    if (!tenant) return res.status(404).json({ error: 'Concessionária não encontrada' });
+
+    const poles = await db.all(
+      `SELECT id, name, lat, lng, ahi_score, status FROM poles WHERE tenant_id = ? ORDER BY id`,
+      [tenantId]
+    );
+
+    if (poles.length === 0) {
+      return res.status(404).json({ error: 'Nenhum poste encontrado para esta concessionária' });
+    }
+
+    const conductors = await db.all(
+      `SELECT c.id, c.pole_from, c.pole_to, c.network_type,
+              pf.lat AS from_lat, pf.lng AS from_lng,
+              pt.lat AS to_lat, pt.lng AS to_lng,
+              c.computed_length_m, c.length_m
+       FROM conductors c
+       JOIN poles pf ON pf.id = c.pole_from
+       JOIN poles pt ON pt.id = c.pole_to
+       WHERE c.tenant_id = ?
+       ORDER BY c.id`,
+      [tenantId]
+    );
+
+    const svg = buildCroquiSvg(poles, conductors, tenant.name);
+
+    res.setHeader('Content-Type', 'text/xml; charset=utf-8');
+    res.setHeader('Content-Disposition', `inline; filename="croqui_tenant${tenantId}.svg"`);
+    res.send(svg);
+  } catch (err) {
+    console.error('Erro ao gerar croqui SVG:', err);
+    if (!res.headersSent) res.status(500).json({ error: 'Erro ao gerar croqui' });
   }
 });
 

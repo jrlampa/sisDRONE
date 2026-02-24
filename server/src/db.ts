@@ -140,6 +140,8 @@ async function initDb(database: Database) {
   try { await database.exec(`ALTER TABLE users ADD COLUMN password_hash TEXT`); } catch {}
   // structure_data column for BIM Half-way (Phase 5)
   try { await database.exec(`ALTER TABLE poles ADD COLUMN structure_data TEXT`); } catch {}
+  // computed_length_m for Phase 32 (Haversine auto span length)
+  try { await database.exec(`ALTER TABLE conductors ADD COLUMN computed_length_m REAL`); } catch {}
   // video_sessions table (Phase 4)
   await database.exec(`
     CREATE TABLE IF NOT EXISTS video_sessions (
@@ -169,6 +171,7 @@ async function initDb(database: Database) {
       cable_type TEXT,
       voltage_kv REAL,
       length_m REAL,
+      computed_length_m REAL,
       notes TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (pole_from) REFERENCES poles(id) ON DELETE CASCADE,

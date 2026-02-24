@@ -1,6 +1,6 @@
 # sisDRONE – RAG / Memória de Trabalho
 
-> Última atualização: 2026-02-24 (Phase 29) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
+> Última atualização: 2026-02-24 (Phase 32/30/31) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
 
 ---
 
@@ -68,8 +68,9 @@ sisDRONE/
 | **Auth** | JWT | `/api/auth/login`, `/api/auth/register`, `/api/auth/change-password` |
 | **ANEEL** | Agents, Datasets | `/api/aneel/agents`, `/api/aneel/datasets` |
 | **BIM** | StructureData (IFC-lite) | `/api/bim/:poleId` (GET/PUT) |
-| **Relatório** | PdfReport | `/api/report/pole/:id` |
-| **Condutores** | Conductor (span elétrico MT/BT/Ramal) | `/api/conductors` (GET list, POST), `/api/conductors/:id` (GET/DELETE) |
+| **Relatório** | PdfReport, CroquiSVG | `/api/report/pole/:id`, `/api/report/croqui/:tenantId` (GET SVG — Phase 31) |
+| **Condutores** | Conductor (span elétrico MT/BT/Ramal) | `/api/conductors` (GET list, POST), `/api/conductors/:id` (GET/PUT/DELETE) — PUT Phase 32, computed_length_m auto Haversine |
+| **Rede** | NetworkGraph, NetworkSegment, IsolatedPole | `/api/network/graph`, `/api/network/segments`, `/api/network/isolated` (Phase 30) |
 
 ---
 
@@ -180,7 +181,7 @@ sisDRONE/
 
 **Meta**: >= 80% de cobertura em código de lógica de negócio
 
-**Situação atual** (Phase 29): 389 server + 11 client = **400 testes no total** ✅ | Coverage: **100% stmts + 100% branches** 🎯
+**Situação atual** (Phase 32/30/31): 400 server + 11 client = **425 testes no total** ✅ | Coverage: **100% stmts + 100% branches** 🎯
 
 **Coverage Threshold** configurado em `server/vitest.config.ts`:
 - Lines/Functions/Statements: ≥ 80%
