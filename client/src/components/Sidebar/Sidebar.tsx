@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Search, FileJson, Globe, FileText, Ruler, LayoutDashboard, Download, X, Zap, ClipboardList, Video, Building2 } from 'lucide-react';
 import PoleDetails from './PoleDetails';
 import { generateInspectionReport } from '../../utils/pdfGenerator';
@@ -8,7 +8,10 @@ import EngineeringTools from './EngineeringTools';
 import VideoCapturePanel from '../VideoCapture/VideoCapturePanel';
 import BimStructureEditor from './BimStructureEditor';
 import NearbySearchPanel from './NearbySearchPanel';
+import FilterChips from '../FilterChips';
 import { useTenant } from '../../context/TenantContext';
+import ToastBanner from '../ToastBanner';
+import { useToast } from '../../hooks/useToast';
 import type { Pole, Span, Inspection, AnalysisResult, Stats, Tenant, User } from '../../types';
 import type { FrameAnalysis } from '../../hooks/useVideoCapture';
 
@@ -66,6 +69,7 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
   } = props;
 
   const { activeTenantId, isOnline } = useTenant();
+  const { toast, showToast, clearToast } = useToast();
 
   const handleExportPDF = () => {
     if (!activeTenant) return;
@@ -91,8 +95,8 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
       link.click();
       link.remove();
     } catch (error) {
-      console.error('Failed to export CSV', error);
-      alert('Erro ao exportar CSV. Tente novamente.');
+      console.error('Falha ao exportar CSV:', error);
+      showToast('Erro ao exportar CSV. Tente novamente.', 'error');
     }
   };
 
@@ -112,6 +116,8 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
           <X size={24} />
         </button>
       </header>
+
+      <ToastBanner toast={toast} onDismiss={clearToast} />
 
       <div className="nav-tools">
         <div className="search-box">
@@ -190,17 +196,7 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
         />
       </div>
 
-      <div className="filter-chips">
-        {(['All', 'Critical', 'Warning', 'Good'] as const).map(c => (
-          <button
-            key={c}
-            className={`badge ${filterCondition === c ? 'active-chip' : 'inactive-chip'}`}
-            onClick={() => setFilterCondition(c)}
-          >
-            {c === 'All' ? 'Todos' : c === 'Critical' ? 'Crítico' : c === 'Warning' ? 'Atenção' : 'Saudável'}
-          </button>
-        ))}
-      </div>
+      <FilterChips selected={filterCondition} onChange={setFilterCondition} />
 
       {selectedPole || activeSpan ? (
         <div className="pole-view animate-fade-in">
@@ -319,6 +315,14 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
           <div className="card stat-card">
             <span className="stat-label">Saudáveis</span>
             <span className="stat-value">{stats.healthy}</span>
+          </div>
+          <div className="card stat-card">
+            <span className="stat-label">Atenção</span>
+            <span className="stat-value">{stats.warning}</span>
+          </div>
+          <div className="card stat-card">
+            <span className="stat-label">Críticos</span>
+            <span className="stat-value">{stats.critical}</span>
           </div>
         </div>
       </div>

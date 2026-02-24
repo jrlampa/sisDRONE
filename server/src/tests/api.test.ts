@@ -12,17 +12,22 @@ describe('API Endpoints', () => {
     expect(res.body.status).toBe('ok');
   });
 
-  it('GET /api/poles should return an array', async () => {
+  it('GET /api/poles should return paginated response', async () => {
     const res = await request(app).get('/api/poles');
     if (res.status !== 200) console.error('GET /api/poles failed:', res.body);
     expect(res.status).toBe(200);
-    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body).toHaveProperty('poles');
+    expect(Array.isArray(res.body.poles)).toBe(true);
+    expect(res.body).toHaveProperty('total');
+    expect(res.body).toHaveProperty('page', 1);
+    expect(res.body).toHaveProperty('limit', 100);
   });
 
   it('GET /api/poles?tenant_id=1 should filter by tenant', async () => {
     const res = await request(app).get('/api/poles?tenant_id=1');
     expect(res.status).toBe(200);
-    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body).toHaveProperty('poles');
+    expect(Array.isArray(res.body.poles)).toBe(true);
   });
 
   it('POST /api/poles should return 400 if lat/lng are missing', async () => {
@@ -107,10 +112,12 @@ describe('API Endpoints', () => {
 });
 
 describe('Work Orders API', () => {
-  it('GET /api/work-orders should return an array', async () => {
+  it('GET /api/work-orders should return paginated shape', async () => {
     const res = await request(app).get('/api/work-orders');
     expect(res.status).toBe(200);
-    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body).toHaveProperty('work_orders');
+    expect(Array.isArray(res.body.work_orders)).toBe(true);
+    expect(res.body).toHaveProperty('total');
   });
 
   it('POST /api/work-orders should return 400 if title is missing', async () => {

@@ -1,13 +1,15 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import Map from './components/Map';
 import Sidebar from './components/Sidebar/Sidebar';
 import MobileFab from './components/MobileFab';
 import LoginPage from './components/LoginPage';
 import AneelSearchPanel from './components/AneelSearchPanel';
+import AlertBanner from './components/AlertBanner';
 import { Zap, Menu, Building, LogOut } from 'lucide-react';
 import { api } from './services/api';
 import { useNetwork } from './hooks/useNetwork';
 import { useAppHandlers } from './hooks/useAppHandlers';
+import { usePoleSearch } from './hooks/usePoleSearch';
 import { TenantProvider } from './context/TenantContext';
 import { WifiOff, RefreshCw } from 'lucide-react';
 import type { Pole, Span, Inspection, AnalysisResult, Tenant, User } from './types';
@@ -25,6 +27,7 @@ const App: React.FC = () => {
 
   const {
     poles, setPoles, stats, fetchStats, fetchPoles,
+    alerts, fetchAlerts,
     activeTenantId, setActiveTenantId,
     currentUser, setCurrentUser,
     isOnline, isSyncing
@@ -66,7 +69,8 @@ const App: React.FC = () => {
     setIsAuthenticated(true);
     fetchPoles();
     fetchStats();
-  }, [setCurrentUser, setActiveTenantId, fetchPoles, fetchStats]);
+    fetchAlerts();
+  }, [setCurrentUser, setActiveTenantId, fetchPoles, fetchStats, fetchAlerts]);
 
   const handleLogout = useCallback(() => {
     localStorage.removeItem('sisdrone_jwt');
@@ -119,16 +123,8 @@ const App: React.FC = () => {
     }
   }, [selectedPole]);
 
-  // ── Filtered poles (memoized) ──
-  const filteredPoles = useMemo(() => poles.filter(pole => {
-    const matchesSearch = pole.name.toLowerCase().includes(searchQuery.toLowerCase())
-      || pole.id.toString().includes(searchQuery);
-    if (filterCondition === 'All') return matchesSearch;
-    const score = pole.ahi_score ?? 100;
-    if (filterCondition === 'Critical') return matchesSearch && score < 50;
-    if (filterCondition === 'Warning') return matchesSearch && score >= 50 && score < 80;
-    return matchesSearch && score >= 80;
-  }), [poles, searchQuery, filterCondition]);
+  // ── Filtered poles (via usePoleSearch hook — SRP) ──
+  const filteredPoles = usePoleSearch(poles, searchQuery, filterCondition);
 
   return (
     <TenantProvider value={{ activeTenantId, setActiveTenantId, currentUser, setCurrentUser, isOnline }}>
@@ -239,21 +235,25 @@ const App: React.FC = () => {
               structures: [],
             });
             fetchStats();
+            fetchAlerts();
           }}
           onSelectPole={handleMarkerClick}
           onPoleUpdated={(updated) => {
             setPoles(prev => prev.map(p => p.id === updated.id ? { ...p, ...updated } : p));
             setSelectedPole(prev => prev?.id === updated.id ? { ...prev, ...updated } : prev);
             showNotification(`Poste "${updated.name}" atualizado com sucesso`);
+            fetchAlerts();
           }}
           onPoleDeleted={(id) => {
             setPoles(prev => prev.filter(p => p.id !== id));
             setSelectedPole(null);
             showNotification('Poste removido com sucesso');
+            fetchAlerts();
           }}
         />
 
         <div className="map-container glass-panel">
+          <AlertBanner alerts={alerts} onSelectPole={handleMarkerClick} />
           {notification && (
             <div className="notification-overlay animate-fade-in">
               <Zap size={16} className="text-primary" /><span>{notification}</span>

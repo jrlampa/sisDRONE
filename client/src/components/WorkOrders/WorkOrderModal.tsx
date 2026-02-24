@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Save } from 'lucide-react';
+import { X, Save, CheckCircle, AlertCircle } from 'lucide-react';
 import { api } from '../../services/api';
 import type { User, Pole, WorkOrder } from '../../types';
 
@@ -17,27 +17,31 @@ const WorkOrderModal: React.FC<WorkOrderModalProps> = ({ isOpen, onClose, pole, 
   const [priority, setPriority] = useState<'LOW' | 'MED' | 'HIGH' | 'CRITICAL'>('MED');
   const [assigneeId, setAssigneeId] = useState<number | ''>('');
   const [loading, setLoading] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  const MODAL_CLOSE_DELAY_MS = 1200;
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setFeedback(null);
     try {
       await api.createWorkOrder({
         title,
-        description: `${description}\n\n[Asset: ${pole.name} (${pole.id})]`,
+        description: `${description}\n\n[Ativo: ${pole.name} (${pole.id})]`,
         priority,
         pole_id: pole.id,
         assignee_id: assigneeId ? Number(assigneeId) : undefined,
         status: 'OPEN'
       });
-      alert('Ordem de Serviço criada com sucesso!');
+      setFeedback({ type: 'success', message: 'Ordem de Serviço criada com sucesso!' });
       onSuccess();
-      onClose();
+      setTimeout(onClose, MODAL_CLOSE_DELAY_MS);
     } catch (error) {
-      console.error('Error creating WO', error);
-      alert('Erro ao criar OS.');
+      console.error('Erro ao criar OS:', error);
+      setFeedback({ type: 'error', message: 'Erro ao criar Ordem de Serviço. Tente novamente.' });
     } finally {
       setLoading(false);
     }
@@ -57,6 +61,13 @@ const WorkOrderModal: React.FC<WorkOrderModalProps> = ({ isOpen, onClose, pole, 
             <X size={20} />
           </button>
         </div>
+
+        {feedback && (
+          <div className={`flex items-center gap-2 px-4 py-3 text-sm ${feedback.type === 'success' ? 'bg-green-500/15 text-green-400' : 'bg-red-500/15 text-red-400'}`}>
+            {feedback.type === 'success' ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
+            <span>{feedback.message}</span>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
           <div>

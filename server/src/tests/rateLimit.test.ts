@@ -57,4 +57,27 @@ describe('RateLimit Middleware', () => {
 
     expect(nextCalled).toBe(2);
   });
+
+  it('should fall back to socket.remoteAddress when req.ip is undefined', () => {
+    const middleware = rateLimit(2, 10_000);
+    const req = { ip: undefined, socket: { remoteAddress: '99.99.99.99' }, headers: {} } as unknown as Request;
+    let nextCalled = 0;
+    const next: NextFunction = () => { nextCalled++; };
+
+    middleware(req, makeRes() as unknown as Response, next);
+    middleware(req, makeRes() as unknown as Response, next);
+
+    expect(nextCalled).toBe(2);
+  });
+
+  it('should fall back to "unknown" when req.ip and socket.remoteAddress are both missing', () => {
+    const middleware = rateLimit(1, 10_000);
+    const req = { ip: undefined, socket: { remoteAddress: undefined }, headers: {} } as unknown as Request;
+    let nextCalled = 0;
+    const next: NextFunction = () => { nextCalled++; };
+    const res = makeRes() as unknown as Response;
+
+    middleware(req, res, next);
+    expect(nextCalled).toBe(1);
+  });
 });

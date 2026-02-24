@@ -5,21 +5,61 @@ import { haversineMeters } from '../utils/geo';
 
 const router = Router();
 
-// GET all poles (optionally filtered by tenant_id)
+const VALID_SORT_MAP: Record<string, string> = {
+  name_asc: 'name ASC',
+  name_desc: 'name DESC',
+  ahi_asc: 'ahi_score ASC',
+  ahi_desc: 'ahi_score DESC',
+  created_asc: 'id ASC',
+  created_desc: 'id DESC',
+};
+
+// GET all poles (optionally filtered by tenant_id, ahi_min, ahi_max, status, with pagination + sort)
 router.get('/', rateLimit(100, 60_000), async (req: Request, res: Response) => {
   try {
     const db = await getDb();
     const tenantId = req.query.tenant_id ? parseInt(String(req.query.tenant_id), 10) : null;
+    const ahiMin = req.query.ahi_min !== undefined ? parseFloat(String(req.query.ahi_min)) : null;
+    const ahiMax = req.query.ahi_max !== undefined ? parseFloat(String(req.query.ahi_max)) : null;
+    const statusFilter = req.query.status ? String(req.query.status) : null;
+    const sortKey = String(req.query.sort || 'created_desc');
+    const orderBy = VALID_SORT_MAP[sortKey] ?? 'id DESC';
 
-    let poles;
+    const page = Math.max(1, parseInt(String(req.query.page || '1'), 10) || 1);
+    const limit = Math.min(200, Math.max(1, parseInt(String(req.query.limit || '100'), 10) || 100));
+    const offset = (page - 1) * limit;
+
+    const conditions: string[] = [];
+    const params: (string | number)[] = [];
+
     if (tenantId && !isNaN(tenantId) && tenantId > 0) {
-      poles = await db.all('SELECT * FROM poles WHERE tenant_id = ? ORDER BY id DESC', [tenantId]);
-    } else {
-      poles = await db.all('SELECT * FROM poles ORDER BY id DESC');
+      conditions.push('tenant_id = ?');
+      params.push(tenantId);
     }
-    res.json(poles);
+    if (ahiMin !== null && !isNaN(ahiMin)) {
+      conditions.push('ahi_score >= ?');
+      params.push(ahiMin);
+    }
+    if (ahiMax !== null && !isNaN(ahiMax)) {
+      conditions.push('ahi_score <= ?');
+      params.push(ahiMax);
+    }
+    if (statusFilter) {
+      conditions.push('status = ?');
+      params.push(statusFilter);
+    }
+
+    const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+    const countRow = await db.get(`SELECT COUNT(*) as count FROM poles ${whereClause}`, params);
+    const total: number = countRow?.count ?? 0;
+    const poles = await db.all(
+      `SELECT * FROM poles ${whereClause} ORDER BY ${orderBy} LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
+    );
+
+    res.json({ poles, total, page, limit, pages: Math.ceil(total / limit) });
   } catch (err) {
-    res.status(500).json({ error: 'DB Error' });
+    res.status(500).json({ error: 'Erro interno no servidor' });
   }
 });
 
@@ -46,7 +86,7 @@ router.post('/', rateLimit(30, 60_000), async (req: Request, res: Response) => {
     );
     res.json({ id: result.lastID, name: safeName, lat, lng, utm_x, utm_y, tenant_id: safeTenantId });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to create pole' });
+    res.status(500).json({ error: 'Falha ao criar poste' });
   }
 });
 
@@ -83,91 +123,27 @@ router.get('/nearby', rateLimit(60, 60_000), async (req: Request, res: Response)
 
     res.json({ lat, lng, radius_m: radius, count: nearby.length, poles: nearby });
   } catch (err) {
-    res.status(500).json({ error: 'DB Error' });
+    res.status(500).json({ error: 'Erro interno no servidor' });
   }
 });
-router.get('/stats', async (req: Request, res: Response) => {
-  try {
-    const db = await getDb();
-
-    // 1. Basic Counts
-    const polesCount = await db.get('SELECT COUNT(*) as count FROM poles');
-    const inspectionsCount = await db.get('SELECT COUNT(*) as count FROM labels');
-
-    // 2. Status Distribution
-    // Assuming 'status' column or inferring from AHI
-    // Let's use AHI levels for "Condition" if status is generic
-    const conditionStats = await db.all(`
-      SELECT 
-        CASE 
-          WHEN ahi_score < 50 THEN 'Crítico'
-          WHEN ahi_score < 80 THEN 'Atenção'
-          ELSE 'Saudável'
-        END as condition,
-        COUNT(*) as count
-      FROM poles
-      GROUP BY condition
-    `);
-
-    // 3. Material Distribution
-    const materialStats = await db.all(`
-      SELECT material, COUNT(*) as count 
-      FROM poles 
-      WHERE material IS NOT NULL 
-      GROUP BY material
-    `);
-
-    // 4. AHI Histogram (Buckets of 20)
-    const ahiHistogram = await db.all(`
-      SELECT 
-        CASE 
-          WHEN ahi_score BETWEEN 0 AND 20 THEN '0-20'
-          WHEN ahi_score BETWEEN 21 AND 40 THEN '21-40'
-          WHEN ahi_score BETWEEN 41 AND 60 THEN '41-60'
-          WHEN ahi_score BETWEEN 61 AND 80 THEN '61-80'
-          ELSE '81-100'
-        END as range,
-        COUNT(*) as count
-      FROM poles
-      GROUP BY range
-    `);
-
-    res.json({
-      totalPoles: polesCount.count,
-      totalInspections: inspectionsCount.count,
-      conditionStats,
-      materialStats,
-      ahiHistogram
-    });
-  } catch (err) {
-    console.error('Stats error:', err);
-    res.status(500).json({ error: 'Stats error' });
+// GET images for a pole (must be before /:id to avoid shadowing)
+router.get('/:id/images', rateLimit(60, 60_000), async (req: Request, res: Response) => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json({ error: 'ID de poste inválido' });
   }
-});
-
-// GET export CSV  (must be before /:id to avoid shadowing)
-router.get('/export', async (req: Request, res: Response) => {
   try {
     const db = await getDb();
-    const poles = await db.all('SELECT * FROM poles ORDER BY id ASC');
-
-    const fields = [
-      'id', 'name', 'lat', 'lng', 'utm_x', 'utm_y',
-      'status', 'ahi_score', 'material', 'installation_date',
-      'height', 'structure_type', 'tenant_id', 'created_at'
-    ];
-
-    const { Parser } = await import('json2csv');
-    const parser = new Parser({ fields });
-    const csv = parser.parse(poles);
-
-    res.header('Content-Type', 'text/csv');
-    res.attachment(`sisdrone_export_${Date.now()}.csv`);
-    return res.send(csv);
-
+    const pole = await db.get('SELECT id FROM poles WHERE id = ?', [id]);
+    if (!pole) return res.status(404).json({ error: 'Poste não encontrado' });
+    const images = await db.all(
+      'SELECT id, file_path, captured_at FROM images WHERE pole_id = ? ORDER BY captured_at DESC',
+      [id]
+    );
+    res.json({ pole_id: id, count: images.length, images });
   } catch (err) {
-    console.error('Export error:', err);
-    res.status(500).json({ error: 'Failed to export CSV' });
+    console.error('Erro ao buscar imagens do poste:', err);
+    res.status(500).json({ error: 'Erro ao buscar imagens do poste' });
   }
 });
 
@@ -188,7 +164,77 @@ router.get('/:id/history', rateLimit(60, 60_000), async (req: Request, res: Resp
     `, [id]);
     res.json(history);
   } catch (err) {
-    res.status(500).json({ error: 'History error' });
+    res.status(500).json({ error: 'Erro ao buscar histórico' });
+  }
+});
+
+// GET condensed summary for a pole: AHI + last inspection + active maintenance plan
+router.get('/:id/summary', rateLimit(120, 60_000), async (req: Request, res: Response) => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json({ error: 'ID de poste inválido' });
+  }
+  try {
+    const db = await getDb();
+    const pole = await db.get(
+      'SELECT id, name, ahi_score, status, material, installation_date, tenant_id FROM poles WHERE id = ?',
+      [id]
+    );
+    if (!pole) return res.status(404).json({ error: 'Poste não encontrado' });
+
+    const lastInspection = await db.get(`
+      SELECT l.label, l.confidence, l.source, l.created_at, i.file_path
+      FROM labels l
+      LEFT JOIN images i ON l.image_id = i.id
+      WHERE l.pole_id = ?
+      ORDER BY l.created_at DESC LIMIT 1
+    `, [id]);
+
+    const activePlan = await db.get(
+      `SELECT id, status, estimated_cost, created_at FROM maintenance_plans
+       WHERE pole_id = ? AND status IN ('PENDING','APPROVED')
+       ORDER BY created_at DESC LIMIT 1`,
+      [id]
+    );
+
+    const inspectionCountRow = await db.get(
+      'SELECT COUNT(*) as count FROM labels WHERE pole_id = ?',
+      [id]
+    );
+
+    res.json({
+      pole,
+      last_inspection: lastInspection ?? null,
+      active_plan: activePlan ?? null,
+      inspection_count: inspectionCountRow?.count ?? 0,
+    });
+  } catch (err) {
+    console.error('Erro de resumo:', err);
+    res.status(500).json({ error: 'Erro ao buscar resumo do poste' });
+  }
+});
+
+// GET work orders for a pole (convenience endpoint)
+router.get('/:id/work-orders', rateLimit(60, 60_000), async (req: Request, res: Response) => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json({ error: 'ID de poste inválido' });
+  }
+  try {
+    const db = await getDb();
+    const pole = await db.get('SELECT id FROM poles WHERE id = ?', [id]);
+    if (!pole) return res.status(404).json({ error: 'Poste não encontrado' });
+    const workOrders = await db.all(
+      `SELECT w.*, u.username as assignee_name
+       FROM work_orders w
+       LEFT JOIN users u ON w.assignee_id = u.id
+       WHERE w.pole_id = ? ORDER BY w.created_at DESC`,
+      [id]
+    );
+    res.json({ pole_id: id, count: workOrders.length, work_orders: workOrders });
+  } catch (err) {
+    console.error('Erro ao buscar ordens de serviço do poste:', err);
+    res.status(500).json({ error: 'Erro ao buscar ordens de serviço do poste' });
   }
 });
 
@@ -204,7 +250,7 @@ router.get('/:id', rateLimit(120, 60_000), async (req: Request, res: Response) =
     if (!pole) return res.status(404).json({ error: 'Poste não encontrado' });
     res.json(pole);
   } catch (err) {
-    res.status(500).json({ error: 'DB Error' });
+    res.status(500).json({ error: 'Erro interno no servidor' });
   }
 });
 
@@ -240,11 +286,11 @@ router.put('/:id', rateLimit(60, 60_000), async (req: Request, res: Response) =>
     const updated = await db.get('SELECT * FROM poles WHERE id = ?', [id]);
     res.json(updated);
   } catch (err) {
-    res.status(500).json({ error: 'DB Error' });
+    res.status(500).json({ error: 'Erro interno no servidor' });
   }
 });
 
-// DELETE pole by id (ADMIN only)
+// DELETE pole by id (ADMIN only) — cascades to labels, images, maintenance_plans, work_orders, video_sessions
 router.delete('/:id', rateLimit(30, 60_000), async (req: Request, res: Response) => {
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id) || id <= 0) {
@@ -254,10 +300,16 @@ router.delete('/:id', rateLimit(30, 60_000), async (req: Request, res: Response)
     const db = await getDb();
     const pole = await db.get('SELECT id FROM poles WHERE id = ?', [id]);
     if (!pole) return res.status(404).json({ error: 'Poste não encontrado' });
+    // Cascade delete related records before removing the pole
+    await db.run('DELETE FROM labels WHERE pole_id = ?', [id]);
+    await db.run('DELETE FROM images WHERE pole_id = ?', [id]);
+    await db.run('DELETE FROM maintenance_plans WHERE pole_id = ?', [id]);
+    await db.run('DELETE FROM work_orders WHERE pole_id = ?', [id]);
+    await db.run('DELETE FROM video_sessions WHERE pole_id = ?', [id]);
     await db.run('DELETE FROM poles WHERE id = ?', [id]);
     res.json({ message: 'Poste removido com sucesso', id });
   } catch (err) {
-    res.status(500).json({ error: 'DB Error' });
+    res.status(500).json({ error: 'Erro interno no servidor' });
   }
 });
 

@@ -10,15 +10,27 @@ export function useNetwork() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [poles, setPoles] = useState<Pole[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
+  const [alerts, setAlerts] = useState<Pole[]>([]);
   const [activeTenantId, setActiveTenantId] = useState<number>(1);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   const fetchPoles = useCallback(async () => {
     try {
       const res = await api.getPoles(activeTenantId);
-      setPoles(res.data);
+      // Suporta resposta paginada { poles, total, ... } ou array legado
+      const data = res.data;
+      setPoles(Array.isArray(data) ? data : (data.poles ?? []));
     } catch (error) {
-      console.error('Failed to fetch poles:', error);
+      console.error('Falha ao buscar postes:', error);
+    }
+  }, [activeTenantId]);
+
+  const fetchAlerts = useCallback(async () => {
+    try {
+      const res = await api.getAlerts(activeTenantId);
+      setAlerts(res.data.poles ?? []);
+    } catch (error) {
+      console.error('Falha ao buscar alertas:', error);
     }
   }, [activeTenantId]);
 
@@ -26,12 +38,13 @@ export function useNetwork() {
     try {
       const res = await api.getStats();
       const data = res.data;
-      // Derive Stats from the DashboardData response
-      const critical = data.conditionStats?.find((c: { condition: string }) => c.condition === 'Crítico')?.count || 0;
-      const healthy = data.conditionStats?.find((c: { condition: string }) => c.condition === 'Saudável')?.count || 0;
-      setStats({ total: data.totalPoles || 0, critical, healthy });
+      // Use direct count fields when available (Phase 26+), fall back to conditionStats array
+      const critical = data.critical ?? data.conditionStats?.find((c: { condition: string }) => c.condition === 'Crítico')?.count ?? 0;
+      const warning  = data.warning  ?? data.conditionStats?.find((c: { condition: string }) => c.condition === 'Atenção')?.count ?? 0;
+      const healthy  = data.healthy  ?? data.conditionStats?.find((c: { condition: string }) => c.condition === 'Saudável')?.count ?? 0;
+      setStats({ total: data.totalPoles || 0, critical, warning, healthy });
     } catch (error) {
-      console.error('Failed to fetch stats:', error);
+      console.error('Falha ao buscar estatísticas:', error);
     }
   }, []);
 
@@ -42,7 +55,7 @@ export function useNetwork() {
 
     for (const req of queue) {
       try {
-        console.log('[Sync] Retrying:', req.url);
+        console.log('[Sync] Tentando novamente:', req.url);
         await axios({
           url: req.url,
           method: req.method,
@@ -51,7 +64,7 @@ export function useNetwork() {
         });
         if (req.id) await removeFromQueue(req.id);
       } catch (err) {
-        console.error('[Sync] Failed:', err);
+        console.error('[Sync] Falha:', err);
       }
     }
 
@@ -85,12 +98,14 @@ export function useNetwork() {
     const init = async () => {
       await fetchPoles();
       await fetchStats();
+      await fetchAlerts();
     };
     init();
-  }, [fetchPoles, fetchStats]);
+  }, [fetchPoles, fetchStats, fetchAlerts]);
 
   return {
     poles, setPoles, stats, fetchStats, fetchPoles,
+    alerts, fetchAlerts,
     activeTenantId, setActiveTenantId,
     currentUser, setCurrentUser,
     isOnline, isSyncing

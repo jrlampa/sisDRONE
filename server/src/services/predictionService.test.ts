@@ -107,4 +107,22 @@ describe('PredictionService', () => {
     const result = predictLifespan(pole);
     expect(result.years_remaining).toBe(0);
   });
+
+  it('should use default ahi_score of 100 when ahi_score is undefined (covers ?? branch)', () => {
+    const currentYear = new Date().getFullYear();
+    const pole: Pole = {
+      id: 9,
+      material: 'concreto',
+      installation_date: new Date(currentYear - 5, 0, 1).toISOString(),
+      // ahi_score intentionally omitted → defaults to 100 via ??
+    };
+    const result = predictLifespan(pole);
+    // currentScore = 100, age = 5 → age > 2 && 100 < 100 is false → default decay rate
+    // decayRate = 100/40 = 2.5 (concrete lifespan), clamped: max(0.5, 2.5) = 2.5
+    expect(result.decay_rate).toBeCloseTo(2.5);
+    // pointsToLose = 100 - 30 = 70, years = 70/2.5 = 28
+    expect(result.years_remaining).toBeCloseTo(28, 0);
+    // confidence: age=5, not >5 → 0.5
+    expect(result.confidence).toBe(0.5);
+  });
 });

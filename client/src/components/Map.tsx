@@ -18,6 +18,25 @@ const DefaultIcon = L.icon({
 
 L.Marker.prototype.options.icon = DefaultIcon;
 
+/** Returns a colored circular divIcon based on AHI score and selection state:
+ *  AHI ≥ 80 → verde | 50–79 → amarelo | < 50 → vermelho | sem AHI → cinza
+ *  selected → larger ring with white border for visual highlight */
+function getAhiIcon(ahi: number | null, selected = false): L.DivIcon {
+  const isUnknown = ahi === null || ahi === undefined;
+  const score = ahi ?? 0;
+  const bg = isUnknown ? '#9ca3af' : score < 50 ? '#ef4444' : score < 80 ? '#f59e0b' : '#10b981';
+  const border = selected ? '#ffffff' : (isUnknown ? '#6b7280' : score < 50 ? '#b91c1c' : score < 80 ? '#b45309' : '#065f46');
+  const size = selected ? 20 : 14;
+  const shadow = selected ? '0 0 0 3px rgba(255,255,255,0.4), 0 3px 8px rgba(0,0,0,0.55)' : '0 2px 5px rgba(0,0,0,0.45)';
+  return L.divIcon({
+    className: '',
+    html: `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${bg};border:${selected ? 3 : 2.5}px solid ${border};box-shadow:${shadow};transition:all .2s;"></div>`,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    popupAnchor: [0, -12],
+  });
+}
+
 interface MapProps {
   poles: Pole[];
   selectedPole: Pole | null;
@@ -50,8 +69,8 @@ const Map: React.FC<MapProps> = ({
 
   return (
     <MapContainer
-      center={[-23.5505, -46.6333]}
-      zoom={13}
+      center={[-22.15018, -42.92185]}
+      zoom={14}
       style={{ height: '100%', width: '100%' }}
     >
       <TileLayer
@@ -66,17 +85,18 @@ const Map: React.FC<MapProps> = ({
         <Marker
           key={pole.id}
           position={[pole.lat, pole.lng]}
+          icon={getAhiIcon(pole.ahi_score ?? null, selectedPole?.id === pole.id)}
           eventHandlers={{
             click: () => onMarkerClick(pole),
           }}
-          opacity={selectedPole?.id === pole.id ? 1 : 0.8}
+          opacity={1}
         >
           <Popup>
             <div className="popup-content">
               <strong>{pole.name || `Poste ${pole.id}`}</strong>
               <p>Coords: {pole.lat.toFixed(6)}, {pole.lng.toFixed(6)}</p>
-              <p>AHI: <span className={`status-badge ${(pole.ahi_score || 100) < 50 ? 'critical' : ((pole.ahi_score || 100) < 80 ? 'warning' : 'saudavel')}`}>
-                {pole.ahi_score ?? 100}
+              <p>AHI: <span className={`status-badge ${pole.ahi_score === null || pole.ahi_score === undefined ? 'warning' : pole.ahi_score < 50 ? 'critical' : pole.ahi_score < 80 ? 'warning' : 'saudavel'}`}>
+                {pole.ahi_score ?? 'N/A'}
               </span></p>
             </div>
           </Popup>

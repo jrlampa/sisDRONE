@@ -24,10 +24,13 @@ export async function getDb() {
       driver: sqlite3.Database
     });
 
+    // Enable foreign key constraint enforcement (SQLite disables FKs by default)
+    await db.exec('PRAGMA foreign_keys = ON');
+
     await initDb(db);
     return db;
   } catch (error) {
-    console.error('Failed to initialize database:', error);
+    console.error('Falha ao inicializar banco de dados:', error);
     throw error;
   }
 }
@@ -188,9 +191,17 @@ async function initDb(database: Database) {
   await database.exec(`
     CREATE INDEX IF NOT EXISTS idx_poles_tenant ON poles(tenant_id);
     CREATE INDEX IF NOT EXISTS idx_poles_status ON poles(status);
+    CREATE INDEX IF NOT EXISTS idx_poles_ahi ON poles(ahi_score);
     CREATE INDEX IF NOT EXISTS idx_maintenance_pole ON maintenance_plans(pole_id);
+    CREATE INDEX IF NOT EXISTS idx_maintenance_status ON maintenance_plans(status);
     CREATE INDEX IF NOT EXISTS idx_wo_status ON work_orders(status);
     CREATE INDEX IF NOT EXISTS idx_wo_assignee ON work_orders(assignee_id);
+    CREATE INDEX IF NOT EXISTS idx_wo_pole ON work_orders(pole_id);
+    CREATE INDEX IF NOT EXISTS idx_labels_pole ON labels(pole_id);
+    CREATE INDEX IF NOT EXISTS idx_labels_created ON labels(created_at);
+    CREATE INDEX IF NOT EXISTS idx_images_pole ON images(pole_id);
+    CREATE INDEX IF NOT EXISTS idx_users_tenant ON users(tenant_id);
+    CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
   `);
 
   // Backfill password_hash for existing users who don't have one

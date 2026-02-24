@@ -43,6 +43,7 @@ export interface AnalysisResult {
 export interface Stats {
   total: number;
   critical: number;
+  warning: number;
   healthy: number;
 }
 
@@ -80,4 +81,26 @@ export interface WorkOrder {
   due_date?: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface PoleSummaryInspection {
+  label: string;
+  confidence: number;
+  source: string;
+  created_at: string;
+  file_path?: string;
+}
+
+export interface PoleSummaryPlan {
+  id: number;
+  status: string;
+  estimated_cost: number;
+  created_at: string;
+}
+
+export interface PoleSummary {
+  pole: Pick<Pole, 'id' | 'name' | 'ahi_score' | 'status' | 'material' | 'installation_date' | 'tenant_id'>;
+  last_inspection: PoleSummaryInspection | null;
+  active_plan: PoleSummaryPlan | null;
+  inspection_count: number;
 }

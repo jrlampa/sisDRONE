@@ -1,18 +1,17 @@
 import React, { useState } from 'react';
-import { MapPin, Upload, Activity, CheckCircle, AlertTriangle, FileText, Loader, Clock, Archive, Download, Edit2, Trash2, Save, X } from 'lucide-react';
+import { MapPin, Upload, FileText, Loader, Download, Edit2, Trash2, X } from 'lucide-react';
 import { api } from '../../services/api';
 import type { Pole, AnalysisResult, User } from '../../types';
-import type { Prediction } from '../../types/prediction';
 import WorkOrderModal from '../WorkOrders/WorkOrderModal';
-
-interface MaintenancePlan {
-  id: number;
-  pole_id: number;
-  plan_text: string;
-  status: 'PENDING' | 'APPROVED' | 'COMPLETED';
-  created_at: string;
-  estimated_cost?: number;
-}
+import ToastBanner from '../ToastBanner';
+import ConfirmDialog from '../ConfirmDialog';
+import PoleAnalysisResult from './PoleAnalysisResult';
+import PoleEditForm from './PoleEditForm';
+import PoleImages from './PoleImages';
+import { useToast } from '../../hooks/useToast';
+import { useConfirm } from '../../hooks/useConfirm';
+import { usePoleSummary } from '../../hooks/usePoleSummary';
+import type { PoleMaintenancePlan } from '../../hooks/usePoleSummary';
 
 interface PoleDetailsProps {
   pole: Pole;
@@ -38,9 +37,11 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
     return { color: 'text-success', bg: 'bg-success', label: 'Saudável' };
   };
 
-  const [maintenancePlan, setMaintenancePlan] = useState<MaintenancePlan | null>(null);
-  const [history, setHistory] = useState<MaintenancePlan[]>([]);
-  const [prediction, setPrediction] = useState<Prediction | null>(null);
+  const { toast, showToast, clearToast } = useToast();
+  const { confirmState, confirm, handleAnswer } = useConfirm();
+
+  const { summary, prediction, history, maintenancePlan, setMaintenancePlan, setHistory } = usePoleSummary(pole.id);
+
   const [loadingPlan, setLoadingPlan] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [isWOModalOpen, setIsWOModalOpen] = useState(false);
@@ -54,42 +55,17 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
   );
   const [savingEdit, setSavingEdit] = useState(false);
 
-  const loadPrediction = React.useCallback(async () => {
-    try {
-      const res = await api.getPrediction(pole.id);
-      setPrediction(res.data);
-    } catch (e) {
-      console.error('Failed to load prediction', e);
-    }
-  }, [pole.id]);
-
-  const loadHistory = React.useCallback(async () => {
-    try {
-      const res = await api.getMaintenancePlans(pole.id);
-      if (res.data && res.data.length > 0) {
-        setHistory(res.data);
-        if (res.data[0].status === 'PENDING') {
-          setMaintenancePlan(res.data[0]);
-        }
-      } else {
-        setHistory([]);
-      }
-    } catch (error) {
-      console.error('Failed to load history', error);
-    }
-  }, [pole.id]);
-
+  // Reset edit state when pole changes
   React.useEffect(() => {
-    if (pole.id) {
-      loadHistory();
-      loadPrediction();
-      setMaintenancePlan(null);
-      setIsEditing(false);
-      setEditName(pole.name);
-      setEditMaterial(pole.material || '');
-      setEditStatus(VALID_STATUSES.includes(pole.status as typeof VALID_STATUSES[number]) ? pole.status as typeof VALID_STATUSES[number] : 'pending');
-    }
-  }, [pole.id, loadHistory, loadPrediction]);
+    setIsEditing(false);
+    setEditName(pole.name);
+    setEditMaterial(pole.material || '');
+    setEditStatus(
+      VALID_STATUSES.includes(pole.status as typeof VALID_STATUSES[number])
+        ? pole.status as typeof VALID_STATUSES[number]
+        : 'pending'
+    );
+  }, [pole.id, pole.name, pole.material, pole.status]);
 
   const handleSaveEdit = async () => {
     setSavingEdit(true);
@@ -102,19 +78,24 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
       onPoleUpdated?.(res.data);
       setIsEditing(false);
     } catch {
-      alert('Erro ao salvar alterações');
+      showToast('Erro ao salvar alterações', 'error');
     } finally {
       setSavingEdit(false);
     }
   };
 
   const handleDeletePole = async () => {
-    if (!window.confirm(`Confirmar exclusão do poste "${pole.name}"? Esta ação não pode ser desfeita.`)) return;
+    const ok = await confirm({
+      title: 'Excluir Poste',
+      message: `Confirmar exclusão do poste "${pole.name}"? Esta ação não pode ser desfeita.`,
+      confirmLabel: 'Excluir',
+    });
+    if (!ok) return;
     try {
       await api.deletePole(pole.id);
       onPoleDeleted?.(pole.id);
     } catch {
-      alert('Erro ao excluir poste');
+      showToast('Erro ao excluir poste', 'error');
     }
   };
 
@@ -123,7 +104,7 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
     setLoadingPlan(true);
     try {
       const res = await api.generateMaintenancePlan(pole.id, analysis);
-      const newPlan: MaintenancePlan = {
+      const newPlan: PoleMaintenancePlan = {
         id: res.data.planId,
         pole_id: pole.id,
         plan_text: res.data.plan,
@@ -134,26 +115,28 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
       setMaintenancePlan(newPlan);
       setHistory(prev => [newPlan, ...prev]);
     } catch (error) {
-      console.error('Error generating plan', error);
-      alert('Erro ao gerar plano.');
+      console.error('Erro ao gerar plano', error);
+      showToast('Erro ao gerar plano de manutenção', 'error');
     } finally {
       setLoadingPlan(false);
     }
   };
 
-  const markCompleted = async (plan: MaintenancePlan) => {
+  const markCompleted = async (plan: PoleMaintenancePlan) => {
     try {
       await api.updateMaintenanceStatus(plan.id, 'COMPLETED');
       const updated = { ...plan, status: 'COMPLETED' as const };
       setMaintenancePlan(updated);
       setHistory(prev => prev.map(p => p.id === plan.id ? updated : p));
     } catch {
-      alert('Erro ao atualizar status');
+      showToast('Erro ao atualizar status do plano', 'error');
     }
   };
 
   return (
     <div className="pole-details animate-fade-in">
+      <ConfirmDialog state={confirmState} onAnswer={handleAnswer} />
+      <ToastBanner toast={toast} onDismiss={clearToast} />
       <div className="card">
         <div className="card-header">
           <MapPin size={20} className="text-accent" />
@@ -179,46 +162,17 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
         </div>
 
         {isEditing ? (
-          <div className="edit-form mt-2">
-            <div className="form-group mb-2">
-              <label className="text-xs text-muted">Nome</label>
-              <input
-                className="glass-input w-full mt-1"
-                value={editName}
-                onChange={e => setEditName(e.target.value.slice(0, 100))}
-                placeholder="Nome do poste"
-              />
-            </div>
-            <div className="form-group mb-2">
-              <label className="text-xs text-muted">Material</label>
-              <input
-                className="glass-input w-full mt-1"
-                value={editMaterial}
-                onChange={e => setEditMaterial(e.target.value.slice(0, 50))}
-                placeholder="Concreto, Madeira, Metal..."
-              />
-            </div>
-            <div className="form-group mb-2">
-              <label className="text-xs text-muted">Status</label>
-              <select
-                className="glass-input w-full mt-1"
-                value={editStatus}
-                onChange={e => setEditStatus(e.target.value as typeof VALID_STATUSES[number])}
-              >
-                {VALID_STATUSES.map(s => (
-                  <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
-                ))}
-              </select>
-            </div>
-            <button
-              className="btn btn-primary btn-full mt-1"
-              onClick={handleSaveEdit}
-              disabled={savingEdit || !editName.trim()}
-            >
-              {savingEdit ? <Loader size={14} className="spin" /> : <Save size={14} />}
-              {savingEdit ? 'Salvando...' : 'Salvar Alterações'}
-            </button>
-          </div>
+          <PoleEditForm
+            editName={editName}
+            editMaterial={editMaterial}
+            editStatus={editStatus}
+            validStatuses={VALID_STATUSES}
+            savingEdit={savingEdit}
+            onChangeName={setEditName}
+            onChangeMaterial={setEditMaterial}
+            onChangeStatus={(v) => setEditStatus(v as typeof VALID_STATUSES[number])}
+            onSave={handleSaveEdit}
+          />
         ) : (
           <>
             <div className="stats-row">
@@ -235,6 +189,9 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
           </>
         )}
 
+        {/* Images Section */}
+        <PoleImages poleId={pole.id} apiBase={apiBase} />
+
         {/* AHI Gauge */}
         <div className="mt-3 pt-3 border-t border-light/10">
           <div className="flex-between mb-1">
@@ -249,6 +206,24 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
               style={{ width: `${pole.ahi_score ?? 100}%` }}
             />
           </div>
+          {summary && (
+            <div className="grid grid-cols-2 gap-2 mt-2 text-xs text-muted">
+              <span>
+                🔍 <strong>{summary.inspection_count}</strong> inspeção{summary.inspection_count !== 1 ? 'ões' : ''}
+              </span>
+              <span>
+                {summary.last_inspection
+                  ? `📅 ${new Date(summary.last_inspection.created_at).toLocaleDateString('pt-BR')}`
+                  : '📅 Sem inspeção'}
+              </span>
+              {summary.active_plan && (
+                <span className="col-span-2 text-yellow-400">
+                  ⚠️ Plano ativo: {summary.active_plan.status}
+                  {summary.active_plan.estimated_cost ? ` · R$ ${summary.active_plan.estimated_cost.toFixed(2)}` : ''}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Prediction Section */}
@@ -328,110 +303,25 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
         onClose={() => setIsWOModalOpen(false)}
         pole={pole}
         users={users}
-        onSuccess={() => alert('OS Criada!')}
+        onSuccess={() => showToast('Ordem de Serviço criada com sucesso!', 'success')}
       />
 
-      {
-        analysis && (
-          <div className="analysis-result card gradient-border animate-slide-up">
-            <div className="analysis-header">
-              <h3><Activity size={16} /> Relatório Vision</h3>
-              <span className={`badge ${analysis.confidence > 0.8 ? 'badge-success' : 'badge-warning'}`}>
-                {Math.round(analysis.confidence * 100)}% Conf.
-              </span>
-            </div>
-            {analysis.imageUrl && (
-              <div className="analysis-img">
-                <img src={`${apiBase}${analysis.imageUrl}`} alt="Audit" />
-              </div>
-            )}
-            <p><strong>Tipo:</strong> {analysis.pole_type}</p>
-            <p>
-              <strong>Condição:</strong>
-              <span className={analysis.condition.toLowerCase().includes('boa') ? 'text-success' : 'text-danger'}>
-                {analysis.condition}
-              </span>
-            </p>
-            <div className="analysis-summary">{analysis.analysis_summary}</div>
-            <div className="feedback-row">
-              <button
-                className="btn btn-outline btn-success"
-                onClick={() => onFeedback(true)}
-              >
-                <CheckCircle size={16} /> OK
-              </button>
-              <button
-                className="btn btn-outline btn-danger"
-                onClick={() => onFeedback(false)}
-              >
-                <AlertTriangle size={16} /> Corrigir
-              </button>
-            </div>
 
-            <div className="maintenance-section">
-              <button
-                className="btn btn-secondary btn-full mt-2"
-                onClick={handleGeneratePlan}
-                disabled={loadingPlan}
-              >
-                {loadingPlan ? <Loader className="spin" size={16} /> : <FileText size={16} />}
-                {loadingPlan ? 'Gerando Plano...' : 'Gerar Plano de Manutenção'}
-              </button>
-
-              {maintenancePlan && (
-                <div className="maintenance-plan mt-2 card bg-darker">
-                  <div className="flex-between">
-                    <h4><FileText size={14} /> Plano de Manutenção #{maintenancePlan.id}</h4>
-                    <span className={`badge ${maintenancePlan.status === 'COMPLETED' ? 'badge-success' : 'badge-warning'}`}>
-                      {maintenancePlan.status}
-                    </span>
-                  </div>
-                  <div className="plan-meta text-muted text-xs mb-2">
-                    <Clock size={10} /> {new Date(maintenancePlan.created_at).toLocaleString()}
-                  </div>
-
-                  <div className="plan-content">
-                    {maintenancePlan.plan_text.split('\n').map((line, i) => (
-                      <p key={i}>{line}</p>
-                    ))}
-                  </div>
-
-                  {maintenancePlan.status !== 'COMPLETED' && (
-                    <button
-                      className="btn btn-sm btn-success w-full mt-2"
-                      onClick={() => markCompleted(maintenancePlan)}
-                    >
-                      <CheckCircle size={14} /> Marcar como Realizado
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {history.length > 0 && !maintenancePlan && (
-                <button className="btn btn-outline btn-sm w-full mt-2" onClick={() => setShowHistory(!showHistory)}>
-                  <Archive size={14} /> Ver Histórico ({history.length})
-                </button>
-              )}
-
-              {showHistory && !maintenancePlan && (
-                <div className="history-list mt-2">
-                  {history.map(h => (
-                    <div key={h.id} className="history-item card p-2 mb-1" onClick={() => setMaintenancePlan(h)}>
-                      <div className="flex-between">
-                        <span>#{h.id} - {new Date(h.created_at).toLocaleDateString()}</span>
-                        <div className="flex gap-2">
-                          {h.estimated_cost && <span className="badge badge-info">R$ {h.estimated_cost.toFixed(2)}</span>}
-                          <span className={`badge ${h.status === 'COMPLETED' ? 'badge-success' : 'badge-warning'}`}>{h.status}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )
-      }
+      {analysis && (
+        <PoleAnalysisResult
+          analysis={analysis}
+          apiBase={apiBase}
+          maintenancePlan={maintenancePlan}
+          history={history}
+          loadingPlan={loadingPlan}
+          showHistory={showHistory}
+          onFeedback={onFeedback}
+          onGeneratePlan={handleGeneratePlan}
+          onMarkCompleted={markCompleted}
+          onSetMaintenancePlan={setMaintenancePlan}
+          onToggleHistory={() => setShowHistory(prev => !prev)}
+        />
+      )}
     </div>
   );
 };

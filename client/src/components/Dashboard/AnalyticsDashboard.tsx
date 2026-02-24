@@ -1,30 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   PieChart, Pie, Cell, AreaChart, Area
 } from 'recharts';
-import { api } from '../../services/api';
 import { Activity, Zap, Box } from 'lucide-react';
-import type { DashboardData } from '../../types';
+import { useDashboard } from '../../hooks/useDashboard';
 
 
 
 const AnalyticsDashboard: React.FC = () => {
-  const [data, setData] = useState<DashboardData | null>(null);
+  const { data, loading, error } = useDashboard();
 
-  useEffect(() => {
-    const loadStats = async () => {
-      try {
-        const res = await api.getStats();
-        setData(res.data);
-      } catch (error) {
-        console.error('Failed to load stats', error);
-      }
-    };
-    loadStats();
-  }, []);
-
-  if (!data) return <div className="p-8 text-center">Carregando Analytics...</div>;
+  if (loading) return <div className="p-8 text-center">Carregando Analytics...</div>;
+  if (error) return <div className="p-8 text-center text-red-400">{error}</div>;
+  if (!data) return null;
 
   return (
     <div className="analytics-dashboard p-6 animate-fade-in text-light">
