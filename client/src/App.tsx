@@ -12,7 +12,7 @@ import { useAppHandlers } from './hooks/useAppHandlers';
 import { usePoleSearch } from './hooks/usePoleSearch';
 import { TenantProvider } from './context/TenantContext';
 import { WifiOff, RefreshCw } from 'lucide-react';
-import type { Pole, Span, Inspection, AnalysisResult, Tenant, User } from './types';
+import type { Pole, Span, Inspection, AnalysisResult, Tenant, User, Conductor } from './types';
 
 // Lazy-load heavy view components to reduce initial bundle size
 const AnalyticsDashboard = lazy(() => import('./components/Dashboard/AnalyticsDashboard'));
@@ -42,7 +42,7 @@ const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [history, setHistory] = useState<Inspection[]>([]);
-  const [activeTab, setActiveTab] = useState<'details' | 'history' | 'eng' | 'video' | 'bim'>('details');
+  const [activeTab, setActiveTab] = useState<'details' | 'history' | 'eng' | 'video' | 'bim' | 'conductors'>('details');
   const [notification, setNotification] = useState<string | null>(null);
   const [isMeasuring, setIsMeasuring] = useState(false);
   const [measurementStart, setMeasurementStart] = useState<Pole | null>(null);
@@ -55,6 +55,7 @@ const App: React.FC = () => {
   const [tension, setTension] = useState(250);
 
   const [showAneelPanel, setShowAneelPanel] = useState(false);
+  const [conductors, setConductors] = useState<Conductor[]>([]);
 
   const gisInputRef = useRef<HTMLInputElement>(null!);
 
@@ -63,6 +64,15 @@ const App: React.FC = () => {
     setTimeout(() => setNotification(null), 3000);
   }, []);
 
+  const fetchConductors = useCallback(async () => {
+    try {
+      const res = await api.getConductors(activeTenantId ? { tenant_id: activeTenantId } : undefined);
+      setConductors(res.data.conductors);
+    } catch {
+      // fail silently – condutores não são críticos para o mapa
+    }
+  }, [activeTenantId]);
+
   const handleLogin = useCallback((user: User) => {
     setCurrentUser(user);
     setActiveTenantId(user.tenant_id);
@@ -70,7 +80,8 @@ const App: React.FC = () => {
     fetchPoles();
     fetchStats();
     fetchAlerts();
-  }, [setCurrentUser, setActiveTenantId, fetchPoles, fetchStats, fetchAlerts]);
+    fetchConductors();
+  }, [setCurrentUser, setActiveTenantId, fetchPoles, fetchStats, fetchAlerts, fetchConductors]);
 
   const handleLogout = useCallback(() => {
     localStorage.removeItem('sisdrone_jwt');
@@ -114,8 +125,9 @@ const App: React.FC = () => {
       document.documentElement.style.setProperty('--accent', activeTenant.accent_color);
       document.documentElement.style.setProperty('--accent-hover', activeTenant.primary_color);
       fetchPoles();
+      fetchConductors();
     }
-  }, [activeTenant, fetchPoles]);
+  }, [activeTenant, fetchPoles, fetchConductors]);
 
   useEffect(() => {
     if (selectedPole) {
@@ -246,6 +258,7 @@ const App: React.FC = () => {
           }}
           onPoleDeleted={(id) => {
             setPoles(prev => prev.filter(p => p.id !== id));
+            setConductors(prev => prev.filter(c => c.pole_from !== id && c.pole_to !== id));
             setSelectedPole(null);
             showNotification('Poste removido com sucesso');
             fetchAlerts();
@@ -270,6 +283,7 @@ const App: React.FC = () => {
               activeSpan={activeSpan}
               userRole={currentUser?.role || 'VIEWER'}
               showHeatmap={showHeatmap}
+              conductors={conductors}
             />
           ) : viewMode === 'ANALYTICS' ? (
             <Suspense fallback={<div className="p-8 text-center">Carregando Analytics...</div>}>

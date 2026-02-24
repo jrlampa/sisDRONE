@@ -158,6 +158,28 @@ async function initDb(database: Database) {
     CREATE INDEX IF NOT EXISTS idx_vsessions_status ON video_sessions(status);
   `);
 
+  // conductors table (Phase 29) — spans elétricos entre postes
+  await database.exec(`
+    CREATE TABLE IF NOT EXISTS conductors (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tenant_id INTEGER NOT NULL DEFAULT 1,
+      pole_from INTEGER NOT NULL,
+      pole_to INTEGER NOT NULL,
+      network_type TEXT NOT NULL DEFAULT 'BT',
+      cable_type TEXT,
+      voltage_kv REAL,
+      length_m REAL,
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (pole_from) REFERENCES poles(id) ON DELETE CASCADE,
+      FOREIGN KEY (pole_to) REFERENCES poles(id) ON DELETE CASCADE,
+      FOREIGN KEY (tenant_id) REFERENCES tenants(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_conductors_tenant ON conductors(tenant_id);
+    CREATE INDEX IF NOT EXISTS idx_conductors_from ON conductors(pole_from);
+    CREATE INDEX IF NOT EXISTS idx_conductors_to ON conductors(pole_to);
+  `);
+
   // ── Seeds ──
   const tenantRes = await database.get('SELECT COUNT(*) as count FROM tenants');
   if (tenantRes && tenantRes.count === 0) {

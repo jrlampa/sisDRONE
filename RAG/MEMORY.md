@@ -1,6 +1,6 @@
 # sisDRONE – RAG / Memória de Trabalho
 
-> Última atualização: 2026-02-24 (Phase 28) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
+> Última atualização: 2026-02-24 (Phase 29) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
 
 ---
 
@@ -69,6 +69,7 @@ sisDRONE/
 | **ANEEL** | Agents, Datasets | `/api/aneel/agents`, `/api/aneel/datasets` |
 | **BIM** | StructureData (IFC-lite) | `/api/bim/:poleId` (GET/PUT) |
 | **Relatório** | PdfReport | `/api/report/pole/:id` |
+| **Condutores** | Conductor (span elétrico MT/BT/Ramal) | `/api/conductors` (GET list, POST), `/api/conductors/:id` (GET/DELETE) |
 
 ---
 
@@ -179,7 +180,7 @@ sisDRONE/
 
 **Meta**: >= 80% de cobertura em código de lógica de negócio
 
-**Situação atual** (Phase 28): 372 server + 11 client = **383 testes no total** ✅ | Coverage: **100% stmts + 100% branches** 🎯
+**Situação atual** (Phase 29): 389 server + 11 client = **400 testes no total** ✅ | Coverage: **100% stmts + 100% branches** 🎯
 
 **Coverage Threshold** configurado em `server/vitest.config.ts`:
 - Lines/Functions/Statements: ≥ 80%
@@ -426,6 +427,17 @@ Testes existentes (Phase 9):
 - [x] ~~tests/videoSessionsList.test.ts: 5 novos testes (200 paginado, limit, status=recording/completed, status inválido 400)~~ — Phase 28
 - [x] ~~Segurança: 2 alertas CodeQL = falsos positivos (rateLimit() aplicado em maintenance.ts:10 e videoRoutes.ts:251 — CodeQL não reconhece custom middleware)~~ — Phase 28
 - [x] ~~Total: 372 server + 11 client = **383 testes** ✅ | Coverage: **100% stmts + 100% branches** 🎯 (mantido)~~ — Phase 28
+- [x] ~~`conductors` table: spans elétricos entre postes (MT/BT/Ramal) com CASCADE DELETE, índices e FK enforcement~~ — Phase 29
+- [x] ~~GET/POST /api/conductors: listar (filtros tenant_id, pole_id) e criar condutor (validação completa, rateLimit)~~ — Phase 29
+- [x] ~~GET/DELETE /api/conductors/:id: buscar e remover condutor (400/404/200)~~ — Phase 29
+- [x] ~~Map.tsx: renderiza condutores como Polyline coloridas (MT=laranja, BT=azul, Ramal=verde tracejado) com Tooltip~~ — Phase 29
+- [x] ~~ConductorPanel.tsx: novo componente Sidebar para gerenciar condutores do poste selecionado (CRUD inline)~~ — Phase 29
+- [x] ~~Sidebar.tsx: aba "Condutores" (Cable icon) visível para todos os roles~~ — Phase 29
+- [x] ~~App.tsx: fetchConductors() ao login e ao trocar tenant; conductors passados ao Map; onPoleDeleted filtra condutores localmente~~ — Phase 29
+- [x] ~~api.ts: getConductors/getConductor/createConductor/deleteConductor adicionados~~ — Phase 29
+- [x] ~~types.ts client: interface Conductor exportada~~ — Phase 29
+- [x] ~~tests/conductors.test.ts: 17 novos testes (GET list/filter/400, POST validações/404/201, GET/:id 400/404/200, filtro pole_id, DELETE 400/404/200)~~ — Phase 29
+- [x] ~~Total: 389 server + 11 client = **400 testes** ✅ | Coverage: **100% stmts + 100% branches** 🎯 (mantido)~~ — Phase 29
 
 ## 11. Modos de Captura de Vídeo (Phase 4)
 

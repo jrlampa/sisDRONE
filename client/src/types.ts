@@ -104,3 +104,22 @@ export interface PoleSummary {
   active_plan: PoleSummaryPlan | null;
   inspection_count: number;
 }
+
+export interface Conductor {
+  id: number;
+  tenant_id: number;
+  pole_from: number;
+  pole_to: number;
+  network_type: 'MT' | 'BT' | 'ramal';
+  cable_type?: string;
+  voltage_kv?: number;
+  length_m?: number;
+  notes?: string;
+  created_at: string;
+  from_lat: number;
+  from_lng: number;
+  from_name: string;
+  to_lat: number;
+  to_lng: number;
+  to_name: string;
+}

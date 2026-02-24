@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, FileJson, Globe, FileText, Ruler, LayoutDashboard, Download, X, Zap, ClipboardList, Video, Building2 } from 'lucide-react';
+import { Search, FileJson, Globe, FileText, Ruler, LayoutDashboard, Download, X, Zap, ClipboardList, Video, Building2, Cable } from 'lucide-react';
 import PoleDetails from './PoleDetails';
 import { generateInspectionReport } from '../../utils/pdfGenerator';
 import { api } from '../../services/api';
@@ -7,6 +7,7 @@ import InspectionHistory from './InspectionHistory';
 import EngineeringTools from './EngineeringTools';
 import VideoCapturePanel from '../VideoCapture/VideoCapturePanel';
 import BimStructureEditor from './BimStructureEditor';
+import ConductorPanel from './ConductorPanel';
 import NearbySearchPanel from './NearbySearchPanel';
 import FilterChips from '../FilterChips';
 import { useTenant } from '../../context/TenantContext';
@@ -27,8 +28,8 @@ interface SidebarProps {
   setFilterCondition: (c: 'All' | 'Critical' | 'Warning' | 'Good') => void;
   selectedPole: Pole | null;
   activeSpan: Span | null;
-  activeTab: 'details' | 'history' | 'eng' | 'video' | 'bim';
-  setActiveTab: (t: 'details' | 'history' | 'eng' | 'video' | 'bim') => void;
+  activeTab: 'details' | 'history' | 'eng' | 'video' | 'bim' | 'conductors';
+  setActiveTab: (t: 'details' | 'history' | 'eng' | 'video' | 'bim' | 'conductors') => void;
   isCapturing: boolean;
   onAnalyze: () => void;
   analysis: AnalysisResult | null;
@@ -222,6 +223,15 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
                 <Building2 size={12} className="inline mr-1" />BIM
               </button>
             )}
+            {selectedPole && (
+              <button
+                onClick={() => setActiveTab('conductors')}
+                className={activeTab === 'conductors' ? 'active' : ''}
+                title="Condutores Elétricos"
+              >
+                <Cable size={12} className="inline mr-1" />Condutores
+              </button>
+            )}
             {selectedPole && userRole !== 'VIEWER' && (
               <button
                 onClick={() => setActiveTab('video')}
@@ -270,6 +280,10 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
 
           {activeTab === 'bim' && selectedPole && (
             <BimStructureEditor pole={selectedPole} />
+          )}
+
+          {activeTab === 'conductors' && selectedPole && (
+            <ConductorPanel pole={selectedPole} allPoles={poles} />
           )}
 
           {activeTab === 'eng' && activeSpan && (

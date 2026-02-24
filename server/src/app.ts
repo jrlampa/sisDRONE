@@ -18,6 +18,7 @@ import videoRouter from './routes/videoRoutes';
 import aneelRouter from './routes/aneelRoutes';
 import bimRouter from './routes/bimRoutes';
 import reportRouter from './routes/reportRoutes';
+import conductorsRouter from './routes/conductors';
 import { checkPermission } from './middleware/auth';
 import { rateLimit } from './middleware/rateLimit';
 import { getDb } from './db';
@@ -68,6 +69,7 @@ app.use('/api/video', videoRouter);
 app.use('/api/aneel', aneelRouter);
 app.use('/api/bim', bimRouter);
 app.use('/api/report', reportRouter);
+app.use('/api/conductors', conductorsRouter);
 
 // Legacy inspect routes: /api/analyze, /api/feedback, /api/:id/history
 // MUST be last: /:id wildcard would shadow all /api/* routes if registered earlier

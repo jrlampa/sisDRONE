@@ -162,4 +162,17 @@ export const api = {
   // PDF Report
   getPoleReportUrl: (poleId: number) =>
     `${API_BASE}/api/report/pole/${poleId}`,
+
+  // Condutores Elétricos (Phase 29)
+  getConductors: (params?: { tenant_id?: number; pole_id?: number }) =>
+    axios.get<{ count: number; conductors: import('../types').Conductor[] }>(`${API_BASE}/api/conductors`, { params }),
+  getConductor: (id: number) =>
+    axios.get<import('../types').Conductor>(`${API_BASE}/api/conductors/${id}`),
+  createConductor: (data: {
+    pole_from: number; pole_to: number;
+    network_type?: 'MT' | 'BT' | 'ramal';
+    cable_type?: string; voltage_kv?: number; length_m?: number; notes?: string; tenant_id?: number;
+  }) => axios.post<import('../types').Conductor>(`${API_BASE}/api/conductors`, data),
+  deleteConductor: (id: number) =>
+    axios.delete<{ message: string; id: number }>(`${API_BASE}/api/conductors/${id}`),
 };

@@ -1,8 +1,8 @@
 import React from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents, Polyline } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents, Polyline, Tooltip } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import type { Pole, Span } from '../types';
+import type { Pole, Span, Conductor } from '../types';
 import HeatmapLayer from './HeatmapLayer';
 
 // Fix for default marker icons in Leaflet + React
@@ -37,6 +37,13 @@ function getAhiIcon(ahi: number | null, selected = false): L.DivIcon {
   });
 }
 
+/** Cor e espessura da linha por tipo de rede elétrica */
+function getConductorStyle(type: string): { color: string; weight: number; dashArray?: string } {
+  if (type === 'MT') return { color: '#f97316', weight: 3 };
+  if (type === 'ramal') return { color: '#22c55e', weight: 1.5, dashArray: '6, 4' };
+  return { color: '#3b82f6', weight: 2 }; // BT padrão
+}
+
 interface MapProps {
   poles: Pole[];
   selectedPole: Pole | null;
@@ -46,10 +53,12 @@ interface MapProps {
   activeSpan: Span | null;
   userRole: 'ADMIN' | 'ENGINEER' | 'VIEWER';
   showHeatmap: boolean;
+  conductors?: Conductor[];
 }
 
 const Map: React.FC<MapProps> = ({
-  poles, selectedPole, onMarkerClick, onMapClick, isMeasuring, activeSpan, userRole, showHeatmap
+  poles, selectedPole, onMarkerClick, onMapClick, isMeasuring, activeSpan, userRole, showHeatmap,
+  conductors = [],
 }) => {
   const heatmapPoints: [number, number, number][] = poles.map(p => {
     // Inverse of AHI: Lower score = Higher intensity in heatmap (more damaged)
@@ -80,6 +89,27 @@ const Map: React.FC<MapProps> = ({
       <MapEvents />
 
       {showHeatmap && <HeatmapLayer points={heatmapPoints} />}
+
+      {conductors.map((c) => {
+        const style = getConductorStyle(c.network_type);
+        return (
+          <Polyline
+            key={`c-${c.id}`}
+            positions={[[c.from_lat, c.from_lng], [c.to_lat, c.to_lng]]}
+            color={style.color}
+            weight={style.weight}
+            dashArray={style.dashArray}
+            opacity={0.85}
+          >
+            <Tooltip sticky>
+              <span><strong>{c.network_type}</strong> — {c.from_name} → {c.to_name}</span>
+              {c.cable_type && <><br />{c.cable_type}</>}
+              {c.voltage_kv !== undefined && c.voltage_kv !== null && <><br />{c.voltage_kv} kV</>}
+              {c.length_m !== undefined && c.length_m !== null && <><br />{c.length_m} m</>}
+            </Tooltip>
+          </Polyline>
+        );
+      })}
 
       {poles.map((pole) => (
         <Marker
