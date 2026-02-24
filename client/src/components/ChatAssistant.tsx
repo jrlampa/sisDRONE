@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, X, Send, Bot, User as UserIcon, Maximize2, Minimize2 } from 'lucide-react';
-import { api } from '../services/api';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { MessageSquare, X, Send, Bot, User as UserIcon, Maximize2, Minimize2, Trash2 } from 'lucide-react';
+import { useChat } from '../hooks/useChat';
 import type { Pole, AnalysisResult } from '../types';
 
 interface ChatAssistantProps {
@@ -8,53 +8,20 @@ interface ChatAssistantProps {
   analysis: AnalysisResult | null;
 }
 
-interface Message {
-  id: number;
-  role: 'user' | 'assistant';
-  content: string;
-}
-
 const ChatAssistant: React.FC<ChatAssistantProps> = ({ selectedPole, analysis }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    { id: 1, role: 'assistant', content: 'Olá! Sou seu assistente SisDRONE. Posso ajudar com análises, orçamentos e dados técnicos.' }
-  ]);
-  const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
+  const { messages, input, setInput, loading, handleSend, clearChat } = useChat({ selectedPole, analysis });
+
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  }, []);
 
   useEffect(() => {
     if (isOpen) scrollToBottom();
-  }, [messages, isOpen]);
-
-  const handleSend = async () => {
-    if (!input.trim()) return;
-
-    const userMsg: Message = { id: Date.now(), role: 'user', content: input };
-    setMessages(prev => [...prev, userMsg]);
-    setInput('');
-    setLoading(true);
-
-    try {
-      const context = {
-        pole: selectedPole,
-        analysis: analysis
-      };
-
-      const res = await api.chatWithAI(userMsg.content, context);
-      const aiMsg: Message = { id: Date.now() + 1, role: 'assistant', content: res.data.response };
-      setMessages(prev => [...prev, aiMsg]);
-    } catch {
-      setMessages(prev => [...prev, { id: Date.now(), role: 'assistant', content: 'Desculpe, estou com problemas de conexão.' }]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [messages, isOpen, scrollToBottom]);
 
   if (!isOpen) {
     return (
@@ -79,6 +46,9 @@ const ChatAssistant: React.FC<ChatAssistantProps> = ({ selectedPole, analysis })
           <h3 className="font-bold text-light">SisDRONE Chat</h3>
         </div>
         <div className="flex gap-2">
+          <button onClick={clearChat} className="p-1 hover:text-accent" aria-label="Limpar conversa" title="Limpar conversa">
+            <Trash2 size={14} />
+          </button>
           <button onClick={() => setIsExpanded(!isExpanded)} className="p-1 hover:text-accent" aria-label={isExpanded ? "Restaurar" : "Expandir"} title={isExpanded ? "Restaurar" : "Expandir"}>
             {isExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
           </button>

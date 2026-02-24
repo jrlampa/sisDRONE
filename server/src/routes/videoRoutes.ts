@@ -241,6 +241,46 @@ router.post('/session/:id/complete', rateLimit(30, 60_000), async (req: Request,
   }
 });
 
+const VALID_SESSION_STATUSES = ['recording', 'completed'] as const;
+
+/**
+ * GET /api/video/sessions
+ * List all video sessions with pagination and optional status filter.
+ * Must be registered BEFORE /sessions/:poleId to avoid shadowing.
+ */
+router.get('/sessions', rateLimit(60, 60_000), async (req: Request, res: Response) => {
+  const page = Math.max(1, parseInt(String(req.query.page || '1'), 10) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit || '50'), 10) || 50));
+  const offset = (page - 1) * limit;
+
+  const statusFilter = req.query.status ? String(req.query.status) : null;
+  if (statusFilter && !(VALID_SESSION_STATUSES as readonly string[]).includes(statusFilter)) {
+    return res.status(400).json({ error: `Status inválido. Use: ${VALID_SESSION_STATUSES.join(', ')}` });
+  }
+
+  const conditions: string[] = [];
+  const params: (string | number)[] = [];
+  if (statusFilter) {
+    conditions.push('status = ?');
+    params.push(statusFilter);
+  }
+  const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+  try {
+    const db = await getDb();
+    const countRow = await db.get(`SELECT COUNT(*) as count FROM video_sessions ${whereClause}`, params);
+    const total: number = countRow?.count ?? 0;
+    const sessions = await db.all(
+      `SELECT * FROM video_sessions ${whereClause} ORDER BY started_at DESC LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
+    );
+    res.json({ sessions, total, page, limit, pages: Math.ceil(total / limit) });
+  } catch (err) {
+    console.error('Erro ao listar sessões de vídeo:', err);
+    res.status(500).json({ error: 'Erro ao listar sessões' });
+  }
+});
+
 /**
  * GET /api/video/sessions/:poleId
  * List video sessions for a pole.

@@ -6,6 +6,23 @@ const VALID_PLAN_STATUSES = ['PENDING', 'APPROVED', 'COMPLETED'] as const;
 
 const router = Router();
 
+// GET /api/maintenance/plan/:planId — single plan by ID
+router.get('/plan/:planId', rateLimit(60, 60_000), async (req, res) => {
+  const planId = parseInt(req.params.planId, 10);
+  if (isNaN(planId) || planId <= 0) {
+    return res.status(400).json({ error: 'planId inválido' });
+  }
+  try {
+    const db = await getDb();
+    const plan = await db.get('SELECT * FROM maintenance_plans WHERE id = ?', [planId]);
+    if (!plan) return res.status(404).json({ error: 'Plano de manutenção não encontrado' });
+    res.json(plan);
+  } catch (error) {
+    console.error('Falha ao buscar plano de manutenção:', error);
+    res.status(500).json({ error: 'Falha ao buscar plano de manutenção' });
+  }
+});
+
 router.get('/:poleId', rateLimit(60, 60_000), async (req, res) => {
   const poleId = parseInt(req.params.poleId, 10);
   if (isNaN(poleId) || poleId <= 0) {

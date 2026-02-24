@@ -108,6 +108,7 @@ export const api = {
   generateMaintenancePlan: (poleId: number, analysis: AnalysisResult) =>
     axios.post<{ plan: string, planId: number, estimatedCost: number }>(`${API_BASE}/api/ai/plan`, { poleId, analysis }),
   getMaintenancePlans: (poleId: number) => axios.get(`${API_BASE}/api/maintenance/${poleId}`),
+  getMaintenancePlan: (planId: number) => axios.get(`${API_BASE}/api/maintenance/plan/${planId}`),
   updateMaintenanceStatus: (planId: number, status: string) =>
     axios.patch(`${API_BASE}/api/maintenance/${planId}/status`, { status }),
   deleteMaintenancePlan: (planId: number) =>
@@ -143,6 +144,10 @@ export const api = {
     axios.post(`${API_BASE}/api/video/session/${sessionId}/complete`),
   getVideoSessions: (poleId: number) =>
     axios.get(`${API_BASE}/api/video/sessions/${poleId}`),
+  getAllVideoSessions: (params?: { status?: string; page?: number; limit?: number }) =>
+    axios.get<{ sessions: unknown[]; total: number; page: number; limit: number; pages: number }>(
+      `${API_BASE}/api/video/sessions`, { params }
+    ),
 
   // ANEEL OpenData
   getAneelAgents: (uf?: string, limit?: number) =>

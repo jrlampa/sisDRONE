@@ -1,6 +1,6 @@
 # sisDRONE – RAG / Memória de Trabalho
 
-> Última atualização: 2026-02-24 (Phase 27) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
+> Última atualização: 2026-02-24 (Phase 28) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
 
 ---
 
@@ -60,8 +60,8 @@ sisDRONE/
 |---------|-----------|-------|
 | **Infraestrutura** | Pole, Tenant | `/api/poles` (filtros: ahi_min, ahi_max, status, paginação), `/api/poles/:id` (GET/PUT/DELETE cascade), `/api/poles/:id/summary`, `/api/poles/:id/images`, `/api/poles/:id/history`, `/api/poles/:id/work-orders`, `/api/poles/heatmap`, `/api/poles/alerts`, `/api/tenants` |
 | **Inspeção** | Inspection (Label), Image | `/api/inspections` (paginado + filtros: pole_id, source), `/api/inspections/:id` (GET/DELETE), `/api/analyze`, `/api/feedback`, `/:id/history` |
-| **Vídeo / Captura** | VideoSession, Frame | `/api/video/session/:id` (**GET** — Phase 27), `/api/video/session/start` (POST), `/api/video/sessions/:poleId` (GET), `/api/video/session/:id/complete` (POST), `/api/video/frame` (POST), `/api/video/upload` (POST) |
-| **IA / Manutenção** | MaintenancePlan | `/api/ai/*` |
+| **Vídeo / Captura** | VideoSession, Frame | `/api/video/session/:id` (**GET** — Phase 27), `/api/video/session/start` (POST), `/api/video/sessions` (**GET paginado** — Phase 28), `/api/video/sessions/:poleId` (GET), `/api/video/session/:id/complete` (POST), `/api/video/frame` (POST), `/api/video/upload` (POST) |
+| **IA / Manutenção** | MaintenancePlan | `/api/ai/*`, `/api/maintenance/:poleId` (GET lista), `/api/maintenance/plan/:planId` (**GET individual** — Phase 28), `/api/maintenance/:planId/status` (PATCH), `/api/maintenance/:planId` (DELETE) |
 | **GIS** | GeoJSON | `/api/gis/*` |
 | **Operações** | WorkOrder | `/api/work-orders` (paginado + filtros: status, assignee_id, **pole_id**), `/api/work-orders/stats`, `/api/work-orders/:id` (GET/PUT/DELETE) |
 | **Usuários** | User | `/api/users` (**filtro tenant_id**), `/api/users/:id` (GET/PUT/DELETE) |
@@ -179,7 +179,7 @@ sisDRONE/
 
 **Meta**: >= 80% de cobertura em código de lógica de negócio
 
-**Situação atual** (Phase 27): 362 server + 11 client = **373 testes no total** ✅ | Coverage: **100% stmts + 100% branches** 🎯
+**Situação atual** (Phase 28): 372 server + 11 client = **383 testes no total** ✅ | Coverage: **100% stmts + 100% branches** 🎯
 
 **Coverage Threshold** configurado em `server/vitest.config.ts`:
 - Lines/Functions/Statements: ≥ 80%
@@ -417,6 +417,15 @@ Testes existentes (Phase 9):
 - [x] ~~GET /api/video/session/:id: novo endpoint REST para buscar sessão individual por ID (400/404/200; rateLimit 60/min)~~ — Phase 27
 - [x] ~~tests/videoSessionGet.test.ts: 6 novos testes (pole creation, session creation, 400 abc/0, 404, 200 + campos)~~ — Phase 27
 - [x] ~~Total: 362 server + 11 client = 373 testes ✅ | Coverage: 100% stmts + 100% branches 🎯 (mantido)~~ — Phase 27
+- [x] ~~GET /api/maintenance/plan/:planId: buscar plano de manutenção por ID (REST gap — apenas /:poleId lista existia; 400/404/200, rateLimit 60/min)~~ — Phase 28
+- [x] ~~GET /api/video/sessions: listar TODAS as sessões paginado (admin view, filtro status=recording/completed, 400 inválido; rateLimit 60/min)~~ — Phase 28
+- [x] ~~useChat hook criado (hooks/useChat.ts): extrai messages/input/loading/handleSend/clearChat de ChatAssistant.tsx (SRP); IDs com useRef counter (anti-colisão)~~ — Phase 28
+- [x] ~~ChatAssistant.tsx refatorado: usa useChat; botão clearChat (Trash2); useCallback para scrollToBottom — 141→97 linhas~~ — Phase 28
+- [x] ~~api.getMaintenancePlan(planId) + api.getAllVideoSessions() adicionados em api.ts~~ — Phase 28
+- [x] ~~tests/maintenancePlanById.test.ts: 5 novos testes (400 abc/0, 404, 200+campos) — insere plano via getDb() direto (sem Groq)~~ — Phase 28
+- [x] ~~tests/videoSessionsList.test.ts: 5 novos testes (200 paginado, limit, status=recording/completed, status inválido 400)~~ — Phase 28
+- [x] ~~Segurança: 2 alertas CodeQL = falsos positivos (rateLimit() aplicado em maintenance.ts:10 e videoRoutes.ts:251 — CodeQL não reconhece custom middleware)~~ — Phase 28
+- [x] ~~Total: 372 server + 11 client = **383 testes** ✅ | Coverage: **100% stmts + 100% branches** 🎯 (mantido)~~ — Phase 28
 
 ## 11. Modos de Captura de Vídeo (Phase 4)
 
