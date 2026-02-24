@@ -24,6 +24,9 @@ export async function getDb() {
       driver: sqlite3.Database
     });
 
+    // Enable foreign key constraint enforcement (SQLite disables FKs by default)
+    await db.exec('PRAGMA foreign_keys = ON');
+
     await initDb(db);
     return db;
   } catch (error) {

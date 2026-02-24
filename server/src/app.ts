@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 import polesRouter from './routes/poles';
+import polesAnalyticsRouter from './routes/polesAnalytics';
 import inspectionsRouter from './routes/inspections';
 import gisRouter from './routes/gis';
 import tenantsRouter from './routes/tenants';
@@ -52,6 +53,9 @@ app.get('/health', rateLimit(60, 60_000), async (_req, res) => {
 app.use('/api/auth', authRouter);
 
 // Routes (specific prefixes must come before the legacy /api catch-all)
+// polesAnalyticsRouter must be mounted BEFORE polesRouter so named routes (/stats, /export, etc.)
+// are matched before the /:id wildcard in polesRouter
+app.use('/api/poles', polesAnalyticsRouter);
 app.use('/api/poles', polesRouter);
 app.use('/api/inspections', inspectionsRouter);
 app.use('/api/gis', gisRouter);

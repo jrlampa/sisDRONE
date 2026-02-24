@@ -179,7 +179,7 @@ sisDRONE/
 
 **Meta**: >= 80% de cobertura em código de lógica de negócio
 
-**Situação atual** (Phase 22): 316 server + 11 client = **327 testes no total** ✅ | Coverage: **100% stmts + 100% branches** 🎯
+**Situação atual** (Phase 23): 322 server + 11 client = **333 testes no total** ✅ | Coverage: **100% stmts + 100% branches** 🎯
 
 **Coverage Threshold** configurado em `server/vitest.config.ts`:
 - Lines/Functions/Statements: ≥ 80%
@@ -373,6 +373,16 @@ Testes existentes (Phase 9):
 - [x] ~~workOrders.test.ts: 2 testes atualizados (GET retorna objeto paginado, não array direto)~~ — Phase 22
 - [x] ~~api.test.ts: teste GET /api/work-orders atualizado para esperar objeto paginado~~ — Phase 22
 - [x] ~~Total: 316 server + 11 client = 327 testes ✅ | Coverage: 100% stmts + 100% branches 🎯 (mantido)~~ — Phase 22
+- [x] ~~poles.ts modularizado: /stats, /export, /alerts, /heatmap → polesAnalytics.ts (436→305 linhas, SRP/modularidade)~~ — Phase 23
+- [x] ~~app.ts: polesAnalyticsRouter montado ANTES de polesRouter (named routes resolvidas primeiro)~~ — Phase 23
+- [x] ~~db.ts: PRAGMA foreign_keys = ON (integridade FK enforcement no SQLite)~~ — Phase 23
+- [x] ~~inspections.ts: filtro `source` (ai/user/manual) em GET /api/inspections (query builder dinâmico)~~ — Phase 23
+- [x] ~~tests/inspectionSource.test.ts: 6 novos testes (source=ai/user/manual, inválido ignorado, combinado com pole_id)~~ — Phase 23
+- [x] ~~HeatmapLayer.tsx: React.FC → FC com import correto (jsx: react-jsx transform — sem namespace React)~~ — Phase 23
+- [x] ~~usePoleSummary hook criado (hooks/usePoleSummary.ts) — extrai loadSummary + loadPrediction + loadHistory de PoleDetails (SRP)~~ — Phase 23
+- [x] ~~PoleDetails.tsx: usa usePoleSummary (370→324 linhas) — remove MaintenancePlan interface local, Prediction import, loadSummary/loadPrediction/loadHistory callbacks~~ — Phase 23
+- [x] ~~api.ts: source filter param documentado em getInspections() signature~~ — Phase 23
+- [x] ~~Total: 322 server + 11 client = 333 testes ✅ | Coverage: 100% stmts + 100% branches 🎯 (mantido)~~ — Phase 23
 
 ---
 

@@ -84,8 +84,8 @@ export const api = {
     ),
   getInspection: (id: number) => axios.get(`${API_BASE}/api/inspections/${id}`),
   deleteInspection: (id: number) => axios.delete<{ message: string; id: number }>(`${API_BASE}/api/inspections/${id}`),
-  getInspections: (poleId?: number, page = 1, limit = 50) =>
-    axios.get(`${API_BASE}/api/inspections`, { params: { ...(poleId ? { pole_id: poleId } : {}), page, limit } }),
+  getInspections: (poleId?: number, page = 1, limit = 50, source?: string) =>
+    axios.get(`${API_BASE}/api/inspections`, { params: { ...(poleId ? { pole_id: poleId } : {}), page, limit, ...(source ? { source } : {}) } }),
   getPoleWorkOrders: (poleId: number) =>
     axios.get<{ pole_id: number; count: number; work_orders: WorkOrder[] }>(`${API_BASE}/api/poles/${poleId}/work-orders`),
   createPole: (data: { lat: number, lng: number, name: string, utm_x: string, utm_y: string, tenant_id: number }) =>

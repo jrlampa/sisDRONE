@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { MapPin, Upload, FileText, Loader, Download, Edit2, Trash2, X } from 'lucide-react';
 import { api } from '../../services/api';
-import type { Pole, AnalysisResult, User, PoleSummary } from '../../types';
-import type { Prediction } from '../../types/prediction';
+import type { Pole, AnalysisResult, User } from '../../types';
 import WorkOrderModal from '../WorkOrders/WorkOrderModal';
 import ToastBanner from '../ToastBanner';
 import ConfirmDialog from '../ConfirmDialog';
@@ -10,15 +9,8 @@ import PoleAnalysisResult from './PoleAnalysisResult';
 import PoleEditForm from './PoleEditForm';
 import { useToast } from '../../hooks/useToast';
 import { useConfirm } from '../../hooks/useConfirm';
-
-interface MaintenancePlan {
-  id: number;
-  pole_id: number;
-  plan_text: string;
-  status: 'PENDING' | 'APPROVED' | 'COMPLETED';
-  created_at: string;
-  estimated_cost?: number;
-}
+import { usePoleSummary } from '../../hooks/usePoleSummary';
+import type { PoleMaintenancePlan } from '../../hooks/usePoleSummary';
 
 interface PoleDetailsProps {
   pole: Pole;
@@ -47,9 +39,8 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
   const { toast, showToast, clearToast } = useToast();
   const { confirmState, confirm, handleAnswer } = useConfirm();
 
-  const [maintenancePlan, setMaintenancePlan] = useState<MaintenancePlan | null>(null);
-  const [history, setHistory] = useState<MaintenancePlan[]>([]);
-  const [prediction, setPrediction] = useState<Prediction | null>(null);
+  const { summary, prediction, history, maintenancePlan, setMaintenancePlan, setHistory } = usePoleSummary(pole.id);
+
   const [loadingPlan, setLoadingPlan] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [isWOModalOpen, setIsWOModalOpen] = useState(false);
@@ -63,54 +54,17 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
   );
   const [savingEdit, setSavingEdit] = useState(false);
 
-  const [summary, setSummary] = useState<PoleSummary | null>(null);
-
-  const loadSummary = React.useCallback(async () => {
-    try {
-      const res = await api.getPoleSummary(pole.id);
-      setSummary(res.data);
-    } catch {
-      // summary is optional enhancement, fail silently
-    }
-  }, [pole.id]);
-
-  const loadPrediction = React.useCallback(async () => {
-    try {
-      const res = await api.getPrediction(pole.id);
-      setPrediction(res.data);
-    } catch (e) {
-      console.error('Falha ao carregar previsão', e);
-    }
-  }, [pole.id]);
-
-  const loadHistory = React.useCallback(async () => {
-    try {
-      const res = await api.getMaintenancePlans(pole.id);
-      if (res.data && res.data.length > 0) {
-        setHistory(res.data);
-        if (res.data[0].status === 'PENDING') {
-          setMaintenancePlan(res.data[0]);
-        }
-      } else {
-        setHistory([]);
-      }
-    } catch (error) {
-      console.error('Falha ao carregar histórico', error);
-    }
-  }, [pole.id]);
-
+  // Reset edit state when pole changes
   React.useEffect(() => {
-    if (pole.id) {
-      loadHistory();
-      loadPrediction();
-      loadSummary();
-      setMaintenancePlan(null);
-      setIsEditing(false);
-      setEditName(pole.name);
-      setEditMaterial(pole.material || '');
-      setEditStatus(VALID_STATUSES.includes(pole.status as typeof VALID_STATUSES[number]) ? pole.status as typeof VALID_STATUSES[number] : 'pending');
-    }
-  }, [pole.id, loadHistory, loadPrediction, loadSummary]);
+    setIsEditing(false);
+    setEditName(pole.name);
+    setEditMaterial(pole.material || '');
+    setEditStatus(
+      VALID_STATUSES.includes(pole.status as typeof VALID_STATUSES[number])
+        ? pole.status as typeof VALID_STATUSES[number]
+        : 'pending'
+    );
+  }, [pole.id, pole.name, pole.material, pole.status]);
 
   const handleSaveEdit = async () => {
     setSavingEdit(true);
@@ -149,7 +103,7 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
     setLoadingPlan(true);
     try {
       const res = await api.generateMaintenancePlan(pole.id, analysis);
-      const newPlan: MaintenancePlan = {
+      const newPlan: PoleMaintenancePlan = {
         id: res.data.planId,
         pole_id: pole.id,
         plan_text: res.data.plan,
@@ -167,7 +121,7 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
     }
   };
 
-  const markCompleted = async (plan: MaintenancePlan) => {
+  const markCompleted = async (plan: PoleMaintenancePlan) => {
     try {
       await api.updateMaintenanceStatus(plan.id, 'COMPLETED');
       const updated = { ...plan, status: 'COMPLETED' as const };
