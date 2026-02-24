@@ -5,7 +5,16 @@ import { haversineMeters } from '../utils/geo';
 
 const router = Router();
 
-// GET all poles (optionally filtered by tenant_id, ahi_min, ahi_max, status, with pagination)
+const VALID_SORT_MAP: Record<string, string> = {
+  name_asc: 'name ASC',
+  name_desc: 'name DESC',
+  ahi_asc: 'ahi_score ASC',
+  ahi_desc: 'ahi_score DESC',
+  created_asc: 'id ASC',
+  created_desc: 'id DESC',
+};
+
+// GET all poles (optionally filtered by tenant_id, ahi_min, ahi_max, status, with pagination + sort)
 router.get('/', rateLimit(100, 60_000), async (req: Request, res: Response) => {
   try {
     const db = await getDb();
@@ -13,6 +22,8 @@ router.get('/', rateLimit(100, 60_000), async (req: Request, res: Response) => {
     const ahiMin = req.query.ahi_min !== undefined ? parseFloat(String(req.query.ahi_min)) : null;
     const ahiMax = req.query.ahi_max !== undefined ? parseFloat(String(req.query.ahi_max)) : null;
     const statusFilter = req.query.status ? String(req.query.status) : null;
+    const sortKey = String(req.query.sort || 'created_desc');
+    const orderBy = VALID_SORT_MAP[sortKey] ?? 'id DESC';
 
     const page = Math.max(1, parseInt(String(req.query.page || '1'), 10) || 1);
     const limit = Math.min(200, Math.max(1, parseInt(String(req.query.limit || '100'), 10) || 100));
@@ -42,7 +53,7 @@ router.get('/', rateLimit(100, 60_000), async (req: Request, res: Response) => {
     const countRow = await db.get(`SELECT COUNT(*) as count FROM poles ${whereClause}`, params);
     const total: number = countRow?.count ?? 0;
     const poles = await db.all(
-      `SELECT * FROM poles ${whereClause} ORDER BY id DESC LIMIT ? OFFSET ?`,
+      `SELECT * FROM poles ${whereClause} ORDER BY ${orderBy} LIMIT ? OFFSET ?`,
       [...params, limit, offset]
     );
 

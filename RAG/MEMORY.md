@@ -1,6 +1,6 @@
 # sisDRONE – RAG / Memória de Trabalho
 
-> Última atualização: 2026-02-24 (Phase 25) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
+> Última atualização: 2026-02-24 (Phase 26) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
 
 ---
 
@@ -179,7 +179,7 @@ sisDRONE/
 
 **Meta**: >= 80% de cobertura em código de lógica de negócio
 
-**Situação atual** (Phase 25): 346 server + 11 client = **357 testes no total** ✅ | Coverage: **100% stmts + 100% branches** 🎯
+**Situação atual** (Phase 26): 356 server + 11 client = **367 testes no total** ✅ | Coverage: **100% stmts + 100% branches** 🎯
 
 **Coverage Threshold** configurado em `server/vitest.config.ts`:
 - Lines/Functions/Statements: ≥ 80%
@@ -398,6 +398,16 @@ Testes existentes (Phase 9):
 - [x] ~~KanbanBoard.tsx refatorado com useWorkOrders (remove useState/useEffect/api inline — SRP)~~ — Phase 25
 - [x] ~~api.updateInspection(id, {label?, confidence?, source?}) adicionado em api.ts~~ — Phase 25
 - [x] ~~Total: 346 server + 11 client = 357 testes ✅ | Coverage: 100% stmts + 100% branches 🎯~~ — Phase 25
+- [x] ~~polesAnalytics.ts: fix NULL ahi_score → 'Sem Dados' (não 'Saudável') + healthy/warning/critical/unknown/averageAhi direto na resposta~~ — Phase 26
+- [x] ~~poles.ts: parâmetro sort em GET /api/poles (name_asc/desc, ahi_asc/desc, created_asc/desc; whitelist; default id DESC)~~ — Phase 26
+- [x] ~~tests/polesSort.test.ts: 5 testes (ahi_asc, ahi_desc, name_asc, sort inválido→default, created_asc)~~ — Phase 26
+- [x] ~~tests/polesStats.test.ts: 5 testes (200, direct counts, averageAhi, soma=totalPoles, conditionStats validCategories)~~ — Phase 26
+- [x] ~~FilterChips.tsx: componente extraído de Sidebar.tsx (SRP) com CONDITION_LABELS constante pt-BR~~ — Phase 26
+- [x] ~~Sidebar.tsx: usa FilterChips; stats-mini-grid expandido para 4 contadores (Postes/Saudáveis/Atenção/Críticos)~~ — Phase 26
+- [x] ~~types.ts: warning adicionado à interface Stats~~ — Phase 26
+- [x] ~~useNetwork.ts: usa campos diretos da API (healthy/warning/critical); pt-BR em todos console.error/log~~ — Phase 26
+- [x] ~~api.ts: console.log '[Offline] Queuing request:' → '[Offline] Enfileirando requisição:'~~ — Phase 26
+- [x] ~~Total: 356 server + 11 client = 367 testes ✅ | Coverage: 100% stmts + 100% branches 🎯~~ — Phase 26
 
 ---
 

@@ -30,7 +30,7 @@ axios.interceptors.response.use(
       // Only queue specific mutations
       const allowedMethods = ['post', 'put', 'delete', 'patch'];
       if (allowedMethods.includes(originalRequest.method)) {
-        console.log('[Offline] Queuing request:', originalRequest.url);
+        console.log('[Offline] Enfileirando requisição:', originalRequest.url);
 
         await addToQueue({
           url: originalRequest.url,

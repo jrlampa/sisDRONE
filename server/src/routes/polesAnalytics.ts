@@ -58,9 +58,11 @@ router.get('/stats', rateLimit(60, 60_000), async (req: Request, res: Response) 
     const polesCount = await db.get('SELECT COUNT(*) as count FROM poles');
     const inspectionsCount = await db.get('SELECT COUNT(*) as count FROM labels');
 
+    // NULL ahi_score → 'Sem Dados' (not 'Saudável') to avoid misleading healthy count
     const conditionStats = await db.all(`
       SELECT
         CASE
+          WHEN ahi_score IS NULL THEN 'Sem Dados'
           WHEN ahi_score < 50 THEN 'Crítico'
           WHEN ahi_score < 80 THEN 'Atenção'
           ELSE 'Saudável'
@@ -80,6 +82,7 @@ router.get('/stats', rateLimit(60, 60_000), async (req: Request, res: Response) 
     const ahiHistogram = await db.all(`
       SELECT
         CASE
+          WHEN ahi_score IS NULL THEN 'Sem Dados'
           WHEN ahi_score BETWEEN 0 AND 20 THEN '0-20'
           WHEN ahi_score BETWEEN 21 AND 40 THEN '21-40'
           WHEN ahi_score BETWEEN 41 AND 60 THEN '41-60'
@@ -91,9 +94,25 @@ router.get('/stats', rateLimit(60, 60_000), async (req: Request, res: Response) 
       GROUP BY range
     `);
 
+    const avgRow = await db.get('SELECT AVG(ahi_score) as avg FROM poles WHERE ahi_score IS NOT NULL');
+
+    // Direct count fields for simpler consumption by clients
+    const critical = conditionStats.find((c: { condition: string }) => c.condition === 'Crítico')?.count ?? 0;
+    const warning  = conditionStats.find((c: { condition: string }) => c.condition === 'Atenção')?.count ?? 0;
+    const healthy  = conditionStats.find((c: { condition: string }) => c.condition === 'Saudável')?.count ?? 0;
+    const unknown  = conditionStats.find((c: { condition: string }) => c.condition === 'Sem Dados')?.count ?? 0;
+    const averageAhi = avgRow?.avg !== null && avgRow?.avg !== undefined
+      ? Math.round(avgRow.avg * 10) / 10
+      : null;
+
     res.json({
       totalPoles: polesCount.count,
       totalInspections: inspectionsCount.count,
+      healthy,
+      warning,
+      critical,
+      unknown,
+      averageAhi,
       conditionStats,
       materialStats,
       ahiHistogram

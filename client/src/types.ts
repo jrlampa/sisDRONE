@@ -43,6 +43,7 @@ export interface AnalysisResult {
 export interface Stats {
   total: number;
   critical: number;
+  warning: number;
   healthy: number;
 }
 
