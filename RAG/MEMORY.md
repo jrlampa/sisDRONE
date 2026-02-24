@@ -1,6 +1,6 @@
 # sisDRONE – RAG / Memória de Trabalho
 
-> Última atualização: 2026-02-24 (Phase 26) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
+> Última atualização: 2026-02-24 (Phase 27) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
 
 ---
 
@@ -60,7 +60,7 @@ sisDRONE/
 |---------|-----------|-------|
 | **Infraestrutura** | Pole, Tenant | `/api/poles` (filtros: ahi_min, ahi_max, status, paginação), `/api/poles/:id` (GET/PUT/DELETE cascade), `/api/poles/:id/summary`, `/api/poles/:id/images`, `/api/poles/:id/history`, `/api/poles/:id/work-orders`, `/api/poles/heatmap`, `/api/poles/alerts`, `/api/tenants` |
 | **Inspeção** | Inspection (Label), Image | `/api/inspections` (paginado + filtros: pole_id, source), `/api/inspections/:id` (GET/DELETE), `/api/analyze`, `/api/feedback`, `/:id/history` |
-| **Vídeo / Captura** | VideoSession, Frame | `/api/video/*` |
+| **Vídeo / Captura** | VideoSession, Frame | `/api/video/session/:id` (**GET** — Phase 27), `/api/video/session/start` (POST), `/api/video/sessions/:poleId` (GET), `/api/video/session/:id/complete` (POST), `/api/video/frame` (POST), `/api/video/upload` (POST) |
 | **IA / Manutenção** | MaintenancePlan | `/api/ai/*` |
 | **GIS** | GeoJSON | `/api/gis/*` |
 | **Operações** | WorkOrder | `/api/work-orders` (paginado + filtros: status, assignee_id, **pole_id**), `/api/work-orders/stats`, `/api/work-orders/:id` (GET/PUT/DELETE) |
@@ -179,7 +179,7 @@ sisDRONE/
 
 **Meta**: >= 80% de cobertura em código de lógica de negócio
 
-**Situação atual** (Phase 26): 356 server + 11 client = **367 testes no total** ✅ | Coverage: **100% stmts + 100% branches** 🎯
+**Situação atual** (Phase 27): 362 server + 11 client = **373 testes no total** ✅ | Coverage: **100% stmts + 100% branches** 🎯
 
 **Coverage Threshold** configurado em `server/vitest.config.ts`:
 - Lines/Functions/Statements: ≥ 80%
@@ -408,8 +408,15 @@ Testes existentes (Phase 9):
 - [x] ~~useNetwork.ts: usa campos diretos da API (healthy/warning/critical); pt-BR em todos console.error/log~~ — Phase 26
 - [x] ~~api.ts: console.log '[Offline] Queuing request:' → '[Offline] Enfileirando requisição:'~~ — Phase 26
 - [x] ~~Total: 356 server + 11 client = 367 testes ✅ | Coverage: 100% stmts + 100% branches 🎯~~ — Phase 26
-
----
+- [x] ~~videoRoutes.ts: 3 console.errors English → pt-BR (Erro ao iniciar sessão, Erro na análise do frame, Erro no upload)~~ — Phase 27
+- [x] ~~bimRoutes.ts: 2 console.errors English → pt-BR (Erro ao buscar/atualizar dados BIM)~~ — Phase 27
+- [x] ~~aneelRoutes.ts: 2 console.errors English → pt-BR ([ANEEL] Erro na API, [ANEEL] Erro nos datasets)~~ — Phase 27
+- [x] ~~aiRoutes.ts: 3 console messages English → pt-BR (Erro na previsão, Falha ao gerar plano, Erro no chat) + console.log [AI] → [IA] pt-BR~~ — Phase 27
+- [x] ~~reportRoutes.ts: 1 console.error English → pt-BR (Erro ao gerar relatório PDF) — servidor 100% pt-BR~~ — Phase 27
+- [x] ~~WorkOrderModal.tsx: console.error 'Error creating WO' → 'Erro ao criar OS:' — cliente 100% pt-BR~~ — Phase 27
+- [x] ~~GET /api/video/session/:id: novo endpoint REST para buscar sessão individual por ID (400/404/200; rateLimit 60/min)~~ — Phase 27
+- [x] ~~tests/videoSessionGet.test.ts: 6 novos testes (pole creation, session creation, 400 abc/0, 404, 200 + campos)~~ — Phase 27
+- [x] ~~Total: 362 server + 11 client = 373 testes ✅ | Coverage: 100% stmts + 100% branches 🎯 (mantido)~~ — Phase 27
 
 ## 11. Modos de Captura de Vídeo (Phase 4)
 

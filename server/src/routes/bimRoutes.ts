@@ -98,7 +98,7 @@ router.get('/:poleId', rateLimit(60, 60_000), async (req: Request, res: Response
 
     res.json({ poleId, pole_name: pole.name, structure });
   } catch (err) {
-    console.error('BIM GET error:', err);
+    console.error('Erro ao buscar dados BIM:', err);
     res.status(500).json({ error: 'Erro ao buscar estrutura BIM' });
   }
 });
@@ -140,7 +140,7 @@ router.put('/:poleId', rateLimit(30, 60_000), async (req: Request, res: Response
     await db.run('UPDATE poles SET structure_data = ? WHERE id = ?', [JSON.stringify(sanitized), poleId]);
     res.json({ poleId, structure: sanitized, message: 'Estrutura BIM atualizada com sucesso' });
   } catch (err) {
-    console.error('BIM PUT error:', err);
+    console.error('Erro ao atualizar dados BIM:', err);
     res.status(500).json({ error: 'Erro ao salvar estrutura BIM' });
   }
 });

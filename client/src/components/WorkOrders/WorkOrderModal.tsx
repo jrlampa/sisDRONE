@@ -40,7 +40,7 @@ const WorkOrderModal: React.FC<WorkOrderModalProps> = ({ isOpen, onClose, pole, 
       onSuccess();
       setTimeout(onClose, MODAL_CLOSE_DELAY_MS);
     } catch (error) {
-      console.error('Error creating WO', error);
+      console.error('Erro ao criar OS:', error);
       setFeedback({ type: 'error', message: 'Erro ao criar Ordem de Serviço. Tente novamente.' });
     } finally {
       setLoading(false);

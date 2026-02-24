@@ -25,7 +25,7 @@ router.get('/predict/:id', rateLimit(30, 60_000), async (req, res) => {
     const prediction = predictLifespan(pole);
     res.json(prediction);
   } catch (error) {
-    console.error('Prediction error:', error);
+    console.error('Erro na previsão:', error);
     res.status(500).json({ error: 'Falha ao gerar previsão' });
   }
 });
@@ -43,7 +43,7 @@ router.post('/plan', rateLimit(10, 60_000), async (req, res) => {
       return res.status(400).json({ error: 'poleId inválido' });
     }
 
-    console.log(`[AI] Generating maintenance plan for Pole ${poleId}...`);
+    console.log(`[IA] Gerando plano de manutenção para Poste ${poleId}...`);
     const planText = await generateMaintenancePlan(analysis);
     const estimatedCost = await calculatePlanCost(planText);
 
@@ -61,7 +61,7 @@ router.post('/plan', rateLimit(10, 60_000), async (req, res) => {
 
     res.json({ plan: planText, planId: result.lastID, estimatedCost });
   } catch (error) {
-    console.error('Failed to generate plan:', error);
+    console.error('Falha ao gerar plano:', error);
     res.status(500).json({ error: 'Falha ao gerar plano de manutenção' });
   }
 });
@@ -76,7 +76,7 @@ router.post('/chat', rateLimit(20, 60_000), async (req, res) => {
     const response = await chatWithData(safeMessage, context);
     res.json({ response });
   } catch (error) {
-    console.error('Chat error:', error);
+    console.error('Erro no chat:', error);
     res.status(500).json({ error: 'Falha ao processar mensagem de chat' });
   }
 });

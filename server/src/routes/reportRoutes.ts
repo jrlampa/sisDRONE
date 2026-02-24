@@ -183,7 +183,7 @@ router.get('/pole/:id', rateLimit(10, 60_000), async (req: Request, res: Respons
 
     doc.end();
   } catch (err) {
-    console.error('PDF report error:', err);
+    console.error('Erro ao gerar relatório PDF:', err);
     if (!res.headersSent) res.status(500).json({ error: 'Erro ao gerar relatório PDF' });
   }
 });

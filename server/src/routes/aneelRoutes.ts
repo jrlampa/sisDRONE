@@ -79,7 +79,7 @@ router.get('/agents', rateLimit(30, 60_000), async (req: Request, res: Response)
     toCache(cacheKey, agents);
     return res.json({ source: 'aneel', count: agents.length, agents });
   } catch (err: any) {
-    console.error('[ANEEL] API error:', err.message);
+    console.error('[ANEEL] Erro na API:', err.message);
     return res.status(502).json({ error: 'Falha ao consultar ANEEL OpenData. Tente novamente.' });
   }
 });
@@ -99,7 +99,7 @@ router.get('/datasets', rateLimit(10, 60_000), async (_req: Request, res: Respon
     toCache(cacheKey, datasets);
     return res.json({ source: 'aneel', datasets });
   } catch (err: any) {
-    console.error('[ANEEL] datasets error:', err.message);
+    console.error('[ANEEL] Erro nos datasets:', err.message);
     return res.status(502).json({ error: 'Falha ao consultar datasets do ANEEL.' });
   }
 });

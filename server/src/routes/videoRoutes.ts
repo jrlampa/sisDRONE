@@ -18,6 +18,26 @@ function ensureUploadDir() {
 const router = Router();
 
 /**
+ * GET /api/video/session/:id
+ * Get details of a specific video session.
+ */
+router.get('/session/:id', rateLimit(60, 60_000), async (req: Request, res: Response) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json({ error: 'ID de sessão inválido' });
+  }
+
+  try {
+    const db = await getDb();
+    const session = await db.get('SELECT * FROM video_sessions WHERE id = ?', [id]);
+    if (!session) return res.status(404).json({ error: 'Sessão não encontrada' });
+    res.json(session);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar sessão' });
+  }
+});
+
+/**
  * POST /api/video/session/start
  * Start a new video capture session (frame or recording mode)
  * Body: { pole_id, tenant_id, mode: 'frame' | 'recording' }
@@ -44,7 +64,7 @@ router.post('/session/start', rateLimit(30, 60_000), async (req: Request, res: R
     );
     res.status(201).json({ sessionId: result.lastID, mode, status: 'recording' });
   } catch (err) {
-    console.error('Error starting session:', err);
+    console.error('Erro ao iniciar sessão:', err);
     res.status(500).json({ error: 'Erro ao iniciar sessão de vídeo' });
   }
 });
@@ -120,7 +140,7 @@ router.post('/frame', rateLimit(60, 60_000), async (req: Request, res: Response)
       sequence: seq,
     });
   } catch (err) {
-    console.error('Frame analysis error:', err);
+    console.error('Erro na análise do frame:', err);
     res.status(500).json({ error: 'Erro na análise do frame' });
   }
 });
@@ -191,7 +211,7 @@ router.post('/upload', rateLimit(20, 60_000), async (req: Request, res: Response
 
     res.json({ status: 'chunk_received', chunkIndex: safeChunkIndex });
   } catch (err) {
-    console.error('Upload error:', err);
+    console.error('Erro no upload:', err);
     res.status(500).json({ error: 'Erro no upload do vídeo' });
   }
 });
