@@ -1,21 +1,13 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { api } from '../../services/api';
+import React, { useCallback } from 'react';
 import type { WorkOrder, User } from '../../types';
 import { Clock, AlertTriangle, CheckCircle, User as UserIcon, Ban, Trash2 } from 'lucide-react';
 import ConfirmDialog from '../ConfirmDialog';
 import { useConfirm } from '../../hooks/useConfirm';
+import { useWorkOrders } from '../../hooks/useWorkOrders';
 
 interface KanbanBoardProps {
   currentUser: User | null;
   users: User[];
-}
-
-interface WorkOrderStats {
-  total: number;
-  OPEN: number;
-  IN_PROGRESS: number;
-  BLOCKED: number;
-  COMPLETED: number;
 }
 
 const PRIORITY_COLORS: Record<string, string> = {
@@ -69,45 +61,8 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({ task, assignee, onDelete
 });
 
 const KanbanBoard: React.FC<KanbanBoardProps> = ({ users }) => {
-  const [tasks, setTasks] = useState<WorkOrder[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<WorkOrderStats | null>(null);
+  const { tasks, stats, loading, fetchTasks, handleStatusChange, handleDeleteTask } = useWorkOrders();
   const { confirmState, confirm, handleAnswer } = useConfirm();
-
-  const fetchStats = useCallback(async () => {
-    try {
-      const res = await api.getWorkOrderStats();
-      setStats(res.data);
-    } catch (err) {
-      console.error('Falha ao carregar estatísticas de ordens de serviço', err);
-    }
-  }, []);
-
-  const fetchTasks = useCallback(async () => {
-    try {
-      const res = await api.getWorkOrders();
-      setTasks(res.data.work_orders);
-    } catch (error) {
-      console.error('Falha ao carregar ordens de serviço', error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchTasks();
-    fetchStats();
-  }, [fetchTasks, fetchStats]);
-
-  const handleStatusChange = useCallback(async (taskId: number, newStatus: WorkOrder['status']) => {
-    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
-    try {
-      await api.updateWorkOrder(taskId, { status: newStatus });
-    } catch (error) {
-      console.error('Falha ao atualizar status', error);
-      fetchTasks();
-    }
-  }, [fetchTasks]);
 
   const handleDelete = useCallback(async (taskId: number) => {
     const ok = await confirm({
@@ -116,15 +71,8 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ users }) => {
       confirmLabel: 'Remover',
     });
     if (!ok) return;
-    setTasks(prev => prev.filter(t => t.id !== taskId));
-    try {
-      await api.deleteWorkOrder(taskId);
-      fetchStats();
-    } catch (error) {
-      console.error('Falha ao excluir ordem de serviço', error);
-      fetchTasks();
-    }
-  }, [fetchTasks, fetchStats]);
+    await handleDeleteTask(taskId);
+  }, [confirm, handleDeleteTask]);
 
   const Column = useCallback(({ status, title, icon: Icon }: { status: string, title: string, icon: React.ElementType }) => (
     <div className="flex-1 min-w-[300px] bg-white/5 rounded-lg p-4 flex flex-col gap-3">

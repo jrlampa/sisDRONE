@@ -147,6 +147,57 @@ router.get('/:id', rateLimit(120, 60_000), async (req: Request, res: Response) =
   }
 });
 
+// PUT update inspection label/confidence by id
+router.put('/:id', rateLimit(30, 60_000), async (req: Request, res: Response) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json({ error: 'ID de inspeção inválido' });
+  }
+  const { label, confidence, source } = req.body;
+  const VALID_SOURCES = ['ai', 'user', 'manual'];
+
+  const updates: string[] = [];
+  const params: (string | number)[] = [];
+
+  if (label !== undefined) {
+    updates.push('label = ?');
+    params.push(String(label).slice(0, 500));
+  }
+  if (confidence !== undefined) {
+    const safeConf = parseFloat(String(confidence));
+    if (isNaN(safeConf) || safeConf < 0 || safeConf > 1) {
+      return res.status(400).json({ error: 'confidence deve ser um número entre 0 e 1' });
+    }
+    updates.push('confidence = ?');
+    params.push(safeConf);
+  }
+  if (source !== undefined) {
+    if (!VALID_SOURCES.includes(String(source))) {
+      return res.status(400).json({ error: `source inválido. Use: ${VALID_SOURCES.join(', ')}` });
+    }
+    updates.push('source = ?');
+    params.push(String(source));
+  }
+
+  if (updates.length === 0) {
+    return res.status(400).json({ error: 'Nenhum campo para atualizar' });
+  }
+
+  try {
+    const db = await getDb();
+    const inspection = await db.get('SELECT id FROM labels WHERE id = ?', [id]);
+    if (!inspection) return res.status(404).json({ error: 'Inspeção não encontrada' });
+    params.push(id);
+    await db.run(`UPDATE labels SET ${updates.join(', ')} WHERE id = ?`, params);
+    const updated = await db.get(`
+      SELECT l.*, i.file_path FROM labels l LEFT JOIN images i ON l.image_id = i.id WHERE l.id = ?
+    `, [id]);
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao atualizar inspeção' });
+  }
+});
+
 // DELETE single inspection label by id
 router.delete('/:id', rateLimit(30, 60_000), async (req: Request, res: Response) => {
   const id = parseInt(req.params.id, 10);

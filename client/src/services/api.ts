@@ -83,6 +83,8 @@ export const api = {
       `${API_BASE}/api/poles/${id}/images`
     ),
   getInspection: (id: number) => axios.get(`${API_BASE}/api/inspections/${id}`),
+  updateInspection: (id: number, data: { label?: string; confidence?: number; source?: string }) =>
+    axios.put(`${API_BASE}/api/inspections/${id}`, data),
   deleteInspection: (id: number) => axios.delete<{ message: string; id: number }>(`${API_BASE}/api/inspections/${id}`),
   getInspections: (poleId?: number, page = 1, limit = 50, source?: string) =>
     axios.get(`${API_BASE}/api/inspections`, { params: { ...(poleId ? { pole_id: poleId } : {}), page, limit, ...(source ? { source } : {}) } }),

@@ -1,6 +1,6 @@
 # sisDRONE – RAG / Memória de Trabalho
 
-> Última atualização: 2026-02-24 (Phase 24) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
+> Última atualização: 2026-02-24 (Phase 25) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
 
 ---
 
@@ -179,7 +179,7 @@ sisDRONE/
 
 **Meta**: >= 80% de cobertura em código de lógica de negócio
 
-**Situação atual** (Phase 24): 332 server + 11 client = **343 testes no total** ✅ | Coverage: **100% stmts + 100% branches** 🎯
+**Situação atual** (Phase 25): 346 server + 11 client = **357 testes no total** ✅ | Coverage: **100% stmts + 100% branches** 🎯
 
 **Coverage Threshold** configurado em `server/vitest.config.ts`:
 - Lines/Functions/Statements: ≥ 80%
@@ -391,6 +391,13 @@ Testes existentes (Phase 9):
 - [x] ~~tests/workOrdersPoleFilter.test.ts: 5 testes (filter, abc, 0, empty, combined status+pole_id)~~ — Phase 24
 - [x] ~~tests/usersTenantFilter.test.ts: 5 testes (all, tenant=1, abc, 0, sem password_hash)~~ — Phase 24
 - [x] ~~Total: 332 server + 11 client = 343 testes ✅ | Coverage: 100% stmts + 100% branches 🎯~~ — Phase 24
+- [x] ~~PUT /api/inspections/:id: atualizar label/confidence/source (CRUD completo do domínio Inspeção — apenas GET/DELETE existiam)~~ — Phase 25
+- [x] ~~tests/inspectionsPut.test.ts: 8 novos testes (abc/0/404/no-fields/conf-OOB/source-inválido/200 label+confidence+source)~~ — Phase 25
+- [x] ~~tests/workOrdersAssigneeFilter.test.ts: 6 novos testes (GET?assignee_id=X: filtro/abc/0/empty/combinado+status/WO seeded presente)~~ — Phase 25
+- [x] ~~useWorkOrders hook criado (hooks/useWorkOrders.ts): extrai tasks/stats/loading/fetchTasks/fetchStats/handleStatusChange/handleDeleteTask de KanbanBoard~~ — Phase 25
+- [x] ~~KanbanBoard.tsx refatorado com useWorkOrders (remove useState/useEffect/api inline — SRP)~~ — Phase 25
+- [x] ~~api.updateInspection(id, {label?, confidence?, source?}) adicionado em api.ts~~ — Phase 25
+- [x] ~~Total: 346 server + 11 client = 357 testes ✅ | Coverage: 100% stmts + 100% branches 🎯~~ — Phase 25
 
 ---
 
