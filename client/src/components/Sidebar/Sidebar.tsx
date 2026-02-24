@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, FileJson, Globe, FileText, Ruler, LayoutDashboard, Download, X, Zap, ClipboardList, Video, Building2, Cable, Network, Upload, ShieldCheck } from 'lucide-react';
+import { Search, FileJson, Globe, FileText, Ruler, LayoutDashboard, Download, X, Zap, ClipboardList, Video, Building2, Cable, Network, Upload, ShieldCheck, BarChart2 } from 'lucide-react';
 import PoleDetails from './PoleDetails';
 import { generateInspectionReport } from '../../utils/pdfGenerator';
 import { api } from '../../services/api';
@@ -10,6 +10,8 @@ import BimStructureEditor from './BimStructureEditor';
 import ConductorPanel from './ConductorPanel';
 import TopologyPanel from './TopologyPanel';
 import ValidationPanel from './ValidationPanel';
+import AdminOverview from '../Dashboard/AdminOverview';
+import ExecutiveDashboard from '../Dashboard/ExecutiveDashboard';
 import ImportModal from '../ImportModal';
 import NearbySearchPanel from './NearbySearchPanel';
 import FilterChips from '../FilterChips';
@@ -31,8 +33,8 @@ interface SidebarProps {
   setFilterCondition: (c: 'All' | 'Critical' | 'Warning' | 'Good') => void;
   selectedPole: Pole | null;
   activeSpan: Span | null;
-  activeTab: 'details' | 'history' | 'eng' | 'video' | 'bim' | 'conductors' | 'topology' | 'validation';
-  setActiveTab: (t: 'details' | 'history' | 'eng' | 'video' | 'bim' | 'conductors' | 'topology' | 'validation') => void;
+  activeTab: 'details' | 'history' | 'eng' | 'video' | 'bim' | 'conductors' | 'topology' | 'validation' | 'kpi' | 'admin';
+  setActiveTab: (t: 'details' | 'history' | 'eng' | 'video' | 'bim' | 'conductors' | 'topology' | 'validation' | 'kpi' | 'admin') => void;
   isCapturing: boolean;
   onAnalyze: () => void;
   analysis: AnalysisResult | null;
@@ -270,6 +272,22 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
             >
               <ShieldCheck size={12} className="inline mr-1" />Validação
             </button>
+            <button
+              onClick={() => setActiveTab('kpi')}
+              className={activeTab === 'kpi' ? 'active' : ''}
+              title="KPIs Executivos (Phase 49)"
+            >
+              <BarChart2 size={12} className="inline mr-1" />KPIs
+            </button>
+            {userRole === 'ADMIN' && (
+              <button
+                onClick={() => setActiveTab('admin')}
+                className={activeTab === 'admin' ? 'active' : ''}
+                title="Dashboard Executivo Multi-Tenant (Phase 43)"
+              >
+                <Building2 size={12} className="inline mr-1" />Admin
+              </button>
+            )}
             {selectedPole && userRole !== 'VIEWER' && (
               <button
                 onClick={() => setActiveTab('video')}
@@ -330,6 +348,17 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
 
           {activeTab === 'validation' && (
             <ValidationPanel tenantId={activeTenantId || undefined} />
+          )}
+
+          {activeTab === 'kpi' && (
+            <ExecutiveDashboard
+              apiBase={`${apiBase}`}
+              tenantId={activeTenantId ?? undefined}
+            />
+          )}
+
+          {activeTab === 'admin' && userRole === 'ADMIN' && (
+            <AdminOverview apiBase={`${apiBase}`} />
           )}
 
           {activeTab === 'eng' && activeSpan && (

@@ -233,4 +233,26 @@ export const api = {
       duplicate_spans: Array<{ conductor_ids: number[]; pole_from: number; pole_to: number }>;
       loops_count: number; dead_ends_count: number; isolated_count: number; duplicates_count: number;
     }>(`${API_BASE}/api/network/validate`, { params: tenantId ? { tenant_id: tenantId } : {} }),
+
+  // Failure Simulation (Phase 47)
+  simulatePoleFailure: (poleId: number, tenantId?: number) =>
+    axios.get<import('../types').FailureSimulationResult>(
+      `${API_BASE}/api/network/simulate-failure`,
+      { params: { pole_id: poleId, ...(tenantId ? { tenant_id: tenantId } : {}) } }
+    ),
+  simulateConductorFailure: (conductorId: number, tenantId?: number) =>
+    axios.get<import('../types').FailureSimulationResult>(
+      `${API_BASE}/api/network/simulate-failure`,
+      { params: { conductor_id: conductorId, ...(tenantId ? { tenant_id: tenantId } : {}) } }
+    ),
+
+  // Admin Overview (Phase 43)
+  getAdminOverview: () =>
+    axios.get<import('../types').AdminOverviewData>(`${API_BASE}/api/admin/overview`),
+  getAdminTenantsStats: () =>
+    axios.get<{ count: number; stats: import('../types').TenantStats[] }>(`${API_BASE}/api/admin/tenants/stats`),
+
+  // KPIs Executivos (Phase 49)
+  getKpis: (params?: { tenant_id?: number; period_days?: number }) =>
+    axios.get<import('../types').KpiData>(`${API_BASE}/api/kpis`, { params }),
 };

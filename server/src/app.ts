@@ -21,6 +21,8 @@ import reportRouter from './routes/reportRoutes';
 import conductorsRouter from './routes/conductors';
 import networkRouter from './routes/networkRoutes';
 import circuitsRouter from './routes/circuitsRoutes';
+import adminRouter from './routes/adminRoutes';
+import kpiRouter from './routes/kpiRoutes';
 import { checkPermission } from './middleware/auth';
 import { rateLimit } from './middleware/rateLimit';
 import { getDb } from './db';
@@ -74,6 +76,8 @@ app.use('/api/report', reportRouter);
 app.use('/api/conductors', conductorsRouter);
 app.use('/api/network', networkRouter);
 app.use('/api/circuits', circuitsRouter);
+app.use('/api/admin', adminRouter);
+app.use('/api/kpis', kpiRouter);
 
 // Legacy inspect routes: /api/analyze, /api/feedback, /api/:id/history
 // MUST be last: /:id wildcard would shadow all /api/* routes if registered earlier

@@ -160,3 +160,58 @@ export interface TopologyValidation {
   isolated: number[];
   duplicate_spans: Array<{ conductor_ids: number[]; pole_from: number; pole_to: number }>;
 }
+
+// Phase 47 — Simulação de Falha
+export interface FailureSimulationResult {
+  type: 'pole' | 'conductor';
+  removed_id: number;
+  affected_poles: number[];
+  affected_count: number;
+  partitions_before: number;
+  partitions_after: number;
+  estimated_affected_customers: number;
+}
+
+// Phase 43 — Dashboard Executivo Multi-Tenant
+export interface TenantOverview {
+  id: number;
+  name: string;
+  total_poles: number;
+  avg_ahi: number | null;
+  critical_poles: number;
+  open_work_orders: number;
+  last_inspection: string | null;
+}
+
+export interface AdminOverviewData {
+  total_tenants: number;
+  total_poles: number;
+  total_open_orders: number;
+  tenants: TenantOverview[];
+}
+
+export interface TenantStats {
+  tenant_id: number;
+  tenant_name: string;
+  total_poles: number;
+  total_conductors: number;
+  avg_ahi: number | null;
+  critical_poles: number;
+  total_work_orders: number;
+  open_work_orders: number;
+}
+
+// Phase 49 — KPIs Executivos
+export interface KpiData {
+  tenant_id: number | null;
+  period_days: number;
+  mttr_hours: number | null;
+  inspection_rate_pct: number;
+  maintenance_cost_total: number;
+  avg_ahi_current: number | null;
+  avg_ahi_previous: number | null;
+  avg_ahi_delta_pct: number | null;
+  recovered_poles: number;
+  inspected_poles: number;
+  total_poles: number;
+}

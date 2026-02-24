@@ -42,7 +42,7 @@ const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [history, setHistory] = useState<Inspection[]>([]);
-  const [activeTab, setActiveTab] = useState<'details' | 'history' | 'eng' | 'video' | 'bim' | 'conductors' | 'topology' | 'validation'>('details');
+  const [activeTab, setActiveTab] = useState<'details' | 'history' | 'eng' | 'video' | 'bim' | 'conductors' | 'topology' | 'validation' | 'kpi' | 'admin'>('details');
   const [notification, setNotification] = useState<string | null>(null);
   const [isMeasuring, setIsMeasuring] = useState(false);
   const [measurementStart, setMeasurementStart] = useState<Pole | null>(null);

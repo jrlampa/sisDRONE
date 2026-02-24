@@ -1,6 +1,6 @@
 # sisDRONE – RAG / Memória de Trabalho
 
-> Última atualização: 2026-02-24 (Phase 36/41/42) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
+> Última atualização: 2026-02-24 (Phase 43/47/49) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
 
 ---
 
@@ -75,6 +75,9 @@ sisDRONE/
 | **Circuitos** | Circuit | `/api/circuits` (GET/POST), `/api/circuits/:id` (GET/PUT/DELETE), `/api/circuits/:id/stats` (Phase 41) — agrupamento de postes e condutores em alimentadores |
 | **Importação** | CSV Bulk | `POST /api/poles/import/csv` (Phase 36) — CSV com validação, transação atômica, max 1000 linhas |
 | **Validação Topológica** | ValidationReport | `GET /api/network/validate` (Phase 42) — loops (DFS), dead_ends, isolados, duplicate_spans; is_valid flag |
+| **Simulação de Falha** | FailureSimulationResult | `GET /api/network/simulate-failure?pole_id=|conductor_id=` (Phase 47) — BFS sem nó/aresta; partições + postes afetados + estimativa clientes |
+| **Admin Overview** | AdminOverviewData | `GET /api/admin/overview` + `GET /api/admin/tenants/stats` (Phase 43) — ADMIN-only; visão cross-tenant |
+| **KPIs Executivos** | KpiData | `GET /api/kpis?tenant_id=&period_days=30` (Phase 49) — MTTR, taxa inspeção, custo, AHI delta, postes recuperados |
 
 ---
 
@@ -185,7 +188,7 @@ sisDRONE/
 
 **Meta**: >= 80% de cobertura em código de lógica de negócio
 
-**Situação atual** (Phase 36/41/42): 447 server + 11 client = **472 testes no total** ✅ | Coverage: **100% stmts + 100% branches** 🎯
+**Situação atual** (Phase 43/47/49): 471 server + 11 client = **496 testes no total** ✅ | Coverage: **100% stmts + 100% branches** 🎯
 
 **Coverage Threshold** configurado em `server/vitest.config.ts`:
 - Lines/Functions/Statements: ≥ 80%

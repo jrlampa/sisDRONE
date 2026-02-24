@@ -13,6 +13,7 @@ import { rateLimit } from '../middleware/rateLimit';
 import { getNetworkGraph, getNetworkSegments, getIsolatedPoles } from '../services/networkService';
 import { calculateVoltageDrop, type RawConductorRow } from '../services/voltageService';
 import { validateTopology, type ValidationEdge, type ValidationNode } from '../services/topologyValidator';
+import { simulatePoleFailure, simulateConductorFailure, type SimNode, type SimEdge } from '../services/failureSimulator';
 
 const router = Router();
 
@@ -184,6 +185,58 @@ router.get('/validate', rateLimit(30, 60_000), async (req: Request, res: Respons
   } catch (err) {
     console.error('Erro ao validar topologia:', err);
     res.status(500).json({ error: 'Erro ao validar topologia' });
+  }
+});
+
+/**
+ * GET /api/network/simulate-failure  (Phase 47)
+ * Simula a remoção de um poste (?pole_id=) ou condutor (?conductor_id=) e
+ * retorna os postes afetados, número de partições e estimativa de clientes.
+ */
+router.get('/simulate-failure', rateLimit(30, 60_000), async (req: Request, res: Response) => {
+  const tid = parseTenant(req.query.tenant_id);
+  if (invalidTenantId(req.query.tenant_id, tid)) {
+    return res.status(400).json({ error: 'tenant_id inválido' });
+  }
+
+  const rawPoleId      = req.query.pole_id;
+  const rawConductorId = req.query.conductor_id;
+
+  if (!rawPoleId && !rawConductorId) {
+    return res.status(400).json({ error: 'Informe pole_id ou conductor_id para simular a falha' });
+  }
+  if (rawPoleId && rawConductorId) {
+    return res.status(400).json({ error: 'Informe apenas pole_id ou conductor_id, não ambos' });
+  }
+
+  const targetId = parseInt(String(rawPoleId ?? rawConductorId), 10);
+  if (isNaN(targetId) || targetId <= 0) {
+    return res.status(400).json({ error: 'ID inválido para simulação de falha' });
+  }
+
+  try {
+    const db = await getDb();
+    const graph = await getNetworkGraph(db, tid);
+
+    const nodes: SimNode[] = graph.nodes.map(n => ({ id: n.id, name: n.name }));
+    const edges: SimEdge[] = graph.edges.map(e => ({ id: e.id, pole_from: e.pole_from, pole_to: e.pole_to }));
+
+    if (rawPoleId !== undefined) {
+      const exists = nodes.some(n => n.id === targetId);
+      if (!exists) return res.status(404).json({ error: 'Poste não encontrado' });
+      const result = simulatePoleFailure(nodes, edges, targetId);
+      return res.json(result);
+    }
+
+    // conductor_id
+    const exists = edges.some(e => e.id === targetId);
+    if (!exists) return res.status(404).json({ error: 'Condutor não encontrado' });
+    const result = simulateConductorFailure(nodes, edges, targetId);
+    return res.json(result);
+
+  } catch (err) {
+    console.error('Erro ao simular falha na rede:', err);
+    res.status(500).json({ error: 'Erro ao simular falha na rede' });
   }
 });
 
