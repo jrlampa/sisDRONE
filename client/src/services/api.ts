@@ -93,7 +93,7 @@ export const api = {
   exportGis: () => axios.get(`${API_BASE}/api/gis/export/geojson`),
   importGis: (geojson: { type: string, features: unknown[] }) => axios.post(`${API_BASE}/api/gis/import/geojson`, { geojson }),
   getTenants: () => axios.get<Tenant[]>(`${API_BASE}/api/tenants`),
-  getUsers: () => axios.get<User[]>(`${API_BASE}/api/users`),
+  getUsers: (tenantId?: number) => axios.get<User[]>(`${API_BASE}/api/users`, { params: tenantId ? { tenant_id: tenantId } : {} }),
   getUserById: (id: number) => axios.get<User>(`${API_BASE}/api/users/${id}`),
   updateUser: (id: number, data: { username?: string; role?: string }) =>
     axios.put<User>(`${API_BASE}/api/users/${id}`, data),
@@ -114,7 +114,7 @@ export const api = {
     axios.post(`${API_BASE}/api/ai/chat`, { message, context }),
   getPrediction: (id: number) => axios.get<Prediction>(`${API_BASE}/api/ai/predict/${id}`),
   exportCSV: () => axios.get(`${API_BASE}/api/poles/export`, { responseType: 'blob' }),
-  getWorkOrders: (params?: { status?: string; assignee_id?: number; page?: number; limit?: number }) =>
+  getWorkOrders: (params?: { status?: string; assignee_id?: number; pole_id?: number; page?: number; limit?: number }) =>
     axios.get<{ work_orders: WorkOrder[]; total: number; page: number; limit: number; pages: number }>(`${API_BASE}/api/work-orders`, { params }),
   getWorkOrderStats: () =>
     axios.get<{ total: number; OPEN: number; IN_PROGRESS: number; BLOCKED: number; COMPLETED: number }>(`${API_BASE}/api/work-orders/stats`),

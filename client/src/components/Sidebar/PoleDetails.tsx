@@ -7,6 +7,7 @@ import ToastBanner from '../ToastBanner';
 import ConfirmDialog from '../ConfirmDialog';
 import PoleAnalysisResult from './PoleAnalysisResult';
 import PoleEditForm from './PoleEditForm';
+import PoleImages from './PoleImages';
 import { useToast } from '../../hooks/useToast';
 import { useConfirm } from '../../hooks/useConfirm';
 import { usePoleSummary } from '../../hooks/usePoleSummary';
@@ -187,6 +188,9 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
             <div className="utm-line"><strong>UTM:</strong> {pole.utm_x}, {pole.utm_y}</div>
           </>
         )}
+
+        {/* Images Section */}
+        <PoleImages poleId={pole.id} apiBase={apiBase} />
 
         {/* AHI Gauge */}
         <div className="mt-3 pt-3 border-t border-light/10">

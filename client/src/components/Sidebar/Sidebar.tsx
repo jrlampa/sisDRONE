@@ -94,7 +94,7 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
       link.click();
       link.remove();
     } catch (error) {
-      console.error('Failed to export CSV', error);
+      console.error('Falha ao exportar CSV:', error);
       showToast('Erro ao exportar CSV. Tente novamente.', 'error');
     }
   };

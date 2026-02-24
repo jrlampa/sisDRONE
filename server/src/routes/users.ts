@@ -6,14 +6,23 @@ const router = Router();
 
 const VALID_ROLES = new Set(['ADMIN', 'ENGINEER', 'VIEWER']);
 
-// GET all users (for assignment selects, etc.)
+// GET all users (optionally filtered by tenant_id)
 router.get('/', rateLimit(60, 60_000), async (req, res) => {
   try {
     const db = await getDb();
-    const users = await db.all('SELECT id, username, role, tenant_id, created_at FROM users');
-    res.json(users);
+    const tenantId = req.query.tenant_id ? parseInt(String(req.query.tenant_id), 10) : null;
+    if (tenantId !== null && (isNaN(tenantId) || tenantId <= 0)) {
+      return res.status(400).json({ error: 'tenant_id inválido' });
+    }
+    const whereClause = tenantId ? 'WHERE tenant_id = ?' : '';
+    const params = tenantId ? [tenantId] : [];
+    const users = await db.all(
+      `SELECT id, username, role, tenant_id, created_at FROM users ${whereClause} ORDER BY id ASC`,
+      params
+    );
+    return res.json(users);
   } catch (error) {
-    res.status(500).json({ error: 'Falha ao buscar usuários' });
+    return res.status(500).json({ error: 'Falha ao buscar usuários' });
   }
 });
 

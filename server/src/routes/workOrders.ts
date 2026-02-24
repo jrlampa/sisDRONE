@@ -30,7 +30,7 @@ router.get('/stats', rateLimit(60, 60_000), async (_req: Request, res: Response)
 router.get('/', rateLimit(60, 60_000), async (req: Request, res: Response) => {
   try {
     const db = await getDb();
-    const { status, assignee_id } = req.query;
+    const { status, assignee_id, pole_id } = req.query;
 
     const page = Math.max(1, parseInt(String(req.query.page || '1'), 10) || 1);
     const limit = Math.min(200, Math.max(1, parseInt(String(req.query.limit || '50'), 10) || 50));
@@ -60,6 +60,15 @@ router.get('/', rateLimit(60, 60_000), async (req: Request, res: Response) => {
       }
       filterClause += ` AND w.assignee_id = ?`;
       params.push(safeAssigneeId);
+    }
+
+    if (pole_id) {
+      const safePoleId = parseInt(String(pole_id), 10);
+      if (isNaN(safePoleId) || safePoleId <= 0) {
+        return res.status(400).json({ error: 'pole_id inválido' });
+      }
+      filterClause += ` AND w.pole_id = ?`;
+      params.push(safePoleId);
     }
 
     const countRow = await db.get(`SELECT COUNT(*) as count ${baseJoin}${filterClause}`, params);

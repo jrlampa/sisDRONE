@@ -1,6 +1,6 @@
 # sisDRONE – RAG / Memória de Trabalho
 
-> Última atualização: 2026-02-23 (Phase 22) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
+> Última atualização: 2026-02-24 (Phase 24) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
 
 ---
 
@@ -58,14 +58,14 @@ sisDRONE/
 
 | Domínio | Entidades | Rotas |
 |---------|-----------|-------|
-| **Infraestrutura** | Pole, Tenant | `/api/poles` (filtros: ahi_min, ahi_max, status, paginação), `/api/poles/:id` (GET/PUT/DELETE cascade), `/api/poles/:id/summary`, `/api/poles/:id/images`, `/api/poles/:id/history`, `/api/poles/heatmap`, `/api/poles/alerts`, `/api/tenants` |
-| **Inspeção** | Inspection (Label), Image | `/api/inspections` (paginado + filtro pole_id), `/api/inspections/:id` (GET/DELETE), `/api/analyze`, `/api/feedback`, `/:id/history` |
+| **Infraestrutura** | Pole, Tenant | `/api/poles` (filtros: ahi_min, ahi_max, status, paginação), `/api/poles/:id` (GET/PUT/DELETE cascade), `/api/poles/:id/summary`, `/api/poles/:id/images`, `/api/poles/:id/history`, `/api/poles/:id/work-orders`, `/api/poles/heatmap`, `/api/poles/alerts`, `/api/tenants` |
+| **Inspeção** | Inspection (Label), Image | `/api/inspections` (paginado + filtros: pole_id, source), `/api/inspections/:id` (GET/DELETE), `/api/analyze`, `/api/feedback`, `/:id/history` |
 | **Vídeo / Captura** | VideoSession, Frame | `/api/video/*` |
 | **IA / Manutenção** | MaintenancePlan | `/api/ai/*` |
 | **GIS** | GeoJSON | `/api/gis/*` |
-| **Operações** | WorkOrder | `/api/work-orders` (paginado + filtros status/assignee_id), `/api/work-orders/stats`, `/api/work-orders/:id` (GET/PUT/DELETE), `/api/poles/:id/work-orders` |
-| **Usuários** | User | `/api/users`, `/api/users/:id` (GET/PUT/DELETE) |
-| **Auth** | JWT | `/api/auth/login`, `/api/auth/register` |
+| **Operações** | WorkOrder | `/api/work-orders` (paginado + filtros: status, assignee_id, **pole_id**), `/api/work-orders/stats`, `/api/work-orders/:id` (GET/PUT/DELETE) |
+| **Usuários** | User | `/api/users` (**filtro tenant_id**), `/api/users/:id` (GET/PUT/DELETE) |
+| **Auth** | JWT | `/api/auth/login`, `/api/auth/register`, `/api/auth/change-password` |
 | **ANEEL** | Agents, Datasets | `/api/aneel/agents`, `/api/aneel/datasets` |
 | **BIM** | StructureData (IFC-lite) | `/api/bim/:poleId` (GET/PUT) |
 | **Relatório** | PdfReport | `/api/report/pole/:id` |
@@ -179,7 +179,7 @@ sisDRONE/
 
 **Meta**: >= 80% de cobertura em código de lógica de negócio
 
-**Situação atual** (Phase 23): 322 server + 11 client = **333 testes no total** ✅ | Coverage: **100% stmts + 100% branches** 🎯
+**Situação atual** (Phase 24): 332 server + 11 client = **343 testes no total** ✅ | Coverage: **100% stmts + 100% branches** 🎯
 
 **Coverage Threshold** configurado em `server/vitest.config.ts`:
 - Lines/Functions/Statements: ≥ 80%
@@ -382,7 +382,15 @@ Testes existentes (Phase 9):
 - [x] ~~usePoleSummary hook criado (hooks/usePoleSummary.ts) — extrai loadSummary + loadPrediction + loadHistory de PoleDetails (SRP)~~ — Phase 23
 - [x] ~~PoleDetails.tsx: usa usePoleSummary (370→324 linhas) — remove MaintenancePlan interface local, Prediction import, loadSummary/loadPrediction/loadHistory callbacks~~ — Phase 23
 - [x] ~~api.ts: source filter param documentado em getInspections() signature~~ — Phase 23
-- [x] ~~Total: 322 server + 11 client = 333 testes ✅ | Coverage: 100% stmts + 100% branches 🎯 (mantido)~~ — Phase 23
+- [x] ~~GET /api/work-orders: filtro pole_id adicionado (400 para inválido, combinável com status)~~ — Phase 24
+- [x] ~~GET /api/users: filtro tenant_id adicionado (400 para inválido, backward compat mantida)~~ — Phase 24
+- [x] ~~PoleImages.tsx: componente galeria de imagens colapsável (MAX_DISPLAYED=6, lazy-load, thumbnails, pt-BR, link para imagem completa)~~ — Phase 24
+- [x] ~~PoleDetails.tsx: seção "Imagens Capturadas" integrada com PoleImages (acima do AHI gauge)~~ — Phase 24
+- [x] ~~Sidebar.tsx: console.error 'Failed to export CSV' → 'Falha ao exportar CSV:' (pt-BR 100%)~~ — Phase 24
+- [x] ~~api.ts: getWorkOrders() aceita pole_id param; getUsers() aceita tenantId param~~ — Phase 24
+- [x] ~~tests/workOrdersPoleFilter.test.ts: 5 testes (filter, abc, 0, empty, combined status+pole_id)~~ — Phase 24
+- [x] ~~tests/usersTenantFilter.test.ts: 5 testes (all, tenant=1, abc, 0, sem password_hash)~~ — Phase 24
+- [x] ~~Total: 332 server + 11 client = 343 testes ✅ | Coverage: 100% stmts + 100% branches 🎯~~ — Phase 24
 
 ---
 
