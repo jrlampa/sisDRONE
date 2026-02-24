@@ -201,4 +201,36 @@ export const api = {
     axios.get<{ pole_id: number; count: number; history: { id: number; ahi_score: number; recorded_at: string }[] }>(
       `${API_BASE}/api/poles/${poleId}/ahi-history`, { params: { limit } }
     ),
+
+  // CSV Import (Phase 36)
+  importPolesCSV: (csvText: string) =>
+    axios.post<{ imported: number; errors: { line: number; reason: string }[] }>(
+      `${API_BASE}/api/poles/import/csv`, csvText,
+      { headers: { 'Content-Type': 'text/csv' } }
+    ),
+
+  // Circuits (Phase 41)
+  getCircuits: (tenantId?: number) =>
+    axios.get<{ count: number; circuits: { id: number; name: string; description: string | null; color: string; tenant_id: number }[] }>(
+      `${API_BASE}/api/circuits`, { params: tenantId ? { tenant_id: tenantId } : {} }
+    ),
+  createCircuit: (data: { name: string; description?: string; color?: string; tenant_id: number }) =>
+    axios.post<{ id: number; name: string; color: string }>(`${API_BASE}/api/circuits`, data),
+  getCircuitStats: (circuitId: number) =>
+    axios.get<{ circuit_id: number; total_poles: number; avg_ahi: number | null; total_conductors: number; total_length_km: number }>(
+      `${API_BASE}/api/circuits/${circuitId}/stats`
+    ),
+  updateCircuit: (id: number, data: { name?: string; description?: string; color?: string }) =>
+    axios.put<{ id: number; name: string }>(`${API_BASE}/api/circuits/${id}`, data),
+  deleteCircuit: (id: number) =>
+    axios.delete<{ id: number }>(`${API_BASE}/api/circuits/${id}`),
+
+  // Topology Validation (Phase 42)
+  getNetworkValidation: (tenantId?: number) =>
+    axios.get<{
+      node_count: number; edge_count: number; is_valid: boolean;
+      loops: number[][]; dead_ends: number[]; isolated: number[];
+      duplicate_spans: Array<{ conductor_ids: number[]; pole_from: number; pole_to: number }>;
+      loops_count: number; dead_ends_count: number; isolated_count: number; duplicates_count: number;
+    }>(`${API_BASE}/api/network/validate`, { params: tenantId ? { tenant_id: tenantId } : {} }),
 };

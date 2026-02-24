@@ -1,6 +1,6 @@
 # sisDRONE – RAG / Memória de Trabalho
 
-> Última atualização: 2026-02-24 (Phase 33/34/40) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
+> Última atualização: 2026-02-24 (Phase 36/41/42) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
 
 ---
 
@@ -72,6 +72,9 @@ sisDRONE/
 | **Condutores** | Conductor (span elétrico MT/BT/Ramal) | `/api/conductors` (GET list, POST), `/api/conductors/:id` (GET/PUT/DELETE) — PUT Phase 32, computed_length_m auto Haversine |
 | **Rede** | NetworkGraph, NetworkSegment, IsolatedPole, VoltageDrop | `/api/network/graph`, `/api/network/segments`, `/api/network/isolated` (Phase 30), `/api/network/voltage-drop` (Phase 33) |
 | **AHI History** | AhiSnapshot | `/api/poles/:id/ahi-history?limit=` (Phase 34) — série temporal de AHI; snapshot gravado em cada plano de IA |
+| **Circuitos** | Circuit | `/api/circuits` (GET/POST), `/api/circuits/:id` (GET/PUT/DELETE), `/api/circuits/:id/stats` (Phase 41) — agrupamento de postes e condutores em alimentadores |
+| **Importação** | CSV Bulk | `POST /api/poles/import/csv` (Phase 36) — CSV com validação, transação atômica, max 1000 linhas |
+| **Validação Topológica** | ValidationReport | `GET /api/network/validate` (Phase 42) — loops (DFS), dead_ends, isolados, duplicate_spans; is_valid flag |
 
 ---
 
@@ -182,7 +185,7 @@ sisDRONE/
 
 **Meta**: >= 80% de cobertura em código de lógica de negócio
 
-**Situação atual** (Phase 33/34/40): 421 server + 11 client = **446 testes no total** ✅ | Coverage: **100% stmts + 100% branches** 🎯
+**Situação atual** (Phase 36/41/42): 447 server + 11 client = **472 testes no total** ✅ | Coverage: **100% stmts + 100% branches** 🎯
 
 **Coverage Threshold** configurado em `server/vitest.config.ts`:
 - Lines/Functions/Statements: ≥ 80%

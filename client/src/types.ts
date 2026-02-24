@@ -137,3 +137,26 @@ export interface NetworkGraph {
   nodes: Pole[];
   edges: Conductor[];
 }
+
+export interface Circuit {
+  id: number;
+  tenant_id: number;
+  name: string;
+  description: string | null;
+  color: string;
+  created_at: string;
+}
+
+export interface TopologyValidation {
+  node_count: number;
+  edge_count: number;
+  is_valid: boolean;
+  loops_count: number;
+  dead_ends_count: number;
+  isolated_count: number;
+  duplicates_count: number;
+  loops: number[][];
+  dead_ends: number[];
+  isolated: number[];
+  duplicate_spans: Array<{ conductor_ids: number[]; pole_from: number; pole_to: number }>;
+}

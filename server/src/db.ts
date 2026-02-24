@@ -198,6 +198,22 @@ async function initDb(database: Database) {
     CREATE INDEX IF NOT EXISTS idx_ahi_history_recorded ON ahi_history(recorded_at);
   `);
 
+  // circuits table (Phase 41) — Circuitos Elétricos / Alimentadores
+  await database.exec(`
+    CREATE TABLE IF NOT EXISTS circuits (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tenant_id INTEGER NOT NULL DEFAULT 1,
+      name TEXT NOT NULL,
+      description TEXT,
+      color TEXT DEFAULT '#6366f1',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (tenant_id) REFERENCES tenants(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_circuits_tenant ON circuits(tenant_id);
+  `);
+  try { await database.exec(`ALTER TABLE poles ADD COLUMN circuit_id INTEGER REFERENCES circuits(id) ON DELETE SET NULL`); } catch {}
+  try { await database.exec(`ALTER TABLE conductors ADD COLUMN circuit_id INTEGER REFERENCES circuits(id) ON DELETE SET NULL`); } catch {}
+
   // ── Seeds ──
   const tenantRes = await database.get('SELECT COUNT(*) as count FROM tenants');
   if (tenantRes && tenantRes.count === 0) {

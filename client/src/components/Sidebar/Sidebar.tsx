@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, FileJson, Globe, FileText, Ruler, LayoutDashboard, Download, X, Zap, ClipboardList, Video, Building2, Cable, Network } from 'lucide-react';
+import { Search, FileJson, Globe, FileText, Ruler, LayoutDashboard, Download, X, Zap, ClipboardList, Video, Building2, Cable, Network, Upload, ShieldCheck } from 'lucide-react';
 import PoleDetails from './PoleDetails';
 import { generateInspectionReport } from '../../utils/pdfGenerator';
 import { api } from '../../services/api';
@@ -9,6 +9,8 @@ import VideoCapturePanel from '../VideoCapture/VideoCapturePanel';
 import BimStructureEditor from './BimStructureEditor';
 import ConductorPanel from './ConductorPanel';
 import TopologyPanel from './TopologyPanel';
+import ValidationPanel from './ValidationPanel';
+import ImportModal from '../ImportModal';
 import NearbySearchPanel from './NearbySearchPanel';
 import FilterChips from '../FilterChips';
 import { useTenant } from '../../context/TenantContext';
@@ -29,8 +31,8 @@ interface SidebarProps {
   setFilterCondition: (c: 'All' | 'Critical' | 'Warning' | 'Good') => void;
   selectedPole: Pole | null;
   activeSpan: Span | null;
-  activeTab: 'details' | 'history' | 'eng' | 'video' | 'bim' | 'conductors' | 'topology';
-  setActiveTab: (t: 'details' | 'history' | 'eng' | 'video' | 'bim' | 'conductors' | 'topology') => void;
+  activeTab: 'details' | 'history' | 'eng' | 'video' | 'bim' | 'conductors' | 'topology' | 'validation';
+  setActiveTab: (t: 'details' | 'history' | 'eng' | 'video' | 'bim' | 'conductors' | 'topology' | 'validation') => void;
   isCapturing: boolean;
   onAnalyze: () => void;
   analysis: AnalysisResult | null;
@@ -72,6 +74,7 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
 
   const { activeTenantId, isOnline } = useTenant();
   const { toast, showToast, clearToast } = useToast();
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   const handleExportPDF = () => {
     if (!activeTenant) return;
@@ -159,6 +162,15 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
           >
             <Globe size={14} /> Exportar
           </button>
+          {userRole !== 'VIEWER' && (
+            <button
+              className="btn btn-outline"
+              onClick={() => setIsImportModalOpen(true)}
+              title="Importar Postes via CSV"
+            >
+              <Upload size={14} /> Importar CSV
+            </button>
+          )}
           <button
             className="btn btn-outline"
             onClick={handleExportPDF}
@@ -251,6 +263,13 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
             >
               <Network size={12} className="inline mr-1" />Rede
             </button>
+            <button
+              onClick={() => setActiveTab('validation')}
+              className={activeTab === 'validation' ? 'active' : ''}
+              title="Validação de Topologia (Phase 42)"
+            >
+              <ShieldCheck size={12} className="inline mr-1" />Validação
+            </button>
             {selectedPole && userRole !== 'VIEWER' && (
               <button
                 onClick={() => setActiveTab('video')}
@@ -309,6 +328,10 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
             <TopologyPanel tenantId={activeTenantId || undefined} onSelectPole={onSelectPole} />
           )}
 
+          {activeTab === 'validation' && (
+            <ValidationPanel tenantId={activeTenantId || undefined} />
+          )}
+
           {activeTab === 'eng' && activeSpan && (
             <EngineeringTools
               activeSpan={activeSpan}
@@ -363,6 +386,12 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
           </div>
         </div>
       </div>
+
+      <ImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onSuccess={(imported) => showToast(`${imported} poste${imported > 1 ? 's' : ''} importado${imported > 1 ? 's' : ''} com sucesso!`, 'success')}
+      />
     </div>
   );
 };

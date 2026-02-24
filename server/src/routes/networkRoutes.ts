@@ -1,16 +1,18 @@
 /**
- * Rotas de Topologia de Rede Elétrica (Phase 30 + Phase 33)
+ * Rotas de Topologia de Rede Elétrica (Phase 30 + Phase 33 + Phase 42)
  *
  *   GET /api/network/graph?tenant_id=         — nós + arestas (JSON-Graph)
  *   GET /api/network/segments?tenant_id=      — segmentos contíguos (componentes conectados)
  *   GET /api/network/isolated?tenant_id=      — postes sem nenhum condutor
  *   GET /api/network/voltage-drop?tenant_id=  — queda de tensão por condutor (NBR 5410)
+ *   GET /api/network/validate?tenant_id=      — relatório de validação topológica (loops, dead_ends, duplicatas)
  */
 import { Router, Request, Response } from 'express';
 import { getDb } from '../db';
 import { rateLimit } from '../middleware/rateLimit';
 import { getNetworkGraph, getNetworkSegments, getIsolatedPoles } from '../services/networkService';
 import { calculateVoltageDrop, type RawConductorRow } from '../services/voltageService';
+import { validateTopology, type ValidationEdge, type ValidationNode } from '../services/topologyValidator';
 
 const router = Router();
 
@@ -133,6 +135,55 @@ router.get('/voltage-drop', rateLimit(60, 60_000), async (req: Request, res: Res
   } catch (err) {
     console.error('Erro ao calcular queda de tensão:', err);
     res.status(500).json({ error: 'Erro ao calcular queda de tensão' });
+  }
+});
+
+/**
+ * GET /api/network/validate  (Phase 42)
+ * Retorna relatório de validação topológica:
+ *   - loops: ciclos detectados por DFS
+ *   - dead_ends: postes com apenas 1 conexão
+ *   - isolated: postes sem nenhuma conexão
+ *   - duplicate_spans: condutores com mesmo par from/to
+ *   - is_valid: true quando sem loops e sem duplicatas
+ */
+router.get('/validate', rateLimit(30, 60_000), async (req: Request, res: Response) => {
+  const tid = parseTenant(req.query.tenant_id);
+  if (invalidTenantId(req.query.tenant_id, tid)) {
+    return res.status(400).json({ error: 'tenant_id inválido' });
+  }
+
+  try {
+    const db = await getDb();
+    const where = tid ? 'WHERE tenant_id = ?' : '';
+    const params = tid ? [tid] : [];
+
+    const [poles, conductors] = await Promise.all([
+      db.all<ValidationNode[]>(`SELECT id, name FROM poles ${where}`, params),
+      db.all<ValidationEdge[]>(
+        `SELECT id, pole_from, pole_to FROM conductors ${tid ? 'WHERE tenant_id = ?' : ''}`,
+        params
+      ),
+    ]);
+
+    const report = validateTopology(poles, conductors);
+
+    res.json({
+      node_count:       poles.length,
+      edge_count:       conductors.length,
+      loops_count:      report.loops.length,
+      dead_ends_count:  report.dead_ends.length,
+      isolated_count:   report.isolated.length,
+      duplicates_count: report.duplicate_spans.length,
+      is_valid:         report.is_valid,
+      loops:            report.loops,
+      dead_ends:        report.dead_ends,
+      isolated:         report.isolated,
+      duplicate_spans:  report.duplicate_spans,
+    });
+  } catch (err) {
+    console.error('Erro ao validar topologia:', err);
+    res.status(500).json({ error: 'Erro ao validar topologia' });
   }
 });
 
