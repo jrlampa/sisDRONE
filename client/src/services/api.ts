@@ -187,8 +187,18 @@ export const api = {
     axios.get<{ segment_count: number; segments: import('../types').NetworkSegment[] }>(`${API_BASE}/api/network/segments`, { params: tenantId ? { tenant_id: tenantId } : {} }),
   getNetworkIsolated: (tenantId?: number) =>
     axios.get<{ count: number; poles: import('../types').Pole[] }>(`${API_BASE}/api/network/isolated`, { params: tenantId ? { tenant_id: tenantId } : {} }),
+  getVoltageDrop: (tenantId?: number) =>
+    axios.get<{ total: number; summary: { critical: number; warning: number; ok: number }; conductors: unknown[] }>(
+      `${API_BASE}/api/network/voltage-drop`, { params: tenantId ? { tenant_id: tenantId } : {} }
+    ),
 
   // Croqui Digital SVG (Phase 31)
   getCroquiUrl: (tenantId: number) =>
     `${API_BASE}/api/report/croqui/${tenantId}`,
+
+  // AHI History — Série Temporal (Phase 34)
+  getAhiHistory: (poleId: number, limit = 30) =>
+    axios.get<{ pole_id: number; count: number; history: { id: number; ahi_score: number; recorded_at: string }[] }>(
+      `${API_BASE}/api/poles/${poleId}/ahi-history`, { params: { limit } }
+    ),
 };

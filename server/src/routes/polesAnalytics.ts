@@ -1,8 +1,12 @@
 import { Router, Request, Response } from 'express';
 import { getDb } from '../db';
 import { rateLimit } from '../middleware/rateLimit';
+import { cache } from '../utils/cache';
 
 const router = Router();
+
+const CACHE_TTL_HEATMAP = 60_000;  // 60 s
+const CACHE_TTL_STATS   = 30_000;  // 30 s
 
 // GET /api/poles/alerts — poles below failure threshold (AHI < 30)
 router.get('/alerts', rateLimit(60, 60_000), async (req: Request, res: Response) => {
@@ -34,6 +38,9 @@ router.get('/heatmap', rateLimit(60, 60_000), async (req: Request, res: Response
   try {
     const db = await getDb();
     const tenantId = req.query.tenant_id ? parseInt(String(req.query.tenant_id), 10) : null;
+    const cacheKey = `poles.heatmap.${tenantId ?? 'all'}`;
+    const cached = cache.get<{ count: number; points: unknown[] }>(cacheKey);
+    if (cached) return res.json(cached);
 
     let points;
     if (tenantId && !isNaN(tenantId) && tenantId > 0) {
@@ -44,7 +51,9 @@ router.get('/heatmap', rateLimit(60, 60_000), async (req: Request, res: Response
     } else {
       points = await db.all('SELECT id, lat, lng, ahi_score, name FROM poles ORDER BY id ASC');
     }
-    res.json({ count: points.length, points });
+    const payload = { count: points.length, points };
+    cache.set(cacheKey, payload, CACHE_TTL_HEATMAP);
+    res.json(payload);
   } catch (err) {
     res.status(500).json({ error: 'Erro interno no servidor' });
   }
@@ -54,6 +63,9 @@ router.get('/heatmap', rateLimit(60, 60_000), async (req: Request, res: Response
 router.get('/stats', rateLimit(60, 60_000), async (req: Request, res: Response) => {
   try {
     const db = await getDb();
+    const cacheKey = 'poles.stats';
+    const cached = cache.get<Record<string, unknown>>(cacheKey);
+    if (cached) return res.json(cached);
 
     const polesCount = await db.get('SELECT COUNT(*) as count FROM poles');
     const inspectionsCount = await db.get('SELECT COUNT(*) as count FROM labels');
@@ -105,7 +117,7 @@ router.get('/stats', rateLimit(60, 60_000), async (req: Request, res: Response) 
       ? Math.round(avgRow.avg * 10) / 10
       : null;
 
-    res.json({
+    const payload = {
       totalPoles: polesCount.count,
       totalInspections: inspectionsCount.count,
       healthy,
@@ -116,7 +128,9 @@ router.get('/stats', rateLimit(60, 60_000), async (req: Request, res: Response) 
       conditionStats,
       materialStats,
       ahiHistogram
-    });
+    };
+    cache.set(cacheKey, payload, CACHE_TTL_STATS);
+    res.json(payload);
   } catch (err) {
     console.error('Erro de estatísticas:', err);
     res.status(500).json({ error: 'Erro interno nas estatísticas' });

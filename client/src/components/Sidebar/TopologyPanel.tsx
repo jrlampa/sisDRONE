@@ -1,11 +1,11 @@
 /**
- * TopologyPanel.tsx — Painel de Topologia de Rede Elétrica (Phase 30)
+ * TopologyPanel.tsx — Painel de Topologia de Rede Elétrica (Phase 30 + 33)
  *
- * Exibe: segmentos contíguos, postes isolados e estatísticas gerais do grafo.
- * Segue princípio: Thin Frontend / Smart Backend.
+ * Exibe: segmentos contíguos, postes isolados, estatísticas do grafo
+ *        e resumo de queda de tensão (Phase 33).
  */
 import React, { useEffect, useState, useCallback } from 'react';
-import { Network, RefreshCw, Loader, AlertTriangle, GitBranch } from 'lucide-react';
+import { Network, RefreshCw, Loader, AlertTriangle, GitBranch, Zap } from 'lucide-react';
 import { api } from '../../services/api';
 import type { NetworkSegment, Pole } from '../../types';
 
@@ -16,6 +16,8 @@ interface TopologyStats {
   isolatedCount: number;
   segments: NetworkSegment[];
   isolated: Pole[];
+  vdCritical: number;
+  vdWarning: number;
   loading: boolean;
   error: string | null;
 }
@@ -33,6 +35,8 @@ const TopologyPanel: React.FC<TopologyPanelProps> = ({ tenantId, onSelectPole })
     isolatedCount: 0,
     segments: [],
     isolated: [],
+    vdCritical: 0,
+    vdWarning: 0,
     loading: true,
     error: null,
   });
@@ -40,10 +44,11 @@ const TopologyPanel: React.FC<TopologyPanelProps> = ({ tenantId, onSelectPole })
   const load = useCallback(async () => {
     setStats(s => ({ ...s, loading: true, error: null }));
     try {
-      const [graphRes, segRes, isolRes] = await Promise.all([
+      const [graphRes, segRes, isolRes, vdRes] = await Promise.all([
         api.getNetworkGraph(tenantId),
         api.getNetworkSegments(tenantId),
         api.getNetworkIsolated(tenantId),
+        api.getVoltageDrop(tenantId).catch(() => null),
       ]);
       setStats({
         nodeCount: graphRes.data.node_count,
@@ -52,6 +57,8 @@ const TopologyPanel: React.FC<TopologyPanelProps> = ({ tenantId, onSelectPole })
         isolatedCount: isolRes.data.count,
         segments: segRes.data.segments,
         isolated: isolRes.data.poles,
+        vdCritical: vdRes?.data.summary.critical ?? 0,
+        vdWarning: vdRes?.data.summary.warning ?? 0,
         loading: false,
         error: null,
       });
@@ -98,6 +105,24 @@ const TopologyPanel: React.FC<TopologyPanelProps> = ({ tenantId, onSelectPole })
           <div className="stat-label">Isolados</div>
         </div>
       </div>
+
+      {/* Voltage Drop Summary (Phase 33) */}
+      {(stats.vdCritical > 0 || stats.vdWarning > 0) && (
+        <div className="card mb-3" style={{ borderLeft: '3px solid var(--danger)' }}>
+          <div className="card-header">
+            <Zap size={15} className="text-danger" />
+            <h4 style={{ margin: 0, fontSize: '0.85rem' }}>Queda de Tensão (NBR 5410)</h4>
+          </div>
+          <div className="flex gap-3 px-2 py-1 text-xs">
+            {stats.vdCritical > 0 && (
+              <span className="text-danger font-semibold">⚡ {stats.vdCritical} crítico{stats.vdCritical > 1 ? 's' : ''} (&gt;10%)</span>
+            )}
+            {stats.vdWarning > 0 && (
+              <span className="text-warning font-semibold">⚠ {stats.vdWarning} atenção (&gt;5%)</span>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Segments */}
       {stats.segments.length > 0 && (

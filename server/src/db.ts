@@ -183,6 +183,21 @@ async function initDb(database: Database) {
     CREATE INDEX IF NOT EXISTS idx_conductors_to ON conductors(pole_to);
   `);
 
+  // ahi_history table (Phase 34) — série temporal do AHI por poste
+  await database.exec(`
+    CREATE TABLE IF NOT EXISTS ahi_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      pole_id INTEGER NOT NULL,
+      tenant_id INTEGER NOT NULL DEFAULT 1,
+      ahi_score INTEGER NOT NULL,
+      recorded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (pole_id) REFERENCES poles(id) ON DELETE CASCADE,
+      FOREIGN KEY (tenant_id) REFERENCES tenants(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_ahi_history_pole ON ahi_history(pole_id);
+    CREATE INDEX IF NOT EXISTS idx_ahi_history_recorded ON ahi_history(recorded_at);
+  `);
+
   // ── Seeds ──
   const tenantRes = await database.get('SELECT COUNT(*) as count FROM tenants');
   if (tenantRes && tenantRes.count === 0) {

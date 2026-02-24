@@ -105,7 +105,10 @@ const Map: React.FC<MapProps> = ({
               <span><strong>{c.network_type}</strong> — {c.from_name} → {c.to_name}</span>
               {c.cable_type && <><br />{c.cable_type}</>}
               {c.voltage_kv !== undefined && c.voltage_kv !== null && <><br />{c.voltage_kv} kV</>}
-              {c.length_m !== undefined && c.length_m !== null && <><br />{c.length_m} m</>}
+              {c.computed_length_m !== undefined && c.computed_length_m !== null && (
+                <><br />↯ {c.computed_length_m.toFixed(0)} m (calc.)</>
+              )}
+              {c.length_m !== undefined && c.length_m !== null && <><br />{c.length_m} m (manual)</>}
             </Tooltip>
           </Polyline>
         );

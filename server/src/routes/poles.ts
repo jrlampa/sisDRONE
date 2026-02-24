@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { getDb } from '../db';
 import { rateLimit } from '../middleware/rateLimit';
 import { haversineMeters } from '../utils/geo';
+import { cache } from '../utils/cache';
 
 const router = Router();
 
@@ -84,6 +85,7 @@ router.post('/', rateLimit(30, 60_000), async (req: Request, res: Response) => {
       'INSERT INTO poles (name, lat, lng, utm_x, utm_y, tenant_id) VALUES (?, ?, ?, ?, ?, ?)',
       [safeName, lat, lng, utm_x || null, utm_y || null, safeTenantId]
     );
+    cache.invalidate('poles.'); // invalidate stats & heatmap cache
     res.json({ id: result.lastID, name: safeName, lat, lng, utm_x, utm_y, tenant_id: safeTenantId });
   } catch (err) {
     res.status(500).json({ error: 'Falha ao criar poste' });
@@ -165,6 +167,34 @@ router.get('/:id/history', rateLimit(60, 60_000), async (req: Request, res: Resp
     res.json(history);
   } catch (err) {
     res.status(500).json({ error: 'Erro ao buscar histórico' });
+  }
+});
+
+// GET AHI history (série temporal) for a pole — Phase 34
+router.get('/:id/ahi-history', rateLimit(60, 60_000), async (req: Request, res: Response) => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json({ error: 'ID de poste inválido' });
+  }
+  const limit = Math.min(parseInt(String(req.query.limit ?? '30'), 10) || 30, 100);
+
+  try {
+    const db = await getDb();
+    const pole = await db.get('SELECT id FROM poles WHERE id = ?', [id]);
+    if (!pole) return res.status(404).json({ error: 'Poste não encontrado' });
+
+    const history = await db.all(
+      `SELECT id, pole_id, ahi_score, recorded_at
+       FROM ahi_history
+       WHERE pole_id = ?
+       ORDER BY recorded_at DESC
+       LIMIT ?`,
+      [id, limit]
+    );
+    res.json({ pole_id: id, count: history.length, history });
+  } catch (err) {
+    console.error('Erro ao buscar histórico AHI:', err);
+    res.status(500).json({ error: 'Erro ao buscar histórico AHI' });
   }
 });
 
@@ -283,6 +313,7 @@ router.put('/:id', rateLimit(60, 60_000), async (req: Request, res: Response) =>
     if (updates.length === 0) return res.status(400).json({ error: 'Nenhum campo para atualizar' });
     params.push(id);
     await db.run(`UPDATE poles SET ${updates.join(', ')} WHERE id = ?`, params);
+    cache.invalidate('poles.'); // invalidate stats & heatmap cache
     const updated = await db.get('SELECT * FROM poles WHERE id = ?', [id]);
     res.json(updated);
   } catch (err) {
@@ -307,6 +338,7 @@ router.delete('/:id', rateLimit(30, 60_000), async (req: Request, res: Response)
     await db.run('DELETE FROM work_orders WHERE pole_id = ?', [id]);
     await db.run('DELETE FROM video_sessions WHERE pole_id = ?', [id]);
     await db.run('DELETE FROM poles WHERE id = ?', [id]);
+    cache.invalidate('poles.'); // invalidate stats & heatmap cache
     res.json({ message: 'Poste removido com sucesso', id });
   } catch (err) {
     res.status(500).json({ error: 'Erro interno no servidor' });

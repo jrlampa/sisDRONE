@@ -1,14 +1,16 @@
 /**
- * Rotas de Topologia de Rede Elétrica (Phase 30)
+ * Rotas de Topologia de Rede Elétrica (Phase 30 + Phase 33)
  *
- *   GET /api/network/graph?tenant_id=     — nós + arestas (JSON-Graph)
- *   GET /api/network/segments?tenant_id=  — segmentos contíguos (componentes conectados)
- *   GET /api/network/isolated?tenant_id=  — postes sem nenhum condutor
+ *   GET /api/network/graph?tenant_id=         — nós + arestas (JSON-Graph)
+ *   GET /api/network/segments?tenant_id=      — segmentos contíguos (componentes conectados)
+ *   GET /api/network/isolated?tenant_id=      — postes sem nenhum condutor
+ *   GET /api/network/voltage-drop?tenant_id=  — queda de tensão por condutor (NBR 5410)
  */
 import { Router, Request, Response } from 'express';
 import { getDb } from '../db';
 import { rateLimit } from '../middleware/rateLimit';
 import { getNetworkGraph, getNetworkSegments, getIsolatedPoles } from '../services/networkService';
+import { calculateVoltageDrop, type RawConductorRow } from '../services/voltageService';
 
 const router = Router();
 
@@ -84,6 +86,53 @@ router.get('/isolated', rateLimit(60, 60_000), async (req: Request, res: Respons
   } catch (err) {
     console.error('Erro ao buscar postes isolados:', err);
     res.status(500).json({ error: 'Erro ao buscar postes isolados' });
+  }
+});
+
+/**
+ * GET /api/network/voltage-drop  (Phase 33)
+ * Calcula queda de tensão estimada para cada condutor com comprimento definido.
+ * Usa fórmula simplificada NBR 5410. Condutores sem length são ignorados.
+ */
+router.get('/voltage-drop', rateLimit(60, 60_000), async (req: Request, res: Response) => {
+  const tid = parseTenant(req.query.tenant_id);
+  if (invalidTenantId(req.query.tenant_id, tid)) {
+    return res.status(400).json({ error: 'tenant_id inválido' });
+  }
+
+  try {
+    const db = await getDb();
+    const where = tid ? 'WHERE c.tenant_id = ?' : '';
+    const params = tid ? [tid] : [];
+
+    const rows: RawConductorRow[] = await db.all(
+      `SELECT c.id, c.pole_from, c.pole_to, c.network_type,
+              c.computed_length_m, c.length_m, c.voltage_kv,
+              pf.name AS from_name, pt.name AS to_name
+       FROM conductors c
+       JOIN poles pf ON pf.id = c.pole_from
+       JOIN poles pt ON pt.id = c.pole_to
+       ${where}
+       ORDER BY c.id`,
+      params
+    );
+
+    const results = rows
+      .map(r => calculateVoltageDrop(r))
+      .filter(Boolean);
+
+    const critical = results.filter(r => r!.status === 'critical').length;
+    const warning  = results.filter(r => r!.status === 'warning').length;
+    const ok       = results.filter(r => r!.status === 'ok').length;
+
+    res.json({
+      total: results.length,
+      summary: { critical, warning, ok },
+      conductors: results,
+    });
+  } catch (err) {
+    console.error('Erro ao calcular queda de tensão:', err);
+    res.status(500).json({ error: 'Erro ao calcular queda de tensão' });
   }
 });
 

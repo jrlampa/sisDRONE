@@ -8,6 +8,7 @@ import ConfirmDialog from '../ConfirmDialog';
 import PoleAnalysisResult from './PoleAnalysisResult';
 import PoleEditForm from './PoleEditForm';
 import PoleImages from './PoleImages';
+import AhiHistoryChart from './AhiHistoryChart';
 import { useToast } from '../../hooks/useToast';
 import { useConfirm } from '../../hooks/useConfirm';
 import { usePoleSummary } from '../../hooks/usePoleSummary';
@@ -224,6 +225,11 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
               )}
             </div>
           )}
+
+          {/* AHI History (Phase 34) */}
+          <div className="mt-3">
+            <AhiHistoryChart poleId={pole.id} limit={10} />
+          </div>
         </div>
 
         {/* Prediction Section */}
