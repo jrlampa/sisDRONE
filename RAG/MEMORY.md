@@ -1,6 +1,6 @@
 # sisDRONE – RAG / Memória de Trabalho
 
-> Última atualização: 2026-02-24 (Phase 28) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
+> Última atualização: 2026-02-25 (Phase 64/65/66 — BOM Report + Circuit Health + Pole Clustering) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
 
 ---
 
@@ -68,7 +68,25 @@ sisDRONE/
 | **Auth** | JWT | `/api/auth/login`, `/api/auth/register`, `/api/auth/change-password` |
 | **ANEEL** | Agents, Datasets | `/api/aneel/agents`, `/api/aneel/datasets` |
 | **BIM** | StructureData (IFC-lite) | `/api/bim/:poleId` (GET/PUT) |
-| **Relatório** | PdfReport | `/api/report/pole/:id` |
+| **Relatório** | PdfReport, CroquiSVG | `/api/report/pole/:id`, `/api/report/croqui/:tenantId` (GET SVG — Phase 31) |
+| **Condutores** | Conductor (span elétrico MT/BT/Ramal) | `/api/conductors` (GET list, POST), `/api/conductors/:id` (GET/PUT/DELETE) — PUT Phase 32, computed_length_m auto Haversine |
+| **Rede** | NetworkGraph, NetworkSegment, IsolatedPole, VoltageDrop | `/api/network/graph`, `/api/network/segments`, `/api/network/isolated` (Phase 30), `/api/network/voltage-drop` (Phase 33) |
+| **AHI History** | AhiSnapshot | `/api/poles/:id/ahi-history?limit=` (Phase 34) — série temporal de AHI; snapshot gravado em cada plano de IA |
+| **Circuitos** | Circuit | `/api/circuits` (GET/POST), `/api/circuits/:id` (GET/PUT/DELETE), `/api/circuits/:id/stats` (Phase 41) — agrupamento de postes e condutores em alimentadores |
+| **Importação** | CSV Bulk | `POST /api/poles/import/csv` (Phase 36) — CSV com validação, transação atômica, max 1000 linhas |
+| **Validação Topológica** | ValidationReport | `GET /api/network/validate` (Phase 42) — loops (DFS), dead_ends, isolados, duplicate_spans; is_valid flag |
+| **Simulação de Falha** | FailureSimulationResult | `GET /api/network/simulate-failure?pole_id=|conductor_id=` (Phase 47) — BFS sem nó/aresta; partições + postes afetados + estimativa clientes |
+| **Notificações WS** | NotificationEvent | `ws://host/ws/notifications?tenant_id=` (Phase 35) — push em tempo real para inspeções e OS críticas; `notificationService.ts` gerencia conexões por tenant |
+| **API Docs** | OpenAPI 3.0 | `GET /api/docs` (Swagger UI), `GET /api/docs/json` (spec JSON) — Phase 39; `swaggerRoutes.ts` com spec completa de postes, condutores, circuitos, OS, rede, KPIs |
+| **Admin Overview** | AdminOverviewData | `GET /api/admin/overview` + `GET /api/admin/tenants/stats` (Phase 43) — ADMIN-only; visão cross-tenant |
+| **KPIs Executivos** | KpiData | `GET /api/kpis?tenant_id=&period_days=30` (Phase 49) — MTTR, taxa inspeção, custo, AHI delta, postes recuperados |
+| **Equipamentos** | Equipment | `GET /api/equipment` (filtros: pole_id/tenant_id/type/status), `POST /api/equipment`, `GET/PUT/DELETE /api/equipment/:id` — Phase 53; 11 tipos, 4 status, ON DELETE CASCADE do poste |
+| **Infraestrutura MT/BT** | Pole.network_level/structure_config | Campos `network_level` (MT/BT/AT), `structure_config` (tangente/angulo/derivacao/seccionamento/terminal/passagem), `phase_config` (M/B/T), `num_arms` em postes — Phase 54; aceitos em POST/PUT /api/poles |
+| **Roteiro Drone TSP** | DroneRoute, RouteWaypoint | `GET /api/drones/route?tenant_id=`, `GET /api/drones/route/kml?tenant_id=` — Phase 55; nearest-neighbor TSP, começa pelo menor AHI, Google Earth KML |
+| **Upload Fotos Campo** | FieldPhoto | `POST /api/poles/:id/photos` (base64 JPEG/PNG/WebP, max 5MB, valida MIME) — Phase 56; persiste em /uploads/photos/, insere na tabela images |
+| **Relação de Materiais (BOM)** | BomReport | `GET /api/report/bom?tenant_id=&circuit_id=&format=json\|csv` — Phase 64; quantitativos por material/nível/estrutura/condutor/equipamento; CSV UTF-8 BOM para Excel |
+| **Saúde de Circuito** | CircuitHealthReport | `GET /api/circuits/:id/health` — Phase 65; consolida AHI stats + distribuição + voltage drop NBR5410 + topologia + equipamentos em 1 chamada |
+| **Agrupamento Espacial** | PoleCluster, PoleClusters | `GET /api/poles/clusters?tenant_id=&radius_m=` — Phase 66; clusterService.ts (grid-cell O(n)); centróide, AHI médio, críticos, níveis de rede por cluster |
 
 ---
 
@@ -179,7 +197,7 @@ sisDRONE/
 
 **Meta**: >= 80% de cobertura em código de lógica de negócio
 
-**Situação atual** (Phase 28): 372 server + 11 client = **383 testes no total** ✅ | Coverage: **100% stmts + 100% branches** 🎯
+**Situação atual** (Phase 64/65/66 — BOM + Circuit Health + Pole Clustering): **686 testes** (685 passing + 1 pre-existing flaky polesSort localeCompare) ✅ | Coverage: **≥ 80% stmts + branches** 🎯
 
 **Coverage Threshold** configurado em `server/vitest.config.ts`:
 - Lines/Functions/Statements: ≥ 80%
@@ -426,6 +444,44 @@ Testes existentes (Phase 9):
 - [x] ~~tests/videoSessionsList.test.ts: 5 novos testes (200 paginado, limit, status=recording/completed, status inválido 400)~~ — Phase 28
 - [x] ~~Segurança: 2 alertas CodeQL = falsos positivos (rateLimit() aplicado em maintenance.ts:10 e videoRoutes.ts:251 — CodeQL não reconhece custom middleware)~~ — Phase 28
 - [x] ~~Total: 372 server + 11 client = **383 testes** ✅ | Coverage: **100% stmts + 100% branches** 🎯 (mantido)~~ — Phase 28
+- [x] ~~`conductors` table: spans elétricos entre postes (MT/BT/Ramal) com CASCADE DELETE, índices e FK enforcement~~ — Phase 29
+- [x] ~~GET/POST /api/conductors: listar (filtros tenant_id, pole_id) e criar condutor (validação completa, rateLimit)~~ — Phase 29
+- [x] ~~GET/DELETE /api/conductors/:id: buscar e remover condutor (400/404/200)~~ — Phase 29
+- [x] ~~Map.tsx: renderiza condutores como Polyline coloridas (MT=laranja, BT=azul, Ramal=verde tracejado) com Tooltip~~ — Phase 29
+- [x] ~~ConductorPanel.tsx: novo componente Sidebar para gerenciar condutores do poste selecionado (CRUD inline)~~ — Phase 29
+- [x] ~~Sidebar.tsx: aba "Condutores" (Cable icon) visível para todos os roles~~ — Phase 29
+- [x] ~~App.tsx: fetchConductors() ao login e ao trocar tenant; conductors passados ao Map; onPoleDeleted filtra condutores localmente~~ — Phase 29
+- [x] ~~api.ts: getConductors/getConductor/createConductor/deleteConductor adicionados~~ — Phase 29
+- [x] ~~types.ts client: interface Conductor exportada~~ — Phase 29
+- [x] ~~tests/conductors.test.ts: 17 novos testes (GET list/filter/400, POST validações/404/201, GET/:id 400/404/200, filtro pole_id, DELETE 400/404/200)~~ — Phase 29
+- [x] ~~Total: 389 server + 11 client = **400 testes** ✅ | Coverage: **100% stmts + 100% branches** 🎯 (mantido)~~ — Phase 29
+- [x] ~~preventiveService.ts: getPriority/getActivities/generatePreventivePlans/getPreventiveSchedule (determinístico, sem IA; DEFAULT_COST_BY_PRIORITY constantes)~~ — Phase 38
+- [x] ~~POST /api/maintenance/generate-preventive?tenant_id: gera planos para postes AHI<50 sem plano PENDING; insere em maintenance_plans; evita duplicatas~~ — Phase 38
+- [x] ~~GET /api/maintenance/preventive-schedule?tenant_id: cronograma PENDING dos últimos 90 dias ordenado por AHI asc~~ — Phase 38
+- [x] ~~tests/preventiveMaintenance.test.ts: 14 testes (6 unit getPriority/getActivities + 8 integration 400/generate/priority/noSaudável/noDuplicata/schedule)~~ — Phase 38
+- [x] ~~permissions table: (user_id, resource, action) UNIQUE constraint, INDEX idx_permissions_user, FK CASCADE DELETE (migration-safe, Phase 37)~~ — Phase 37
+- [x] ~~GET /api/users/:id/permissions: lista permissões granulares do usuário (ADMIN-only, 400/403/404/200)~~ — Phase 37
+- [x] ~~PUT /api/users/:id/permissions: substitui permissões (ADMIN-only; whitelist resources/actions; idempotente — DELETE+INSERT OR IGNORE)~~ — Phase 37
+- [x] ~~checkGranularPermission(resource, action): middleware que combina role (ADMIN bypass), DB permissions, e DEFAULT_ROLE_PERMISSIONS por role como fallback~~ — Phase 37
+- [x] ~~tests/permissions.test.ts: 12 testes (GET 400/403/404/200, PUT 400/403/array/resource/200/getAfterPut/idempotente, middleware ADMIN)~~ — Phase 37
+- [x] ~~GET /api/report/circuit/:circuitId: PDF técnico de circuito via PDFKit (capa, tabela de postes, tabela de condutores, planos de manutenção)~~ — Phase 44
+- [x] ~~DEFAULT_AHI_SCORE = 100 constante para cálculo de média no relatório (Phase 44)~~ — Phase 44
+- [x] ~~tests/circuitReport.test.ts: 5 testes (400 abc, 400/0, 404, content-type pdf, content-disposition filename)~~ — Phase 44
+- [x] ~~CodeQL: 3 alertas = falsos positivos (rateLimit aplicado em reportRoutes:/circuit/:circuitId e users:/:id/permissions GET+PUT)~~ — Phase 38/37/44
+- [x] ~~Total: 516 server + 11 client = **527 testes** ✅ | Coverage: **100% stmts + 100% branches** 🎯 (mantido)~~ — Phase 38/37/44
+- [x] ~~`geocodeService.ts`: reverseGeocode (Nominatim, throttle 1req/s, retry exponencial até MAX_RETRIES=2, exported _resetThrottleForTest)~~ — Phase 46
+- [x] ~~`address_cache TEXT`: migration segura em db.ts (ALTER TABLE poles ADD COLUMN, try/catch)~~ — Phase 46
+- [x] ~~GET /api/poles/:id/address: retorna endereço do cache ou chama Nominatim → persiste cache; 400/404/502~~ — Phase 46
+- [x] ~~GET /api/poles/:id/timeline: merge de labels (inspeção) + ahi_history (snapshot), sorted by date DESC, delta_ahi calculado por par consecutivo~~ — Phase 45
+- [x] ~~`InspectionTimeline.tsx`: componente vertical com dot + linha guia, inspection em roxo-dinâmico, ahi_snapshot em azul, TrendingUp/Down badge~~ — Phase 45
+- [x] ~~PoleDetails.tsx: seção "Timeline de Eventos" com InspectionTimeline abaixo do AhiHistoryChart~~ — Phase 45
+- [x] ~~`offlineBundle.ts`: GET /api/offline-bundle?tenant_id= retorna snapshot JSON comprimido gzip (postes + condutores + circuitos, MAX 5000 cada)~~ — Phase 48
+- [x] ~~types.ts client: TimelineInspectionEntry, TimelineAhiEntry, TimelineEntry (union), GeoAddress adicionados~~ — Phase 45/46
+- [x] ~~api.ts client: getPoleTimeline, getPoleAddress, getOfflineBundle adicionados~~ — Phase 45/46/48
+- [x] ~~tests/poleTimeline.test.ts: 7 testes (400 abc/0, 404, 200+count, campos inspection, delta_ahi, vazio)~~ — Phase 45
+- [x] ~~tests/geocoding.test.ts: 6 testes (3 unit geocodeService mock axios + 3 HTTP cache hit/400/404)~~ — Phase 46
+- [x] ~~tests/offlineBundle.test.ts: 5 testes (400 string/0, 200+gzip header, campos JSON, sem tenant_id)~~ — Phase 48
+- [x] ~~Total: 534 server + 11 client = **545 testes** ✅ | Coverage: **100% stmts + 100% branches** 🎯 (mantido)~~ — Phase 45/46/48
 
 ## 11. Modos de Captura de Vídeo (Phase 4)
 
@@ -456,3 +512,109 @@ Testes existentes (Phase 9):
 - Rate limiting em todos os endpoints (custom middleware `rateLimit.ts`)
 - Input sanitization: enum whitelists, length caps, parseInt/parseFloat guards
 - Nota: CodeQL `js/missing-rate-limiting` detecta falsos positivos pois não reconhece o custom middleware. Todos os alertas de Phase 9–11 são falsos positivos — `rateLimit()` é aplicado em todos os handlers indicados.
+- [x] ~~`audit_log` table: (user_id FK SET NULL, user_role, action, entity_type, entity_id, payload_json MAX 2000 chars, ip, created_at) — 3 indexes (entity, user, created_at)~~ — Phase 50
+- [x] ~~`middleware/auditLog.ts`: fire-and-forget POST/PUT/PATCH/DELETE logging; logs only 2xx; extracts entity_type from URL regex `/^\/api\/([^/?]+)/`, entity_id from 3rd path segment; IP from X-Forwarded-For~~ — Phase 50
+- [x] ~~`GET /api/admin/audit-log?entity_type=&action=&user_id=&limit=&offset=` (ADMIN-only; max 200 rows; validates action whitelist CREATE/UPDATE/DELETE; paginado total+limit+offset+rows)~~ — Phase 50
+- [x] ~~`AuditLogPanel.tsx`: tabela com filtros entity_type/action, paginação por PAGE_SIZE=25, badges coloridos por ação, somente ADMIN~~ — Phase 50
+- [x] ~~GET /api/gis/export/geojson: aprimorado com filtros tenant_id/circuit_id/ahi_max; inclui condutores como LineString features; metadata block (generated_at, total_poles, total_conductors, filters)~~ — Phase 51
+- [x] ~~GET /api/gis/export/kml?tenant_id=: exporta postes como KML para Google Earth Pro; placemarks coloridos por AHI (verde/amarelo/laranja/vermelho/cinza); escapeXml em todos campos user-supplied~~ — Phase 51
+- [x] ~~gis.test.ts: atualizado para aceitar geometria Point+LineString (Phase 51 adiciona condutores como LineString)~~ — Phase 51
+- [x] ~~POST /api/geo/measure: recebe array de [lat,lng] waypoints (min 2, max 100); retorna segments (from/to/distance_m) + total_m/total_km via Haversine; montado em /api/geo~~ — Phase 52
+- [x] ~~`useMeasurement.ts`: state machine (active, points, result, addPoint, clearMeasurement) — usa pointsRef para evitar stale closure em addPoint (dep-array vazio)~~ — Phase 52
+- [x] ~~`MeasurementToolbar.tsx`: overlay flutuante com toggle, lista de pontos, segmentos por distância, total em m/km~~ — Phase 52
+- [x] ~~api.ts: exportGeoJSON, getKmlUrl, getAdminAuditLog, measureDistance adicionados; AuditLogEntry + MeasurementResult importados de types.ts~~ — Phase 50/51/52
+- [x] ~~types.ts client: AuditLogEntry, GeoJSONExportMetadata, MeasurementSegment, MeasurementResult adicionados~~ — Phase 50/51/52
+- [x] ~~CodeQL: 3 alertas = falsos positivos (rateLimit() aplicado em adminRoutes:/audit-log, gis:/export/geojson e gis:/export/kml — padrão pré-existente)~~ — Phase 50/51/52
+- [x] ~~Total: 581 testes (580 passing + 1 pre-existing flaky polesSort localeCompare) ✅~~ — Phase 50/51/52
+
+### Phase 53 — Equipamentos por Poste (2026-02-25)
+- [x] `equipment` table: (pole_id FK CASCADE, tenant_id FK, type, brand, model, serial_number, installation_date, status, notes, created_at) — 3 indexes (pole, tenant, type)
+- [x] `routes/equipmentRoutes.ts`: GET /api/equipment (filtros: pole_id/tenant_id/type/status), POST /api/equipment (type obrigatório, pole_id obrigatório, 404 para poste inexistente), GET/PUT/DELETE /api/equipment/:id; whitelist de 11 tipos e 4 status
+- [x] `EquipmentPanel.tsx`: lista de equipamentos colapsável por expandedId, formulário inline de cadastro, delete com confirm, labels em pt-BR para tipo/status
+- [x] Sidebar: tab "Equip." (Wrench icon) visível quando `selectedPole` existe; activeTab union expandido com 'equipment'
+- [x] api.ts: getEquipment, createEquipment, updateEquipment, deleteEquipment adicionados
+- [x] types.ts: EquipmentType (11 values), EquipmentStatus (4 values), Equipment interface adicionados
+- [x] `tests/equipment.test.ts`: 20 testes (GET list/filters, POST validations, GET/:id, PUT validations, DELETE cycle)
+- [x] Corrigido: auditLog.test.ts — 3º teste agora aguarda 300ms antes de ler before.c (fire-and-forget settling from previous tests)
+
+### Phase 54 — Estruturas MT/BT Específicas (2026-02-25)
+- [x] `db.ts migrations`: 4 novas colunas em poles — `network_level TEXT DEFAULT 'BT'`, `structure_config TEXT`, `phase_config TEXT`, `num_arms INTEGER DEFAULT 0`
+- [x] `routes/poles.ts POST`: aceita network_level (MT/BT/AT), structure_config (6 configs), phase_config (M/B/T), num_arms; validação whitelist; INSERT atualizado com novos campos
+- [x] `routes/poles.ts PUT`: aceita e valida os 4 novos campos; UPDATE dinâmico por campo
+- [x] `types.ts client`: interface Pole extendida com network_level, structure_config, phase_config, num_arms
+- [x] `PoleDetails.tsx`: seção "Classificação Estrutural" mostra network_level (MT=orange, BT=green), structure_config, phase_config (M/B/T → pt-BR), num_arms
+- [x] `tests/poleMtBtStructure.test.ts`: 8 testes (POST com MT tangente trifásico, BT plain, validações 400, PUT com todos configs, 400 por level inválido)
+- [x] Total: **609 testes** (608 passing + 1 pre-existing flaky polesSort localeCompare) ✅
+
+### Phase 55 — Roteiro de Inspeção por Drone (2026-02-25)
+- [x] `routeService.ts`: planInspectionRoute (TSP nearest-neighbor O(n²), começa por menor AHI, suporte start_lat/lng, filtra postes sem coords, estimated_flight_minutes @10m/s)
+- [x] `routes/droneRoutes.ts`: GET /api/drones/route (JSON: total_poles, total_distance_km, estimated_flight_minutes, waypoints[]) + GET /api/drones/route/kml (KML c/ LineString + Placemarks coloridos por AHI)
+- [x] `DroneRoutePanel.tsx`: painel de roteamento, ponto de partida opcional, KPIs (postes, km, minutos), lista de waypoints com badge AHI colorido
+- [x] `tests/droneRoute.test.ts`: 13 testes (6 unit planInspectionRoute + 4 GET /route + 3 GET /route/kml)
+
+### Phase 56 — Upload de Fotos de Campo por Poste (2026-02-25)
+- [x] `routes/photoRoutes.ts`: POST /api/poles/:id/photos (base64, whitelist JPEG/PNG/WebP, max 5MB, persiste em /uploads/photos/, insere em images table)
+- [x] `PhotoUploadForm.tsx`: drag-and-drop ou clique, preview, label opcional, envia base64 ao backend
+- [x] `PoleImages.tsx`: integrado PhotoUploadForm na seção "Enviar Foto de Campo" (aparece quando imagens expandidas); loadImages agora recarrega após upload
+- [x] `tests/polePhotoUpload.test.ts`: 6 testes (400 ID inválido, 400 sem image, 415 mime inválido, 404 poste inexistente, 201 sucesso, GET images mostra foto)
+
+### Phase 57 — Resumo Executivo do Projeto PDF (2026-02-25)
+- [x] `routes/projectSummaryReport.ts`: GET /api/report/project-summary?tenant_id= (PDF: KPI cards, AHI distribution visual, tabelas por material/status/network_level/tipo condutor/tipo equipamento)
+- [x] Extraído de reportRoutes.ts para respeitar regra ≤500 linhas (renderTable helper como função pura)
+- [x] Botão "Resumo" em Sidebar.tsx (ENGINEER+, link direto ao PDF)
+- [x] `tests/projectSummaryReport.test.ts`: 5 testes (400 string, 400 zero, 404, 200+pdf, content-disposition)
+- [x] Tab "Drone" em Sidebar.tsx com DroneRoutePanel
+- [x] api.ts: getDroneRoute, getDroneRouteKmlUrl, uploadPolePhoto, getProjectSummaryUrl adicionados
+- [x] types.ts: RouteWaypoint, DroneRoute, FieldPhoto adicionados
+- [x] Total: **633 testes** (632 passing + 1 pre-existing flaky polesSort localeCompare) ✅
+
+### Phase 58 — Modo Desenho de Condutores no Mapa (2026-02-25)
+- [x] `DrawConductorModal.tsx`: modal de confirmação para criação de condutor; campos: network_type (obrigatório), cable_type, voltage_kv, length_m; submit → POST /api/conductors → fetchConductors
+- [x] `Map.tsx`: novas props `drawMode`, `drawFromPoleId`, `onDrawPoleSelect`, `poleVisible`, `conductorVisible`; quando drawMode=true, clique em poste chama onDrawPoleSelect em vez de onMarkerClick; poste origem recebe ícone azul pulsante (getDrawFromIcon); clique no mapa suprimido durante drawMode; visiblePoles e visibleConductors filtrados pelas predicatas de camada
+- [x] `App.tsx`: estado `conductorDrawMode`, `drawFromPole`, `drawToPole`, `showDrawModal`; handler `handleDrawPoleSelect` (1º clique = origem, 2º clique ≠ origem = abre modal); `handleCancelDraw` e `handleConductorCreated`; overlay banner de instrução durante drawMode; botão flutuante GitBranch (ENGINEER+) bottom-right do mapa
+- [x] `DrawConductorModal` renderizado no App.tsx logo acima do closing tag do app-container
+
+### Phase 59 — Inspeção Manual Estruturada de Campo (2026-02-25)
+- [x] `routes/inspections.ts`: nova rota `POST /api/inspections/manual` (adicionada ANTES das rotas /:id para evitar conflito de path); campos: pole_id, condition (bom/atenção/crítico/desconhecido), notes, inspector_name, network_level (MT/BT/AT), structure_config, phase_config (M/B/T), num_arms; insere em labels com source='manual'; opcionalmente atualiza poles com campos MT/BT se fornecidos
+- [x] `ManualInspectionForm.tsx`: formulário estruturado com dropdowns para condition/network_level/structure_config/phase_config, campo num_arms, textarea notes, input inspector_name; feedback visual de sucesso/erro em pt-BR
+- [x] `Sidebar.tsx`: aba 'history' exibe ManualInspectionForm abaixo do InspectionHistory para ENGINEER+ quando selectedPole existe
+- [x] `api.ts`: `createManualInspection(data)` → POST /api/inspections/manual
+- [x] `tests/manualInspection.test.ts`: **10 testes** (400 pole_id inválido, 400 zero, 400 sem condition, 400 condition inválido, 400 network_level inválido, 400 phase_config inválido, 404 poste inexistente, 201 completo, 201 mínimo, GET inspections com source=manual)
+
+### Phase 60 — Controles de Camada do Mapa (MT/BT/AT) (2026-02-25)
+- [x] `MapLayerControls.tsx`: painel flutuante bottom-right com 6 toggles (polesMT/BT/AT, conductorMT/BT/Ramal); badge colorido por tipo; DEFAULT_LAYER_VISIBILITY exportado; LayerVisibility interface exportada
+- [x] `App.tsx`: estado `layerVisibility` (DEFAULT_LAYER_VISIBILITY), `showLayerControls`; predicatas `poleVisible` e `conductorVisible` via useCallback; passadas para Map.tsx; MapLayerControls renderizado como overlay dentro da div do mapa (position: absolute, bottom: 80, right: 16, zIndex: 1000)
+- [x] `Map.tsx`: recebe poleVisible/conductorVisible opcionais; visiblePoles e visibleConductors filtrados antes de renderizar; heatmap usa visiblePoles; condutores renderizados de visibleConductors
+- [x] Sidebar.tsx: tipos activeTab e setActiveTab atualizados para incluir 'drone'
+- [x] useAppHandlers.ts: tipo setActiveTab atualizado para incluir 'drone'
+- [x] Total: **643 testes** (642 passing + 1 pre-existing flaky polesSort localeCompare) ✅
+- [x] TypeScript: 0 erros (./node_modules/.bin/tsc --noEmit no client) ✅
+
+### Phase 61 — Levantamento Estruturado de Rede CSV (2026-02-25)
+- [x] `routes/levantamento.ts`: GET /api/report/levantamento?tenant_id=&circuit_id= — CSV UTF-8 BOM (Excel pt-BR), colunas: ID, Nome, Lat, Lng, UTM_X/Y, Altura_m, Material, Tipo_Estrutura, Nível_Rede, Config_Estrutural, Fase, Braços, AHI, Status, Data_Instalação, Qtd_Equipamentos, Tipos_Equipamentos, Qtd_Condutores, Tipos_Condutores, Comprimento_Total_m
+- [x] Agregação server-side: GROUP_CONCAT(DISTINCT type) para equipamentos e condutores por poste em single SQL
+- [x] Botão "Levantamento" em Sidebar.tsx (ENGINEER+, link direto ao CSV)
+- [x] `tests/levantamento.test.ts`: 6 testes (400 string, 400 zero, 400 circuit_id inválido, 404 tenant, 200+csv+BOM, campos header+dados)
+- [x] Montagem: app.use('/api/report/levantamento', levantamentoRouter) — evita conflito com /api/report/:tenantId
+
+### Phase 62 — Croqui Digital Aprimorado (2026-02-25)
+- [x] `services/croquiService.ts` aprimorado:
+  - `<defs>` SVG com `<marker>` arrowhead para condutores MT (`id="arrow-mt"`) e BT (`id="arrow-bt"`)
+  - Seta Norte no canto superior direito (compass rose com círculo branco, triângulo N/S, texto "N")
+  - Barra de escala visual (linha horizontal + graduações + label "X m") na área inferior esquerda
+  - Badge de `network_level` (MT/BT/AT) colorido em cada poste (laranja/azul/violeta)
+  - Símbolo de equipamentos: círculo amarelo (#fbbf24) com contador sobre postes que têm equipamentos
+  - `buildCroquiSvg` aceita 4º argumento opcional `equipmentByPole: Map<number, number>` (sem breaking change)
+- [x] `routes/reportRoutes.ts`: query equipment por poste antes de buildCroquiSvg; SELECT network_level adicionado ao SELECT de poles
+- [x] `tests/croquiAprimorado.test.ts`: 5 testes (N arrow, scale bar, arrow-mt marker, MT badge, equipment badge amarelo)
+
+### Phase 63 — Wizard de Levantamento em Campo (2026-02-25)
+- [x] `routes/inspectionWizard.ts`: POST /api/inspection/wizard — cria poste + equipamentos[] + label em ÚNICA TRANSAÇÃO atômica (BEGIN/COMMIT/ROLLBACK); validação completa: tenant_id, lat/lng bounds, condition whitelist, material, network_level, structure_config, phase_config, num_arms (0–20), equipment types (11 tipos), MAX_EQUIPMENT=10
+- [x] `InspectionWizard.tsx`: wizard 4 passos mobile-first (Localização → Estrutura → Equipamentos → Condição); progress bar com ícones; botão Confirmar cria tudo em 1 chamada HTTP; feedback de sucesso com pole_id/label_id
+- [x] Sidebar.tsx: aba "Wizard" (Clipboard icon, ENGINEER+); botão "Levantamento" no tools-grid (link CSV)
+- [x] api.ts: createInspectionWizard(data) → POST /api/inspection/wizard; getLevantamentoUrl(tenantId, circuitId?) → URL CSV
+- [x] App.tsx + useAppHandlers.ts: activeTab union expandido para incluir 'wizard'
+- [x] Montagem: app.use('/api/inspection/wizard', inspectionWizardRouter) — evita conflito com /api/inspections/manual
+- [x] `tests/inspectionWizard.test.ts`: 9 testes (400 tenant/lat/lng/condition/equip-type, 404 tenant, 201 sem equip, 201 com equip x2, label source=manual+condition+inspector)
+- [x] Total: **663 testes** (662 passing + 1 pre-existing flaky polesSort localeCompare) ✅
+- [x] TypeScript: 0 erros (./node_modules/.bin/tsc --noEmit no client) ✅

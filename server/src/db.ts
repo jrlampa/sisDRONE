@@ -140,6 +140,8 @@ async function initDb(database: Database) {
   try { await database.exec(`ALTER TABLE users ADD COLUMN password_hash TEXT`); } catch {}
   // structure_data column for BIM Half-way (Phase 5)
   try { await database.exec(`ALTER TABLE poles ADD COLUMN structure_data TEXT`); } catch {}
+  // computed_length_m for Phase 32 (Haversine auto span length)
+  try { await database.exec(`ALTER TABLE conductors ADD COLUMN computed_length_m REAL`); } catch {}
   // video_sessions table (Phase 4)
   await database.exec(`
     CREATE TABLE IF NOT EXISTS video_sessions (
@@ -156,6 +158,117 @@ async function initDb(database: Database) {
     );
     CREATE INDEX IF NOT EXISTS idx_vsessions_pole ON video_sessions(pole_id);
     CREATE INDEX IF NOT EXISTS idx_vsessions_status ON video_sessions(status);
+  `);
+
+  // conductors table (Phase 29) — spans elétricos entre postes
+  await database.exec(`
+    CREATE TABLE IF NOT EXISTS conductors (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tenant_id INTEGER NOT NULL DEFAULT 1,
+      pole_from INTEGER NOT NULL,
+      pole_to INTEGER NOT NULL,
+      network_type TEXT NOT NULL DEFAULT 'BT',
+      cable_type TEXT,
+      voltage_kv REAL,
+      length_m REAL,
+      computed_length_m REAL,
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (pole_from) REFERENCES poles(id) ON DELETE CASCADE,
+      FOREIGN KEY (pole_to) REFERENCES poles(id) ON DELETE CASCADE,
+      FOREIGN KEY (tenant_id) REFERENCES tenants(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_conductors_tenant ON conductors(tenant_id);
+    CREATE INDEX IF NOT EXISTS idx_conductors_from ON conductors(pole_from);
+    CREATE INDEX IF NOT EXISTS idx_conductors_to ON conductors(pole_to);
+  `);
+
+  // ahi_history table (Phase 34) — série temporal do AHI por poste
+  await database.exec(`
+    CREATE TABLE IF NOT EXISTS ahi_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      pole_id INTEGER NOT NULL,
+      tenant_id INTEGER NOT NULL DEFAULT 1,
+      ahi_score INTEGER NOT NULL,
+      recorded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (pole_id) REFERENCES poles(id) ON DELETE CASCADE,
+      FOREIGN KEY (tenant_id) REFERENCES tenants(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_ahi_history_pole ON ahi_history(pole_id);
+    CREATE INDEX IF NOT EXISTS idx_ahi_history_recorded ON ahi_history(recorded_at);
+  `);
+
+  // circuits table (Phase 41) — Circuitos Elétricos / Alimentadores
+  await database.exec(`
+    CREATE TABLE IF NOT EXISTS circuits (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tenant_id INTEGER NOT NULL DEFAULT 1,
+      name TEXT NOT NULL,
+      description TEXT,
+      color TEXT DEFAULT '#6366f1',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (tenant_id) REFERENCES tenants(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_circuits_tenant ON circuits(tenant_id);
+  `);
+  try { await database.exec(`ALTER TABLE poles ADD COLUMN circuit_id INTEGER REFERENCES circuits(id) ON DELETE SET NULL`); } catch {}
+  try { await database.exec(`ALTER TABLE conductors ADD COLUMN circuit_id INTEGER REFERENCES circuits(id) ON DELETE SET NULL`); } catch {}
+  try { await database.exec(`ALTER TABLE poles ADD COLUMN address_cache TEXT`); } catch {}
+  // Phase 54 — MT/BT Structure Classification
+  try { await database.exec(`ALTER TABLE poles ADD COLUMN network_level TEXT DEFAULT 'BT'`); } catch {}
+  try { await database.exec(`ALTER TABLE poles ADD COLUMN structure_config TEXT`); } catch {}
+  try { await database.exec(`ALTER TABLE poles ADD COLUMN phase_config TEXT`); } catch {}
+  try { await database.exec(`ALTER TABLE poles ADD COLUMN num_arms INTEGER DEFAULT 0`); } catch {}
+
+  // permissions table (Phase 37) — RBAC Granular por recurso/ação
+  await database.exec(`
+    CREATE TABLE IF NOT EXISTS permissions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      resource TEXT NOT NULL,
+      action TEXT NOT NULL,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      UNIQUE(user_id, resource, action)
+    );
+    CREATE INDEX IF NOT EXISTS idx_permissions_user ON permissions(user_id);
+
+    CREATE TABLE IF NOT EXISTS audit_log (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id     INTEGER,
+      user_role   TEXT,
+      action      TEXT NOT NULL,
+      entity_type TEXT NOT NULL,
+      entity_id   INTEGER,
+      payload_json TEXT,
+      ip          TEXT,
+      created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_audit_entity  ON audit_log(entity_type, entity_id);
+    CREATE INDEX IF NOT EXISTS idx_audit_user    ON audit_log(user_id);
+    CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_log(created_at);
+  `);
+
+  // equipment table (Phase 53) — Equipamentos por Poste (transformador, fusível, religador, etc.)
+  await database.exec(`
+    CREATE TABLE IF NOT EXISTS equipment (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      pole_id INTEGER NOT NULL,
+      tenant_id INTEGER NOT NULL DEFAULT 1,
+      type TEXT NOT NULL,
+      brand TEXT,
+      model TEXT,
+      serial_number TEXT,
+      installation_date DATE,
+      status TEXT DEFAULT 'active',
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (pole_id) REFERENCES poles(id) ON DELETE CASCADE,
+      FOREIGN KEY (tenant_id) REFERENCES tenants(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_equipment_pole ON equipment(pole_id);
+    CREATE INDEX IF NOT EXISTS idx_equipment_tenant ON equipment(tenant_id);
+    CREATE INDEX IF NOT EXISTS idx_equipment_type ON equipment(type);
   `);
 
   // ── Seeds ──

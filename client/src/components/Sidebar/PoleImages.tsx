@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { Image, ChevronDown, ChevronUp, Loader } from 'lucide-react';
 import { api } from '../../services/api';
+import PhotoUploadForm from './PhotoUploadForm';
 
 interface PoleImage {
   id: number;
@@ -22,7 +23,6 @@ const PoleImages: React.FC<PoleImagesProps> = ({ poleId, apiBase }) => {
   const [error, setError] = useState<string | null>(null);
 
   const loadImages = useCallback(async () => {
-    if (loaded) return;
     setLoading(true);
     setError(null);
     try {
@@ -34,13 +34,19 @@ const PoleImages: React.FC<PoleImagesProps> = ({ poleId, apiBase }) => {
     } finally {
       setLoading(false);
     }
-  }, [poleId, loaded]);
+  }, [poleId]);
 
   const handleToggle = () => {
     const next = !expanded;
     setExpanded(next);
     if (next && !loaded) loadImages();
   };
+
+  const handleUploaded = useCallback(() => {
+    // Reload images after upload
+    setLoaded(false);
+    loadImages();
+  }, [loadImages]);
 
   return (
     <div className="mt-3 pt-3 border-t border-light/10">
@@ -97,6 +103,14 @@ const PoleImages: React.FC<PoleImagesProps> = ({ poleId, apiBase }) => {
               )}
             </div>
           )}
+
+          {/* Upload de Foto de Campo (Phase 56) */}
+          <div className="mt-3 pt-3 border-t border-light/10">
+            <p className="text-[10px] uppercase tracking-wider text-muted font-bold mb-2">
+              Enviar Foto de Campo
+            </p>
+            <PhotoUploadForm poleId={poleId} onUploaded={handleUploaded} />
+          </div>
         </div>
       )}
     </div>

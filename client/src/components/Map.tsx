@@ -1,8 +1,8 @@
 import React from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents, Polyline } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents, Polyline, Tooltip } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import type { Pole, Span } from '../types';
+import type { Pole, Span, Conductor } from '../types';
 import HeatmapLayer from './HeatmapLayer';
 
 // Fix for default marker icons in Leaflet + React
@@ -37,6 +37,24 @@ function getAhiIcon(ahi: number | null, selected = false): L.DivIcon {
   });
 }
 
+/** Blue pulsing icon for the first selected pole in draw mode */
+function getDrawFromIcon(): L.DivIcon {
+  return L.divIcon({
+    className: '',
+    html: `<div style="width:22px;height:22px;border-radius:50%;background:#3b82f6;border:3px solid #ffffff;box-shadow:0 0 0 5px rgba(59,130,246,0.35),0 3px 8px rgba(0,0,0,0.55);"></div>`,
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
+    popupAnchor: [0, -14],
+  });
+}
+
+/** Cor e espessura da linha por tipo de rede elétrica */
+function getConductorStyle(type: string): { color: string; weight: number; dashArray?: string } {
+  if (type === 'MT') return { color: '#f97316', weight: 3 };
+  if (type === 'ramal') return { color: '#22c55e', weight: 1.5, dashArray: '6, 4' };
+  return { color: '#3b82f6', weight: 2 }; // BT padrão
+}
+
 interface MapProps {
   poles: Pole[];
   selectedPole: Pole | null;
@@ -46,19 +64,39 @@ interface MapProps {
   activeSpan: Span | null;
   userRole: 'ADMIN' | 'ENGINEER' | 'VIEWER';
   showHeatmap: boolean;
+  conductors?: Conductor[];
+  /** Phase 58: activates "draw conductor" mode — pole clicks select endpoints */
+  drawMode?: boolean;
+  /** Phase 58: ID of the first pole already selected in draw mode */
+  drawFromPoleId?: number | null;
+  /** Phase 58: callback when user clicks a pole during draw mode */
+  onDrawPoleSelect?: (pole: Pole) => void;
+  /** Phase 60: predicate to filter poles before rendering */
+  poleVisible?: (pole: Pole) => boolean;
+  /** Phase 60: predicate to filter conductors before rendering */
+  conductorVisible?: (c: Conductor) => boolean;
 }
 
 const Map: React.FC<MapProps> = ({
-  poles, selectedPole, onMarkerClick, onMapClick, isMeasuring, activeSpan, userRole, showHeatmap
+  poles, selectedPole, onMarkerClick, onMapClick, isMeasuring, activeSpan, userRole, showHeatmap,
+  conductors = [],
+  drawMode = false, drawFromPoleId = null, onDrawPoleSelect,
+  poleVisible, conductorVisible,
 }) => {
-  const heatmapPoints: [number, number, number][] = poles.map(p => {
+  const visiblePoles = poleVisible ? poles.filter(poleVisible) : poles;
+  const visibleConductors = conductorVisible ? conductors.filter(conductorVisible) : conductors;
+
+  const heatmapPoints: [number, number, number][] = visiblePoles.map(p => {
     // Inverse of AHI: Lower score = Higher intensity in heatmap (more damaged)
     const intensity = p.ahi_score ? (100 - p.ahi_score) / 100 : 0.2;
     return [p.lat, p.lng, intensity];
   });
+
   const MapEvents = () => {
     useMapEvents({
       click(e) {
+        // Suppress normal map click when draw mode is active
+        if (drawMode) return;
         if (!isMeasuring && userRole !== 'VIEWER') {
           onMapClick(e.latlng.lat, e.latlng.lng);
         }
@@ -81,27 +119,68 @@ const Map: React.FC<MapProps> = ({
 
       {showHeatmap && <HeatmapLayer points={heatmapPoints} />}
 
-      {poles.map((pole) => (
-        <Marker
-          key={pole.id}
-          position={[pole.lat, pole.lng]}
-          icon={getAhiIcon(pole.ahi_score ?? null, selectedPole?.id === pole.id)}
-          eventHandlers={{
-            click: () => onMarkerClick(pole),
-          }}
-          opacity={1}
-        >
-          <Popup>
-            <div className="popup-content">
-              <strong>{pole.name || `Poste ${pole.id}`}</strong>
-              <p>Coords: {pole.lat.toFixed(6)}, {pole.lng.toFixed(6)}</p>
-              <p>AHI: <span className={`status-badge ${pole.ahi_score === null || pole.ahi_score === undefined ? 'warning' : pole.ahi_score < 50 ? 'critical' : pole.ahi_score < 80 ? 'warning' : 'saudavel'}`}>
-                {pole.ahi_score ?? 'N/A'}
-              </span></p>
-            </div>
-          </Popup>
-        </Marker>
-      ))}
+      {visibleConductors.map((c) => {
+        const style = getConductorStyle(c.network_type);
+        return (
+          <Polyline
+            key={`c-${c.id}`}
+            positions={[[c.from_lat, c.from_lng], [c.to_lat, c.to_lng]]}
+            color={style.color}
+            weight={style.weight}
+            dashArray={style.dashArray}
+            opacity={0.85}
+          >
+            <Tooltip sticky>
+              <span><strong>{c.network_type}</strong> — {c.from_name} → {c.to_name}</span>
+              {c.cable_type && <><br />{c.cable_type}</>}
+              {c.voltage_kv !== undefined && c.voltage_kv !== null && <><br />{c.voltage_kv} kV</>}
+              {c.computed_length_m !== undefined && c.computed_length_m !== null && (
+                <><br />↯ {c.computed_length_m.toFixed(0)} m (calc.)</>
+              )}
+              {c.length_m !== undefined && c.length_m !== null && <><br />{c.length_m} m (manual)</>}
+            </Tooltip>
+          </Polyline>
+        );
+      })}
+
+      {visiblePoles.map((pole) => {
+        const isDrawFrom = drawMode && drawFromPoleId === pole.id;
+        const markerIcon = isDrawFrom
+          ? getDrawFromIcon()
+          : getAhiIcon(pole.ahi_score ?? null, selectedPole?.id === pole.id);
+        return (
+          <Marker
+            key={pole.id}
+            position={[pole.lat, pole.lng]}
+            icon={markerIcon}
+            eventHandlers={{
+              click: () => {
+                if (drawMode && onDrawPoleSelect) {
+                  onDrawPoleSelect(pole);
+                } else {
+                  onMarkerClick(pole);
+                }
+              },
+            }}
+            opacity={1}
+          >
+            <Popup>
+              <div className="popup-content">
+                <strong>{pole.name || `Poste ${pole.id}`}</strong>
+                {drawMode
+                  ? <p style={{ color: '#3b82f6', fontWeight: 500 }}>{isDrawFrom ? '↗ Origem selecionada — clique no destino' : 'Clique para conectar'}</p>
+                  : <>
+                    <p>Coords: {pole.lat.toFixed(6)}, {pole.lng.toFixed(6)}</p>
+                    <p>AHI: <span className={`status-badge ${pole.ahi_score === null || pole.ahi_score === undefined ? 'warning' : pole.ahi_score < 50 ? 'critical' : pole.ahi_score < 80 ? 'warning' : 'saudavel'}`}>
+                      {pole.ahi_score ?? 'N/A'}
+                    </span></p>
+                  </>
+                }
+              </div>
+            </Popup>
+          </Marker>
+        );
+      })}
 
       {activeSpan && (
         <Polyline

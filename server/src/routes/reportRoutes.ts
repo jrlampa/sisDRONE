@@ -10,6 +10,7 @@ import { Router, Request, Response } from 'express';
 import PDFDocument from 'pdfkit';
 import { getDb } from '../db';
 import { rateLimit } from '../middleware/rateLimit';
+import { buildCroquiSvg } from '../services/croquiService';
 
 const router = Router();
 
@@ -188,4 +189,235 @@ router.get('/pole/:id', rateLimit(10, 60_000), async (req: Request, res: Respons
   }
 });
 
+/**
+ * GET /api/report/croqui/:tenantId  (Phase 31)
+ * Gera e retorna o Croqui Digital da rede como SVG.
+ */
+router.get('/croqui/:tenantId', rateLimit(20, 60_000), async (req: Request, res: Response) => {
+  const tenantId = parseInt(req.params.tenantId, 10);
+  if (isNaN(tenantId) || tenantId <= 0) {
+    return res.status(400).json({ error: 'tenantId inválido' });
+  }
+
+  try {
+    const db = await getDb();
+    const tenant = await db.get('SELECT name FROM tenants WHERE id = ?', [tenantId]);
+    if (!tenant) return res.status(404).json({ error: 'Concessionária não encontrada' });
+
+    const poles = await db.all(
+      `SELECT id, name, lat, lng, ahi_score, status, network_level FROM poles WHERE tenant_id = ? ORDER BY id`,
+      [tenantId]
+    );
+
+    if (poles.length === 0) {
+      return res.status(404).json({ error: 'Nenhum poste encontrado para esta concessionária' });
+    }
+
+    const conductors = await db.all(
+      `SELECT c.id, c.pole_from, c.pole_to, c.network_type,
+              pf.lat AS from_lat, pf.lng AS from_lng,
+              pt.lat AS to_lat, pt.lng AS to_lng,
+              c.computed_length_m, c.length_m
+       FROM conductors c
+       JOIN poles pf ON pf.id = c.pole_from
+       JOIN poles pt ON pt.id = c.pole_to
+       WHERE c.tenant_id = ?
+       ORDER BY c.id`,
+      [tenantId]
+    );
+
+    // Phase 62: query equipment counts per pole for croqui symbols
+    const poleIds: number[] = poles.map((p: { id: number }) => p.id);
+    const eqRows = poleIds.length ? await db.all(
+      `SELECT pole_id, COUNT(*) AS qty FROM equipment WHERE pole_id IN (${poleIds.map(() => '?').join(',')}) GROUP BY pole_id`,
+      poleIds,
+    ) : [];
+    const eqByPole = new Map<number, number>(
+      eqRows.map((e: { pole_id: number; qty: number }) => [e.pole_id, e.qty]),
+    );
+
+    const svg = buildCroquiSvg(poles, conductors, tenant.name, eqByPole);
+
+    res.setHeader('Content-Type', 'text/xml; charset=utf-8');
+    res.setHeader('Content-Disposition', `inline; filename="croqui_tenant${tenantId}.svg"`);
+    res.send(svg);
+  } catch (err) {
+    console.error('Erro ao gerar croqui SVG:', err);
+    if (!res.headersSent) res.status(500).json({ error: 'Erro ao gerar croqui' });
+  }
+});
+
+// ── Phase 44: Relatório de Circuito (PDF Completo) ──────────────────────────
+
+/** AHI padrão usado no cálculo de média quando um poste não possui score registrado */
+const DEFAULT_AHI_SCORE = 100;
+
+/**
+ * GET /api/report/circuit/:circuitId
+ * Gera PDF técnico completo de um circuito: capa, postes, condutores e planos de manutenção.
+ */
+router.get('/circuit/:circuitId', rateLimit(5, 60_000), async (req: Request, res: Response) => {
+  const circuitId = parseInt(req.params.circuitId, 10);
+  if (isNaN(circuitId) || circuitId <= 0) {
+    return res.status(400).json({ error: 'ID de circuito inválido' });
+  }
+
+  try {
+    const db = await getDb();
+    const circuit = await db.get('SELECT * FROM circuits WHERE id = ?', [circuitId]);
+    if (!circuit) return res.status(404).json({ error: 'Circuito não encontrado' });
+
+    const tenant = await db.get('SELECT name FROM tenants WHERE id = ?', [circuit.tenant_id]);
+
+    const poles = await db.all(
+      `SELECT * FROM poles WHERE circuit_id = ? ORDER BY name ASC`,
+      [circuitId]
+    );
+
+    const conductors = await db.all(
+      `SELECT c.*, pf.name AS from_name, pt.name AS to_name
+       FROM conductors c
+       LEFT JOIN poles pf ON c.pole_from = pf.id
+       LEFT JOIN poles pt ON c.pole_to = pt.id
+       WHERE c.circuit_id = ? ORDER BY c.id ASC`,
+      [circuitId]
+    );
+
+    const poleIds = poles.map((p: { id: number }) => p.id);
+    const plans = poleIds.length
+      ? await db.all(
+          `SELECT mp.*, p.name AS pole_name FROM maintenance_plans mp
+           JOIN poles p ON mp.pole_id = p.id
+           WHERE mp.pole_id IN (${poleIds.map(() => '?').join(',')}) AND mp.status = 'PENDING'
+           ORDER BY p.ahi_score ASC LIMIT 50`,
+          poleIds
+        )
+      : [];
+
+    const avgAhi =
+      poles.length > 0
+        ? Math.round(poles.reduce((s: number, p: { ahi_score: number }) => s + (p.ahi_score ?? DEFAULT_AHI_SCORE), 0) / poles.length)
+        : DEFAULT_AHI_SCORE;
+    const totalLength = conductors.reduce(
+      (s: number, c: { computed_length_m: number; length_m: number }) =>
+        s + (c.computed_length_m ?? c.length_m ?? 0),
+      0
+    );
+
+    // ── Build PDF ──
+    const doc = new PDFDocument({ size: 'A4', margin: 40 });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="circuito_${circuitId}_relatorio.pdf"`
+    );
+    doc.pipe(res);
+
+    const DARK = '#1e293b';
+    const BLUE = '#3b82f6';
+    const GRAY = '#64748b';
+
+    // Cover
+    doc.rect(0, 0, doc.page.width, 80).fill(DARK);
+    doc.fillColor('white').fontSize(22).font('Helvetica-Bold').text('sisDRONE', 40, 22);
+    doc.fontSize(10).font('Helvetica').text('RELATÓRIO TÉCNICO DE CIRCUITO ELÉTRICO', 40, 48);
+    doc.text(
+      `Gerado em: ${new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`,
+      40, 62
+    );
+
+    doc.moveDown(3);
+    doc.fillColor(BLUE).fontSize(16).font('Helvetica-Bold')
+      .text(`Circuito: ${circuit.name}`, 40, 100);
+    doc.fillColor(GRAY).fontSize(9).font('Helvetica')
+      .text(
+        `Concessionária: ${tenant?.name ?? 'N/D'} | ID: ${circuit.id} | Postes: ${poles.length} | Condutores: ${conductors.length}`,
+        40, 120
+      );
+    doc.text(`AHI Médio: ${avgAhi} | Extensão Total: ${(totalLength / 1000).toFixed(2)} km`, 40, 132);
+    if (circuit.description) {
+      doc.text(`Descrição: ${circuit.description}`, 40, 144);
+    }
+
+    // Poles table
+    doc.moveDown(2);
+    doc.fillColor(DARK).fontSize(13).font('Helvetica-Bold').text('Postes do Circuito', { underline: true });
+    doc.moveDown(0.4);
+    if (poles.length === 0) {
+      doc.fillColor(GRAY).fontSize(10).font('Helvetica').text('Nenhum poste associado a este circuito.');
+    } else {
+      const COL = [40, 200, 290, 360, 430];
+      doc.fillColor(DARK).fontSize(9).font('Helvetica-Bold');
+      doc.text('Nome', COL[0], doc.y, { width: 150, continued: false });
+      const rowY = doc.y - 11;
+      doc.text('Material', COL[1], rowY, { width: 85 });
+      doc.text('Status', COL[2], rowY, { width: 65 });
+      doc.text('AHI', COL[3], rowY, { width: 65 });
+      doc.text('Estrutura', COL[4], rowY, { width: 100 });
+      doc.moveDown(0.2);
+      doc.moveTo(40, doc.y).lineTo(555, doc.y).strokeColor('#cbd5e1').stroke();
+      doc.moveDown(0.2);
+      doc.font('Helvetica').fontSize(8);
+      for (const p of poles) {
+        const y = doc.y;
+        doc.fillColor('#334155').text(p.name || `#${p.id}`, COL[0], y, { width: 155, continued: false });
+        doc.text(p.material || '—', COL[1], y, { width: 85 });
+        doc.text((p.status || '—').toUpperCase(), COL[2], y, { width: 65 });
+        doc.text(p.ahi_score != null ? String(p.ahi_score) : '—', COL[3], y, { width: 65 });
+        doc.text(p.structure_type || '—', COL[4], y, { width: 100 });
+        doc.moveDown(0.15);
+      }
+    }
+
+    // Conductors table
+    doc.moveDown(1.5);
+    doc.fillColor(DARK).fontSize(13).font('Helvetica-Bold').text('Condutores do Circuito', { underline: true });
+    doc.moveDown(0.4);
+    if (conductors.length === 0) {
+      doc.fillColor(GRAY).fontSize(10).font('Helvetica').text('Nenhum condutor associado a este circuito.');
+    } else {
+      const COL2 = [40, 160, 260, 340, 420];
+      doc.fillColor(DARK).fontSize(9).font('Helvetica-Bold');
+      doc.text('De', COL2[0], doc.y, { width: 115, continued: false });
+      const ry = doc.y - 11;
+      doc.text('Para', COL2[1], ry, { width: 95 });
+      doc.text('Tipo', COL2[2], ry, { width: 75 });
+      doc.text('Tensão (kV)', COL2[3], ry, { width: 75 });
+      doc.text('Comprimento (m)', COL2[4], ry, { width: 120 });
+      doc.moveDown(0.2);
+      doc.moveTo(40, doc.y).lineTo(555, doc.y).strokeColor('#cbd5e1').stroke();
+      doc.moveDown(0.2);
+      doc.font('Helvetica').fontSize(8);
+      for (const c of conductors) {
+        const y = doc.y;
+        const lenM = c.computed_length_m ?? c.length_m;
+        doc.fillColor('#334155').text(c.from_name || `P#${c.pole_from}`, COL2[0], y, { width: 115 });
+        doc.text(c.to_name || `P#${c.pole_to}`, COL2[1], y, { width: 95 });
+        doc.text((c.network_type || c.cable_type || '—').toUpperCase(), COL2[2], y, { width: 75 });
+        doc.text(c.voltage_kv != null ? String(c.voltage_kv) : '—', COL2[3], y, { width: 75 });
+        doc.text(lenM != null ? lenM.toFixed(1) : '—', COL2[4], y, { width: 120 });
+        doc.moveDown(0.15);
+      }
+    }
+
+    // Maintenance plans
+    if (plans.length > 0) {
+      doc.moveDown(1.5);
+      doc.fillColor(DARK).fontSize(13).font('Helvetica-Bold').text('Planos de Manutenção Ativos', { underline: true });
+      doc.moveDown(0.4);
+      doc.font('Helvetica').fontSize(8).fillColor('#334155');
+      for (const pl of plans) {
+        doc.text(`[${pl.pole_name}] ${pl.plan_text?.split('\n')[0] ?? '—'} — R$ ${pl.estimated_cost?.toFixed(2) ?? '—'}`);
+        doc.moveDown(0.2);
+      }
+    }
+
+    doc.end();
+  } catch (err) {
+    console.error('Erro ao gerar relatório de circuito:', err);
+    if (!res.headersSent) res.status(500).json({ error: 'Erro ao gerar relatório de circuito' });
+  }
+});
+
 export default router;
+

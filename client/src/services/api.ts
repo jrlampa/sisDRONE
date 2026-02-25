@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Tenant, User, WorkOrder, Pole, AnalysisResult, PoleSummary } from '../types';
+import type { Tenant, User, WorkOrder, Pole, AnalysisResult, PoleSummary, AuditLogEntry, MeasurementResult } from '../types';
 import type { Prediction } from '../types/prediction';
 import { addToQueue } from '../utils/offlineQueue';
 
@@ -88,6 +88,10 @@ export const api = {
   deleteInspection: (id: number) => axios.delete<{ message: string; id: number }>(`${API_BASE}/api/inspections/${id}`),
   getInspections: (poleId?: number, page = 1, limit = 50, source?: string) =>
     axios.get(`${API_BASE}/api/inspections`, { params: { ...(poleId ? { pole_id: poleId } : {}), page, limit, ...(source ? { source } : {}) } }),
+  createManualInspection: (data: {
+    pole_id: number; condition: string; notes?: string; inspector_name?: string;
+    network_level?: string; structure_config?: string; phase_config?: string; num_arms?: number;
+  }) => axios.post(`${API_BASE}/api/inspections/manual`, data),
   getPoleWorkOrders: (poleId: number) =>
     axios.get<{ pole_id: number; count: number; work_orders: WorkOrder[] }>(`${API_BASE}/api/poles/${poleId}/work-orders`),
   createPole: (data: { lat: number, lng: number, name: string, utm_x: string, utm_y: string, tenant_id: number }) =>
@@ -162,4 +166,227 @@ export const api = {
   // PDF Report
   getPoleReportUrl: (poleId: number) =>
     `${API_BASE}/api/report/pole/${poleId}`,
+
+  // Condutores Elétricos (Phase 29/32)
+  getConductors: (params?: { tenant_id?: number; pole_id?: number }) =>
+    axios.get<{ count: number; conductors: import('../types').Conductor[] }>(`${API_BASE}/api/conductors`, { params }),
+  getConductor: (id: number) =>
+    axios.get<import('../types').Conductor>(`${API_BASE}/api/conductors/${id}`),
+  createConductor: (data: {
+    pole_from: number; pole_to: number;
+    network_type?: 'MT' | 'BT' | 'ramal';
+    cable_type?: string; voltage_kv?: number; length_m?: number; notes?: string; tenant_id?: number;
+  }) => axios.post<import('../types').Conductor>(`${API_BASE}/api/conductors`, data),
+  updateConductor: (id: number, data: {
+    network_type?: 'MT' | 'BT' | 'ramal'; cable_type?: string;
+    voltage_kv?: number; length_m?: number; notes?: string;
+  }) => axios.put<import('../types').Conductor>(`${API_BASE}/api/conductors/${id}`, data),
+  deleteConductor: (id: number) =>
+    axios.delete<{ message: string; id: number }>(`${API_BASE}/api/conductors/${id}`),
+
+  // Rede Elétrica — Topologia (Phase 30)
+  getNetworkGraph: (tenantId?: number) =>
+    axios.get<import('../types').NetworkGraph>(`${API_BASE}/api/network/graph`, { params: tenantId ? { tenant_id: tenantId } : {} }),
+  getNetworkSegments: (tenantId?: number) =>
+    axios.get<{ segment_count: number; segments: import('../types').NetworkSegment[] }>(`${API_BASE}/api/network/segments`, { params: tenantId ? { tenant_id: tenantId } : {} }),
+  getNetworkIsolated: (tenantId?: number) =>
+    axios.get<{ count: number; poles: import('../types').Pole[] }>(`${API_BASE}/api/network/isolated`, { params: tenantId ? { tenant_id: tenantId } : {} }),
+  getVoltageDrop: (tenantId?: number) =>
+    axios.get<{ total: number; summary: { critical: number; warning: number; ok: number }; conductors: unknown[] }>(
+      `${API_BASE}/api/network/voltage-drop`, { params: tenantId ? { tenant_id: tenantId } : {} }
+    ),
+
+  // Croqui Digital SVG (Phase 31)
+  getCroquiUrl: (tenantId: number) =>
+    `${API_BASE}/api/report/croqui/${tenantId}`,
+
+  // AHI History — Série Temporal (Phase 34)
+  getAhiHistory: (poleId: number, limit = 30) =>
+    axios.get<{ pole_id: number; count: number; history: { id: number; ahi_score: number; recorded_at: string }[] }>(
+      `${API_BASE}/api/poles/${poleId}/ahi-history`, { params: { limit } }
+    ),
+
+  // CSV Import (Phase 36)
+  importPolesCSV: (csvText: string) =>
+    axios.post<{ imported: number; errors: { line: number; reason: string }[] }>(
+      `${API_BASE}/api/poles/import/csv`, csvText,
+      { headers: { 'Content-Type': 'text/csv' } }
+    ),
+
+  // Circuits (Phase 41)
+  getCircuits: (tenantId?: number) =>
+    axios.get<{ count: number; circuits: { id: number; name: string; description: string | null; color: string; tenant_id: number }[] }>(
+      `${API_BASE}/api/circuits`, { params: tenantId ? { tenant_id: tenantId } : {} }
+    ),
+  createCircuit: (data: { name: string; description?: string; color?: string; tenant_id: number }) =>
+    axios.post<{ id: number; name: string; color: string }>(`${API_BASE}/api/circuits`, data),
+  getCircuitStats: (circuitId: number) =>
+    axios.get<{ circuit_id: number; total_poles: number; avg_ahi: number | null; total_conductors: number; total_length_km: number }>(
+      `${API_BASE}/api/circuits/${circuitId}/stats`
+    ),
+  updateCircuit: (id: number, data: { name?: string; description?: string; color?: string }) =>
+    axios.put<{ id: number; name: string }>(`${API_BASE}/api/circuits/${id}`, data),
+  deleteCircuit: (id: number) =>
+    axios.delete<{ id: number }>(`${API_BASE}/api/circuits/${id}`),
+
+  // Topology Validation (Phase 42)
+  getNetworkValidation: (tenantId?: number) =>
+    axios.get<{
+      node_count: number; edge_count: number; is_valid: boolean;
+      loops: number[][]; dead_ends: number[]; isolated: number[];
+      duplicate_spans: Array<{ conductor_ids: number[]; pole_from: number; pole_to: number }>;
+      loops_count: number; dead_ends_count: number; isolated_count: number; duplicates_count: number;
+    }>(`${API_BASE}/api/network/validate`, { params: tenantId ? { tenant_id: tenantId } : {} }),
+
+  // Failure Simulation (Phase 47)
+  simulatePoleFailure: (poleId: number, tenantId?: number) =>
+    axios.get<import('../types').FailureSimulationResult>(
+      `${API_BASE}/api/network/simulate-failure`,
+      { params: { pole_id: poleId, ...(tenantId ? { tenant_id: tenantId } : {}) } }
+    ),
+  simulateConductorFailure: (conductorId: number, tenantId?: number) =>
+    axios.get<import('../types').FailureSimulationResult>(
+      `${API_BASE}/api/network/simulate-failure`,
+      { params: { conductor_id: conductorId, ...(tenantId ? { tenant_id: tenantId } : {}) } }
+    ),
+
+  // Admin Overview (Phase 43)
+  getAdminOverview: () =>
+    axios.get<import('../types').AdminOverviewData>(`${API_BASE}/api/admin/overview`),
+  getAdminTenantsStats: () =>
+    axios.get<{ count: number; stats: import('../types').TenantStats[] }>(`${API_BASE}/api/admin/tenants/stats`),
+
+  // KPIs Executivos (Phase 49)
+  getKpis: (params?: { tenant_id?: number; period_days?: number }) =>
+    axios.get<import('../types').KpiData>(`${API_BASE}/api/kpis`, { params }),
+
+  // Timeline de Inspeções (Phase 45)
+  getPoleTimeline: (poleId: number) =>
+    axios.get<{ pole_id: number; count: number; timeline: import('../types').TimelineEntry[] }>(
+      `${API_BASE}/api/poles/${poleId}/timeline`
+    ),
+
+  // Geocodificação Reversa (Phase 46)
+  getPoleAddress: (poleId: number) =>
+    axios.get<{ pole_id: number; address: import('../types').GeoAddress; cached: boolean }>(
+      `${API_BASE}/api/poles/${poleId}/address`
+    ),
+
+  // Bundle Offline (Phase 48 backend)
+  getOfflineBundle: (tenantId?: number) =>
+    axios.get(`${API_BASE}/api/offline-bundle`, {
+      params: tenantId ? { tenant_id: tenantId } : {},
+      responseType: 'arraybuffer',
+    }),
+
+  // GIS Export Aprimorado (Phase 51)
+  exportGeoJSON: (params?: { tenant_id?: number; circuit_id?: number; ahi_max?: number }) =>
+    axios.get<object>(`${API_BASE}/api/gis/export/geojson`, { params }),
+  getKmlUrl: (tenantId?: number): string =>
+    `${API_BASE}/api/gis/export/kml${tenantId ? `?tenant_id=${tenantId}` : ''}`,
+
+  // Audit Log (Phase 50)
+  getAdminAuditLog: (params?: {
+    entity_type?: string;
+    action?: string;
+    user_id?: number;
+    limit?: number;
+    offset?: number;
+  }) =>
+    axios.get<{ total: number; limit: number; offset: number; rows: AuditLogEntry[] }>(
+      `${API_BASE}/api/admin/audit-log`,
+      { params }
+    ).then(r => r.data),
+
+  // Medição Geoespacial (Phase 52)
+  measureDistance: (points: [number, number][]) =>
+    axios.post<MeasurementResult>(`${API_BASE}/api/geo/measure`, { points })
+      .then(r => r.data),
+
+  // Equipamentos por Poste (Phase 53)
+  getEquipment: (params?: { pole_id?: number; tenant_id?: number; type?: string; status?: string }) =>
+    axios.get<{ count: number; equipment: import('../types').Equipment[] }>(`${API_BASE}/api/equipment`, { params }),
+  createEquipment: (data: {
+    pole_id: number; tenant_id?: number; type: import('../types').EquipmentType;
+    brand?: string; model?: string; serial_number?: string;
+    installation_date?: string; status?: import('../types').EquipmentStatus; notes?: string;
+  }) => axios.post<import('../types').Equipment>(`${API_BASE}/api/equipment`, data),
+  updateEquipment: (id: number, data: {
+    type?: import('../types').EquipmentType; brand?: string; model?: string;
+    serial_number?: string; installation_date?: string;
+    status?: import('../types').EquipmentStatus; notes?: string;
+  }) => axios.put<import('../types').Equipment>(`${API_BASE}/api/equipment/${id}`, data),
+  deleteEquipment: (id: number) =>
+    axios.delete<{ message: string; id: number }>(`${API_BASE}/api/equipment/${id}`),
+
+  // Roteiro de Inspeção Drone (Phase 55)
+  getDroneRoute: (tenantId: number, startLat?: number, startLng?: number) =>
+    axios.get<import('../types').DroneRoute>(`${API_BASE}/api/drones/route`, {
+      params: { tenant_id: tenantId, start_lat: startLat, start_lng: startLng },
+    }),
+  getDroneRouteKmlUrl: (tenantId: number) =>
+    `${API_BASE}/api/drones/route/kml?tenant_id=${tenantId}`,
+
+  // Upload de Fotos de Campo (Phase 56)
+  uploadPolePhoto: (poleId: number, image: string, mimeType: string, label?: string) =>
+    axios.post<import('../types').FieldPhoto>(`${API_BASE}/api/poles/${poleId}/photos`, {
+      image,
+      mime_type: mimeType,
+      label,
+    }),
+
+  // Resumo Executivo do Projeto (Phase 57)
+  getProjectSummaryUrl: (tenantId: number) =>
+    `${API_BASE}/api/report/project-summary?tenant_id=${tenantId}`,
+
+  // Levantamento Estruturado CSV (Phase 61)
+  getLevantamentoUrl: (tenantId: number, circuitId?: number) => {
+    const params = new URLSearchParams({ tenant_id: String(tenantId) });
+    if (circuitId) params.set('circuit_id', String(circuitId));
+    return `${API_BASE}/api/report/levantamento?${params.toString()}`;
+  },
+
+  // Wizard de Levantamento em Campo (Phase 63)
+  createInspectionWizard: (data: {
+    tenant_id: number;
+    lat: number;
+    lng: number;
+    name?: string;
+    material?: string;
+    network_level?: string;
+    structure_config?: string;
+    phase_config?: string;
+    num_arms?: number;
+    height?: number;
+    condition: string;
+    notes?: string;
+    inspector_name?: string;
+    equipment?: { type: string; brand?: string; model?: string; serial_number?: string }[];
+  }) =>
+    axios.post<{ pole_id: number; label_id: number; equipment_ids: number[]; message: string }>(
+      `${API_BASE}/api/inspection/wizard`,
+      data,
+    ),
+
+  // Relação de Materiais / BOM (Phase 64)
+  getBom: (params: { tenant_id?: number; circuit_id?: number }) =>
+    axios.get<import('../types').BomReport>(`${API_BASE}/api/report/bom`, { params }),
+
+  getBomCsvUrl: (tenantId: number, circuitId?: number) => {
+    const p = new URLSearchParams({ tenant_id: String(tenantId), format: 'csv' });
+    if (circuitId) p.set('circuit_id', String(circuitId));
+    return `${API_BASE}/api/report/bom?${p.toString()}`;
+  },
+
+  // Saúde de Circuito (Phase 65)
+  getCircuitHealth: (circuitId: number) =>
+    axios.get<import('../types').CircuitHealthReport>(`${API_BASE}/api/circuits/${circuitId}/health`),
+
+  // Agrupamento Espacial de Postes (Phase 66)
+  getPoleClusters: (params: { tenant_id?: number; radius_m: number }) =>
+    axios.get<import('../types').PoleClusters>(`${API_BASE}/api/poles/clusters`, { params }),
 };
+
+// Named exports for direct import in hooks/components
+export const { getAdminAuditLog, measureDistance, exportGeoJSON, getKmlUrl } = api;
+export type { AuditLogEntry, MeasurementResult };

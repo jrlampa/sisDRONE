@@ -18,8 +18,25 @@ import videoRouter from './routes/videoRoutes';
 import aneelRouter from './routes/aneelRoutes';
 import bimRouter from './routes/bimRoutes';
 import reportRouter from './routes/reportRoutes';
+import conductorsRouter from './routes/conductors';
+import networkRouter from './routes/networkRoutes';
+import circuitsRouter from './routes/circuitsRoutes';
+import adminRouter from './routes/adminRoutes';
+import kpiRouter from './routes/kpiRoutes';
+import offlineBundleRouter from './routes/offlineBundle';
+import swaggerRouter from './routes/swaggerRoutes';
+import geoMeasureRouter from './routes/geoMeasure';
+import equipmentRouter from './routes/equipmentRoutes';
+import droneRouter from './routes/droneRoutes';
+import photoRouter from './routes/photoRoutes';
+import projectSummaryRouter from './routes/projectSummaryReport';
+import levantamentoRouter from './routes/levantamento';
+import bomReportRouter from './routes/bomReport';
+import circuitHealthRouter from './routes/circuitHealth';
+import inspectionWizardRouter from './routes/inspectionWizard';
 import { checkPermission } from './middleware/auth';
 import { rateLimit } from './middleware/rateLimit';
+import { auditLog } from './middleware/auditLog';
 import { getDb } from './db';
 
 dotenv.config();
@@ -32,6 +49,7 @@ const app = express();
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
+app.use(auditLog);
 
 app.get('/health', rateLimit(60, 60_000), async (_req, res) => {
   try {
@@ -68,6 +86,22 @@ app.use('/api/video', videoRouter);
 app.use('/api/aneel', aneelRouter);
 app.use('/api/bim', bimRouter);
 app.use('/api/report', reportRouter);
+app.use('/api/conductors', conductorsRouter);
+app.use('/api/network', networkRouter);
+app.use('/api/circuits', circuitsRouter);
+app.use('/api/admin', adminRouter);
+app.use('/api/kpis', kpiRouter);
+app.use('/api/offline-bundle', offlineBundleRouter);
+app.use('/api/docs', swaggerRouter);
+app.use('/api/geo', geoMeasureRouter);
+app.use('/api/equipment', equipmentRouter);
+app.use('/api/drones', droneRouter);
+app.use('/api/poles', photoRouter);
+app.use('/api/report', projectSummaryRouter);
+app.use('/api/report/levantamento', levantamentoRouter);
+app.use('/api/report/bom', bomReportRouter);
+app.use('/api/circuits', circuitHealthRouter);
+app.use('/api/inspection/wizard', inspectionWizardRouter);
 
 // Legacy inspect routes: /api/analyze, /api/feedback, /api/:id/history
 // MUST be last: /:id wildcard would shadow all /api/* routes if registered earlier

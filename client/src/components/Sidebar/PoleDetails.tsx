@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MapPin, Upload, FileText, Loader, Download, Edit2, Trash2, X } from 'lucide-react';
+import { MapPin, Upload, FileText, Download, Edit2, Trash2, X } from 'lucide-react';
 import { api } from '../../services/api';
 import type { Pole, AnalysisResult, User } from '../../types';
 import WorkOrderModal from '../WorkOrders/WorkOrderModal';
@@ -8,6 +8,8 @@ import ConfirmDialog from '../ConfirmDialog';
 import PoleAnalysisResult from './PoleAnalysisResult';
 import PoleEditForm from './PoleEditForm';
 import PoleImages from './PoleImages';
+import AhiHistoryChart from './AhiHistoryChart';
+import InspectionTimeline from './InspectionTimeline';
 import { useToast } from '../../hooks/useToast';
 import { useConfirm } from '../../hooks/useConfirm';
 import { usePoleSummary } from '../../hooks/usePoleSummary';
@@ -186,6 +188,43 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
               </div>
             </div>
             <div className="utm-line"><strong>UTM:</strong> {pole.utm_x}, {pole.utm_y}</div>
+
+            {/* Classificação MT/BT (Phase 54) */}
+            {(pole.network_level || pole.structure_config || pole.phase_config) && (
+              <div className="mt-2 pt-2 border-t border-light/10">
+                <p className="text-xs uppercase tracking-wider text-muted font-bold mb-1">Classificação Estrutural</p>
+                <div className="stats-row">
+                  {pole.network_level && (
+                    <div className="stat-item">
+                      <span className="stat-label">Nível</span>
+                      <span className={`stat-value font-bold ${pole.network_level === 'MT' ? 'text-warning' : 'text-accent'}`}>
+                        {pole.network_level}
+                      </span>
+                    </div>
+                  )}
+                  {pole.structure_config && (
+                    <div className="stat-item">
+                      <span className="stat-label">Configuração</span>
+                      <span className="stat-value text-xs capitalize">{pole.structure_config}</span>
+                    </div>
+                  )}
+                  {pole.phase_config && (
+                    <div className="stat-item">
+                      <span className="stat-label">Fase</span>
+                      <span className="stat-value">
+                        {pole.phase_config === 'M' ? 'Monofásico' : pole.phase_config === 'B' ? 'Bifásico' : 'Trifásico'}
+                      </span>
+                    </div>
+                  )}
+                  {pole.num_arms !== undefined && pole.num_arms > 0 && (
+                    <div className="stat-item">
+                      <span className="stat-label">Braços</span>
+                      <span className="stat-value">{pole.num_arms}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </>
         )}
 
@@ -224,6 +263,17 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
               )}
             </div>
           )}
+
+          {/* AHI History (Phase 34) */}
+          <div className="mt-3">
+            <AhiHistoryChart poleId={pole.id} limit={10} />
+          </div>
+
+          {/* Timeline de Inspeções (Phase 45) */}
+          <div className="mt-4 pt-3 border-t border-light/10">
+            <p className="text-xs uppercase tracking-wider text-muted font-bold mb-3">Timeline de Eventos</p>
+            <InspectionTimeline poleId={pole.id} />
+          </div>
         </div>
 
         {/* Prediction Section */}

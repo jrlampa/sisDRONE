@@ -54,6 +54,14 @@ router.post('/plan', rateLimit(10, 60_000), async (req, res) => {
     const ahi = calculateAHI(pole, analysis);
     await db.run('UPDATE poles SET ahi_score = ? WHERE id = ?', [ahi, safePoleId]);
 
+    // Record AHI snapshot for time-series history (Phase 34)
+    if (safePoleId && pole) {
+      await db.run(
+        'INSERT INTO ahi_history (pole_id, tenant_id, ahi_score) VALUES (?, ?, ?)',
+        [safePoleId, pole.tenant_id ?? 1, ahi]
+      );
+    }
+
     const result = await db.run(
       'INSERT INTO maintenance_plans (pole_id, plan_text, status, estimated_cost) VALUES (?, ?, ?, ?)',
       [safePoleId, planText, 'PENDING', estimatedCost]

@@ -1,9 +1,11 @@
 import dotenv from 'dotenv';
 dotenv.config();
 import http from 'http';
+import type { IncomingMessage } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
 import app from './app';
 import { getDb } from './db';
+import { registerConnection, unregisterConnection } from './services/notificationService';
 
 const PORT = process.env.PORT || 3001;
 
@@ -45,9 +47,27 @@ async function startServer() {
       });
     });
 
+    // WebSocket server for push notifications (per-tenant)
+    const wssNotify = new WebSocketServer({ server, path: '/ws/notifications' });
+
+    wssNotify.on('connection', (ws: WebSocket, req: IncomingMessage) => {
+      const url = new URL(req.url ?? '', `http://localhost:${PORT}`);
+      const tenantId = parseInt(url.searchParams.get('tenant_id') ?? '1', 10);
+      const safeTenantId = isNaN(tenantId) || tenantId <= 0 ? 1 : tenantId;
+
+      registerConnection(safeTenantId, ws);
+      console.log(`[WS:notify] Tenant ${safeTenantId} client connected`);
+
+      ws.on('close', () => {
+        unregisterConnection(safeTenantId, ws);
+        console.log(`[WS:notify] Tenant ${safeTenantId} client disconnected`);
+      });
+    });
+
     server.listen(PORT, () => {
       console.log(`Server running at http://localhost:${PORT}`);
       console.log(`WebSocket telemetry at ws://localhost:${PORT}/ws/drone`);
+      console.log(`WebSocket notifications at ws://localhost:${PORT}/ws/notifications`);
     });
   } catch (err) {
     console.error('Failed to start server:', err);

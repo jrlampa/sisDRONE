@@ -2,6 +2,8 @@ import { Router, Request, Response } from 'express';
 import { getDb } from '../db';
 import { rateLimit } from '../middleware/rateLimit';
 import { haversineMeters } from '../utils/geo';
+import { cache } from '../utils/cache';
+import { reverseGeocode } from '../services/geocodeService';
 
 const router = Router();
 
@@ -65,7 +67,8 @@ router.get('/', rateLimit(100, 60_000), async (req: Request, res: Response) => {
 
 // POST new pole
 router.post('/', rateLimit(30, 60_000), async (req: Request, res: Response) => {
-  const { lat, lng, name, utm_x, utm_y, tenant_id } = req.body;
+  const { lat, lng, name, utm_x, utm_y, tenant_id,
+          network_level, structure_config, phase_config, num_arms } = req.body;
 
   // Input validation
   if (typeof lat !== 'number' || typeof lng !== 'number') {
@@ -75,16 +78,42 @@ router.post('/', rateLimit(30, 60_000), async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Coordenadas fora do intervalo válido' });
   }
 
-  const safeName = String(name || `Poste Sem Nome`).slice(0, 100);
-  const safeTenantId = Number(tenant_id) || 1;
+  const VALID_NETWORK_LEVELS = ['MT', 'BT', 'AT'];
+  const VALID_STRUCTURE_CONFIGS = ['tangente', 'angulo', 'derivacao', 'seccionamento', 'terminal', 'passagem'];
+  const VALID_PHASE_CONFIGS = ['M', 'B', 'T'];
+
+  if (network_level && !VALID_NETWORK_LEVELS.includes(network_level)) {
+    return res.status(400).json({ error: `network_level inválido. Use: ${VALID_NETWORK_LEVELS.join(', ')}` });
+  }
+  if (structure_config && !VALID_STRUCTURE_CONFIGS.includes(structure_config)) {
+    return res.status(400).json({ error: `structure_config inválido. Use: ${VALID_STRUCTURE_CONFIGS.join(', ')}` });
+  }
+  if (phase_config && !VALID_PHASE_CONFIGS.includes(phase_config)) {
+    return res.status(400).json({ error: `phase_config inválido. Use: ${VALID_PHASE_CONFIGS.join(', ')}` });
+  }
+
+  const safeName      = String(name || `Poste Sem Nome`).slice(0, 100);
+  const safeTenantId  = Number(tenant_id) || 1;
+  const safeNetLevel  = network_level    ? String(network_level).slice(0, 5)  : 'BT';
+  const safeStructCfg = structure_config ? String(structure_config).slice(0, 30) : null;
+  const safePhase     = phase_config     ? String(phase_config).slice(0, 2)   : null;
+  const safeNumArms   = num_arms !== undefined ? Math.max(0, parseInt(String(num_arms), 10) || 0) : 0;
 
   try {
     const db = await getDb();
     const result = await db.run(
-      'INSERT INTO poles (name, lat, lng, utm_x, utm_y, tenant_id) VALUES (?, ?, ?, ?, ?, ?)',
-      [safeName, lat, lng, utm_x || null, utm_y || null, safeTenantId]
+      `INSERT INTO poles
+         (name, lat, lng, utm_x, utm_y, tenant_id, network_level, structure_config, phase_config, num_arms)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [safeName, lat, lng, utm_x || null, utm_y || null, safeTenantId,
+       safeNetLevel, safeStructCfg, safePhase, safeNumArms]
     );
-    res.json({ id: result.lastID, name: safeName, lat, lng, utm_x, utm_y, tenant_id: safeTenantId });
+    cache.invalidate('poles.'); // invalidate stats & heatmap cache
+    res.json({
+      id: result.lastID, name: safeName, lat, lng, utm_x, utm_y, tenant_id: safeTenantId,
+      network_level: safeNetLevel, structure_config: safeStructCfg,
+      phase_config: safePhase, num_arms: safeNumArms,
+    });
   } catch (err) {
     res.status(500).json({ error: 'Falha ao criar poste' });
   }
@@ -168,6 +197,34 @@ router.get('/:id/history', rateLimit(60, 60_000), async (req: Request, res: Resp
   }
 });
 
+// GET AHI history (série temporal) for a pole — Phase 34
+router.get('/:id/ahi-history', rateLimit(60, 60_000), async (req: Request, res: Response) => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json({ error: 'ID de poste inválido' });
+  }
+  const limit = Math.min(parseInt(String(req.query.limit ?? '30'), 10) || 30, 100);
+
+  try {
+    const db = await getDb();
+    const pole = await db.get('SELECT id FROM poles WHERE id = ?', [id]);
+    if (!pole) return res.status(404).json({ error: 'Poste não encontrado' });
+
+    const history = await db.all(
+      `SELECT id, pole_id, ahi_score, recorded_at
+       FROM ahi_history
+       WHERE pole_id = ?
+       ORDER BY recorded_at DESC
+       LIMIT ?`,
+      [id, limit]
+    );
+    res.json({ pole_id: id, count: history.length, history });
+  } catch (err) {
+    console.error('Erro ao buscar histórico AHI:', err);
+    res.status(500).json({ error: 'Erro ao buscar histórico AHI' });
+  }
+});
+
 // GET condensed summary for a pole: AHI + last inspection + active maintenance plan
 router.get('/:id/summary', rateLimit(120, 60_000), async (req: Request, res: Response) => {
   const id = parseInt(String(req.params.id), 10);
@@ -238,6 +295,77 @@ router.get('/:id/work-orders', rateLimit(60, 60_000), async (req: Request, res: 
   }
 });
 
+// GET timeline of events for a pole (Phase 45 — inspections + AHI snapshots, sorted by date DESC)
+router.get('/:id/timeline', rateLimit(60, 60_000), async (req: Request, res: Response) => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json({ error: 'ID de poste inválido' });
+  }
+  try {
+    const db = await getDb();
+    const pole = await db.get('SELECT id FROM poles WHERE id = ?', [id]);
+    if (!pole) return res.status(404).json({ error: 'Poste não encontrado' });
+
+    const inspections = await db.all(
+      `SELECT l.id, 'inspection' as type, l.label, l.confidence, l.source,
+              l.created_at as date, i.file_path
+       FROM labels l LEFT JOIN images i ON l.image_id = i.id
+       WHERE l.pole_id = ? ORDER BY l.created_at DESC`,
+      [id]
+    );
+
+    const ahiRows = await db.all(
+      `SELECT id, ahi_score, recorded_at as date
+       FROM ahi_history WHERE pole_id = ? ORDER BY recorded_at DESC`,
+      [id]
+    );
+
+    // Compute delta_ahi = current - previous (positive = improvement)
+    const ahiEntries = ahiRows.map((row, idx) => {
+      const older = ahiRows[idx + 1];
+      return {
+        type: 'ahi_snapshot' as const,
+        date: row.date,
+        id: row.id,
+        ahi_score: row.ahi_score,
+        delta_ahi: older != null ? (row.ahi_score - older.ahi_score) : null,
+      };
+    });
+
+    const timeline = [...inspections, ...ahiEntries]
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    res.json({ pole_id: id, count: timeline.length, timeline });
+  } catch (err) {
+    console.error('Erro ao buscar timeline do poste:', err);
+    res.status(500).json({ error: 'Erro ao buscar timeline do poste' });
+  }
+});
+
+// GET reverse-geocoded address for a pole (Phase 46 — Nominatim, cached in address_cache)
+router.get('/:id/address', rateLimit(10, 60_000), async (req: Request, res: Response) => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json({ error: 'ID de poste inválido' });
+  }
+  try {
+    const db = await getDb();
+    const pole = await db.get('SELECT id, lat, lng, address_cache FROM poles WHERE id = ?', [id]);
+    if (!pole) return res.status(404).json({ error: 'Poste não encontrado' });
+
+    if (pole.address_cache) {
+      return res.json({ pole_id: id, address: JSON.parse(pole.address_cache), cached: true });
+    }
+
+    const address = await reverseGeocode(pole.lat, pole.lng);
+    await db.run('UPDATE poles SET address_cache = ? WHERE id = ?', [JSON.stringify(address), id]);
+    res.json({ pole_id: id, address, cached: false });
+  } catch (err) {
+    console.error('Erro ao geocodificar poste:', err);
+    res.status(502).json({ error: 'Erro ao buscar endereço: serviço externo indisponível' });
+  }
+});
+
 // GET single pole by id (must be after all named GET routes)
 router.get('/:id', rateLimit(120, 60_000), async (req: Request, res: Response) => {
   const id = parseInt(String(req.params.id), 10);
@@ -260,29 +388,55 @@ router.put('/:id', rateLimit(60, 60_000), async (req: Request, res: Response) =>
   if (isNaN(id) || id <= 0) {
     return res.status(400).json({ error: 'id inválido' });
   }
-  const { name, material, height, structure_type, status } = req.body;
+  const { name, material, height, structure_type, status,
+          network_level, structure_config, phase_config, num_arms } = req.body;
+
   const VALID_STATUSES = ['pending', 'inspected', 'maintenance', 'critical', 'ok'];
+  const VALID_NETWORK_LEVELS = ['MT', 'BT', 'AT'];
+  const VALID_STRUCTURE_CONFIGS = ['tangente', 'angulo', 'derivacao', 'seccionamento', 'terminal', 'passagem'];
+  const VALID_PHASE_CONFIGS = ['M', 'B', 'T'];
+
   if (status && !VALID_STATUSES.includes(status)) {
     return res.status(400).json({ error: `status inválido. Use: ${VALID_STATUSES.join(', ')}` });
   }
-  const safeName = name ? String(name).slice(0, 100) : undefined;
-  const safeMaterial = material ? String(material).slice(0, 50) : undefined;
-  const safeHeight = height !== undefined ? Number(height) : undefined;
-  const safeStructureType = structure_type ? String(structure_type).slice(0, 50) : undefined;
+  if (network_level !== undefined && !VALID_NETWORK_LEVELS.includes(network_level)) {
+    return res.status(400).json({ error: `network_level inválido. Use: ${VALID_NETWORK_LEVELS.join(', ')}` });
+  }
+  if (structure_config !== undefined && structure_config !== null && !VALID_STRUCTURE_CONFIGS.includes(structure_config)) {
+    return res.status(400).json({ error: `structure_config inválido. Use: ${VALID_STRUCTURE_CONFIGS.join(', ')}` });
+  }
+  if (phase_config !== undefined && phase_config !== null && !VALID_PHASE_CONFIGS.includes(phase_config)) {
+    return res.status(400).json({ error: `phase_config inválido. Use: ${VALID_PHASE_CONFIGS.join(', ')}` });
+  }
+
+  const safeName        = name          ? String(name).slice(0, 100)          : undefined;
+  const safeMaterial    = material      ? String(material).slice(0, 50)        : undefined;
+  const safeHeight      = height !== undefined ? Number(height)                : undefined;
+  const safeStructType  = structure_type ? String(structure_type).slice(0, 50) : undefined;
+  const safeNetLevel    = network_level !== undefined ? String(network_level).slice(0, 5) : undefined;
+  const safeStructCfg   = structure_config !== undefined ? (structure_config === null ? null : String(structure_config).slice(0, 30)) : undefined;
+  const safePhase       = phase_config  !== undefined ? (phase_config === null ? null : String(phase_config).slice(0, 2)) : undefined;
+  const safeNumArms     = num_arms     !== undefined ? Math.max(0, parseInt(String(num_arms), 10) || 0) : undefined;
+
   try {
     const db = await getDb();
     const pole = await db.get('SELECT id FROM poles WHERE id = ?', [id]);
     if (!pole) return res.status(404).json({ error: 'Poste não encontrado' });
     const updates: string[] = [];
     const params: unknown[] = [];
-    if (safeName !== undefined) { updates.push('name = ?'); params.push(safeName); }
-    if (safeMaterial !== undefined) { updates.push('material = ?'); params.push(safeMaterial); }
+    if (safeName !== undefined)      { updates.push('name = ?');           params.push(safeName); }
+    if (safeMaterial !== undefined)  { updates.push('material = ?');       params.push(safeMaterial); }
     if (safeHeight !== undefined && !isNaN(safeHeight)) { updates.push('height = ?'); params.push(safeHeight); }
-    if (safeStructureType !== undefined) { updates.push('structure_type = ?'); params.push(safeStructureType); }
-    if (status) { updates.push('status = ?'); params.push(status); }
+    if (safeStructType !== undefined) { updates.push('structure_type = ?'); params.push(safeStructType); }
+    if (status)                      { updates.push('status = ?');         params.push(status); }
+    if (safeNetLevel !== undefined)  { updates.push('network_level = ?');  params.push(safeNetLevel); }
+    if (safeStructCfg !== undefined) { updates.push('structure_config = ?'); params.push(safeStructCfg); }
+    if (safePhase !== undefined)     { updates.push('phase_config = ?');   params.push(safePhase); }
+    if (safeNumArms !== undefined)   { updates.push('num_arms = ?');       params.push(safeNumArms); }
     if (updates.length === 0) return res.status(400).json({ error: 'Nenhum campo para atualizar' });
     params.push(id);
     await db.run(`UPDATE poles SET ${updates.join(', ')} WHERE id = ?`, params);
+    cache.invalidate('poles.'); // invalidate stats & heatmap cache
     const updated = await db.get('SELECT * FROM poles WHERE id = ?', [id]);
     res.json(updated);
   } catch (err) {
@@ -307,6 +461,7 @@ router.delete('/:id', rateLimit(30, 60_000), async (req: Request, res: Response)
     await db.run('DELETE FROM work_orders WHERE pole_id = ?', [id]);
     await db.run('DELETE FROM video_sessions WHERE pole_id = ?', [id]);
     await db.run('DELETE FROM poles WHERE id = ?', [id]);
+    cache.invalidate('poles.'); // invalidate stats & heatmap cache
     res.json({ message: 'Poste removido com sucesso', id });
   } catch (err) {
     res.status(500).json({ error: 'Erro interno no servidor' });

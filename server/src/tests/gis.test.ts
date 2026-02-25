@@ -17,7 +17,8 @@ describe('GIS Export — GET /api/gis/export/geojson', () => {
     expect(res.status).toBe(200);
     for (const feat of res.body.features) {
       expect(feat.type).toBe('Feature');
-      expect(feat.geometry.type).toBe('Point');
+      // Phase 51: FeatureCollection contém Points (postes) e LineStrings (condutores)
+      expect(['Point', 'LineString']).toContain(feat.geometry.type);
       expect(Array.isArray(feat.geometry.coordinates)).toBe(true);
     }
   });

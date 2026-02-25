@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { getDb } from '../db';
 import { rateLimit } from '../middleware/rateLimit';
+import { broadcast } from '../services/notificationService';
 import { WorkOrder } from '../types';
 
 const VALID_STATUSES: WorkOrder['status'][] = ['OPEN', 'IN_PROGRESS', 'BLOCKED', 'COMPLETED'];
@@ -122,6 +123,24 @@ router.post('/', rateLimit(20, 60_000), async (req: Request, res: Response) => {
     );
 
     const newOrder = await db.get('SELECT * FROM work_orders WHERE id = ?', result.lastID);
+
+    // Notify tenant clients when a CRITICAL work order is created
+    // Tenant context is inferred from the associated pole when available
+    if (safePriority === 'CRITICAL' && safePoleId) {
+      const pole = await db.get<{ tenant_id: number }>('SELECT tenant_id FROM poles WHERE id = ?', [safePoleId]);
+      if (pole?.tenant_id) {
+        broadcast({
+          type: 'work_order_critical',
+          title: 'OS Crítica Criada',
+          message: `Nova ordem de serviço crítica: ${safeTitle}`,
+          work_order_id: result.lastID,
+          pole_id: safePoleId,
+          tenant_id: pole.tenant_id,
+          timestamp: Date.now(),
+        });
+      }
+    }
+
     res.status(201).json(newOrder);
   } catch (error) {
     console.error('Erro ao criar ordem de serviço:', error);

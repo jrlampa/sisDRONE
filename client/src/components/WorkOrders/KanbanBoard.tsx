@@ -60,8 +60,40 @@ const TaskCard: React.FC<TaskCardProps> = React.memo(({ task, assignee, onDelete
   );
 });
 
+interface ColumnProps {
+  status: string;
+  title: string;
+  icon: React.ElementType;
+  tasks: WorkOrder[];
+  users: User[];
+  onDelete: (id: number) => void;
+}
+
+const Column: React.FC<ColumnProps> = ({ status, title, icon: Icon, tasks, users, onDelete }) => (
+  <div className="flex-1 min-w-[300px] bg-white/5 rounded-lg p-4 flex flex-col gap-3">
+    <div className="flex items-center justify-between mb-2">
+      <h3 className="font-bold flex items-center gap-2">
+        <Icon size={18} /> {title}
+      </h3>
+      <span className="text-xs bg-white/10 px-2 py-1 rounded-full">
+        {tasks.filter(t => t.status === status).length}
+      </span>
+    </div>
+    <div className="flex flex-col gap-3 overflow-y-auto max-h-[calc(100vh-200px)]">
+      {tasks.filter(t => t.status === status).map(task => (
+        <TaskCard
+          key={task.id}
+          task={task}
+          assignee={users.find(u => u.id === task.assignee_id)}
+          onDelete={onDelete}
+        />
+      ))}
+    </div>
+  </div>
+);
+
 const KanbanBoard: React.FC<KanbanBoardProps> = ({ users }) => {
-  const { tasks, stats, loading, fetchTasks, handleStatusChange, handleDeleteTask } = useWorkOrders();
+  const { tasks, stats, loading, handleStatusChange, handleDeleteTask } = useWorkOrders();
   const { confirmState, confirm, handleAnswer } = useConfirm();
 
   const handleDelete = useCallback(async (taskId: number) => {
@@ -73,29 +105,6 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ users }) => {
     if (!ok) return;
     await handleDeleteTask(taskId);
   }, [confirm, handleDeleteTask]);
-
-  const Column = useCallback(({ status, title, icon: Icon }: { status: string, title: string, icon: React.ElementType }) => (
-    <div className="flex-1 min-w-[300px] bg-white/5 rounded-lg p-4 flex flex-col gap-3">
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="font-bold flex items-center gap-2">
-          <Icon size={18} /> {title}
-        </h3>
-        <span className="text-xs bg-white/10 px-2 py-1 rounded-full">
-          {tasks.filter(t => t.status === status).length}
-        </span>
-      </div>
-      <div className="flex flex-col gap-3 overflow-y-auto max-h-[calc(100vh-200px)]">
-        {tasks.filter(t => t.status === status).map(task => (
-          <TaskCard
-            key={task.id}
-            task={task}
-            assignee={users.find(u => u.id === task.assignee_id)}
-            onDelete={handleDelete}
-          />
-        ))}
-      </div>
-    </div>
-  ), [tasks, users, handleDelete]);
 
   const handleDrop = useCallback((e: React.DragEvent, status: WorkOrder['status']) => {
     const taskId = Number(e.dataTransfer.getData('taskId'));
@@ -118,16 +127,16 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ users }) => {
       )}
       <div className="flex gap-4 p-4 h-full overflow-x-auto">
         <div onDragOver={(e) => e.preventDefault()} onDrop={(e) => handleDrop(e, 'OPEN')} className="flex-1">
-          <Column status="OPEN" title="A Fazer" icon={Clock} />
+          <Column status="OPEN" title="A Fazer" icon={Clock} tasks={tasks} users={users} onDelete={handleDelete} />
         </div>
         <div onDragOver={(e) => e.preventDefault()} onDrop={(e) => handleDrop(e, 'IN_PROGRESS')} className="flex-1">
-          <Column status="IN_PROGRESS" title="Em Andamento" icon={AlertTriangle} />
+          <Column status="IN_PROGRESS" title="Em Andamento" icon={AlertTriangle} tasks={tasks} users={users} onDelete={handleDelete} />
         </div>
         <div onDragOver={(e) => e.preventDefault()} onDrop={(e) => handleDrop(e, 'BLOCKED')} className="flex-1">
-          <Column status="BLOCKED" title="Bloqueado" icon={Ban} />
+          <Column status="BLOCKED" title="Bloqueado" icon={Ban} tasks={tasks} users={users} onDelete={handleDelete} />
         </div>
         <div onDragOver={(e) => e.preventDefault()} onDrop={(e) => handleDrop(e, 'COMPLETED')} className="flex-1">
-          <Column status="COMPLETED" title="Concluído" icon={CheckCircle} />
+          <Column status="COMPLETED" title="Concluído" icon={CheckCircle} tasks={tasks} users={users} onDelete={handleDelete} />
         </div>
       </div>
     </>

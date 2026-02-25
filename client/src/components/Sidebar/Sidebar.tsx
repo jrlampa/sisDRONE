@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, FileJson, Globe, FileText, Ruler, LayoutDashboard, Download, X, Zap, ClipboardList, Video, Building2 } from 'lucide-react';
+import { Search, FileJson, Globe, FileText, Ruler, LayoutDashboard, Download, X, Zap, ClipboardList, Video, Building2, Cable, Network, Upload, ShieldCheck, BarChart2, Wrench, Navigation, Clipboard, PackageSearch } from 'lucide-react';
 import PoleDetails from './PoleDetails';
 import { generateInspectionReport } from '../../utils/pdfGenerator';
 import { api } from '../../services/api';
@@ -7,10 +7,21 @@ import InspectionHistory from './InspectionHistory';
 import EngineeringTools from './EngineeringTools';
 import VideoCapturePanel from '../VideoCapture/VideoCapturePanel';
 import BimStructureEditor from './BimStructureEditor';
+import ConductorPanel from './ConductorPanel';
+import TopologyPanel from './TopologyPanel';
+import ValidationPanel from './ValidationPanel';
+import EquipmentPanel from './EquipmentPanel';
+import AdminOverview from '../Dashboard/AdminOverview';
+import ExecutiveDashboard from '../Dashboard/ExecutiveDashboard';
+import ManualInspectionForm from './ManualInspectionForm';
+import ImportModal from '../ImportModal';
 import NearbySearchPanel from './NearbySearchPanel';
 import FilterChips from '../FilterChips';
 import { useTenant } from '../../context/TenantContext';
 import ToastBanner from '../ToastBanner';
+import DroneRoutePanel from './DroneRoutePanel';
+import InspectionWizard from './InspectionWizard';
+import BomPanel from './BomPanel';
 import { useToast } from '../../hooks/useToast';
 import type { Pole, Span, Inspection, AnalysisResult, Stats, Tenant, User } from '../../types';
 import type { FrameAnalysis } from '../../hooks/useVideoCapture';
@@ -27,8 +38,8 @@ interface SidebarProps {
   setFilterCondition: (c: 'All' | 'Critical' | 'Warning' | 'Good') => void;
   selectedPole: Pole | null;
   activeSpan: Span | null;
-  activeTab: 'details' | 'history' | 'eng' | 'video' | 'bim';
-  setActiveTab: (t: 'details' | 'history' | 'eng' | 'video' | 'bim') => void;
+  activeTab: 'details' | 'history' | 'eng' | 'video' | 'bim' | 'conductors' | 'topology' | 'validation' | 'kpi' | 'admin' | 'equipment' | 'drone' | 'wizard' | 'bom';
+  setActiveTab: (t: 'details' | 'history' | 'eng' | 'video' | 'bim' | 'conductors' | 'topology' | 'validation' | 'kpi' | 'admin' | 'equipment' | 'drone' | 'wizard' | 'bom') => void;
   isCapturing: boolean;
   onAnalyze: () => void;
   analysis: AnalysisResult | null;
@@ -70,6 +81,7 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
 
   const { activeTenantId, isOnline } = useTenant();
   const { toast, showToast, clearToast } = useToast();
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   const handleExportPDF = () => {
     if (!activeTenant) return;
@@ -157,6 +169,15 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
           >
             <Globe size={14} /> Exportar
           </button>
+          {userRole !== 'VIEWER' && (
+            <button
+              className="btn btn-outline"
+              onClick={() => setIsImportModalOpen(true)}
+              title="Importar Postes via CSV"
+            >
+              <Upload size={14} /> Importar CSV
+            </button>
+          )}
           <button
             className="btn btn-outline"
             onClick={handleExportPDF}
@@ -164,6 +185,39 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
           >
             <FileText size={14} /> Relatório
           </button>
+          {activeTenant && (
+            <a
+              href={api.getCroquiUrl(activeTenant.id)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-outline"
+              title="Abrir Croqui Digital da Rede (SVG)"
+            >
+              <Network size={14} /> Croqui
+            </a>
+          )}
+          {activeTenant && userRole !== 'VIEWER' && (
+            <a
+              href={api.getProjectSummaryUrl(activeTenant.id)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-outline"
+              title="Resumo Executivo do Projeto (PDF)"
+            >
+              <FileText size={14} /> Resumo
+            </a>
+          )}
+          {activeTenant && userRole !== 'VIEWER' && (
+            <a
+              href={api.getLevantamentoUrl(activeTenant.id)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-outline"
+              title="Exportar Levantamento de Campo (CSV)"
+            >
+              <Download size={14} /> Levantamento
+            </a>
+          )}
           <button
             className={`btn btn-outline ${viewMode === 'WORK_ORDERS' ? 'active' : ''}`}
             onClick={() => setViewMode(viewMode === 'WORK_ORDERS' ? 'MAP' : 'WORK_ORDERS')}
@@ -222,6 +276,77 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
                 <Building2 size={12} className="inline mr-1" />BIM
               </button>
             )}
+            {selectedPole && (
+              <button
+                onClick={() => setActiveTab('conductors')}
+                className={activeTab === 'conductors' ? 'active' : ''}
+                title="Condutores Elétricos"
+              >
+                <Cable size={12} className="inline mr-1" />Condutores
+              </button>
+            )}
+            {selectedPole && (
+              <button
+                onClick={() => setActiveTab('equipment')}
+                className={activeTab === 'equipment' ? 'active' : ''}
+                title="Equipamentos do Poste (Phase 53)"
+              >
+                <Wrench size={12} className="inline mr-1" />Equip.
+              </button>
+            )}
+            <button
+              onClick={() => setActiveTab('topology')}
+              className={activeTab === 'topology' ? 'active' : ''}
+              title="Topologia da Rede (Phase 30)"
+            >
+              <Network size={12} className="inline mr-1" />Rede
+            </button>
+            <button
+              onClick={() => setActiveTab('validation')}
+              className={activeTab === 'validation' ? 'active' : ''}
+              title="Validação de Topologia (Phase 42)"
+            >
+              <ShieldCheck size={12} className="inline mr-1" />Validação
+            </button>
+            <button
+              onClick={() => setActiveTab('kpi')}
+              className={activeTab === 'kpi' ? 'active' : ''}
+              title="KPIs Executivos (Phase 49)"
+            >
+              <BarChart2 size={12} className="inline mr-1" />KPIs
+            </button>
+            <button
+              onClick={() => setActiveTab('drone')}
+              className={activeTab === 'drone' ? 'active' : ''}
+              title="Roteiro de Inspeção por Drone (Phase 55)"
+            >
+              <Navigation size={12} className="inline mr-1" />Drone
+            </button>
+            {userRole !== 'VIEWER' && (
+              <button
+                onClick={() => setActiveTab('wizard')}
+                className={activeTab === 'wizard' ? 'active' : ''}
+                title="Wizard de Levantamento em Campo (Phase 63)"
+              >
+                <Clipboard size={12} className="inline mr-1" />Wizard
+              </button>
+            )}
+            <button
+              onClick={() => setActiveTab('bom')}
+              className={activeTab === 'bom' ? 'active' : ''}
+              title="Relação de Materiais / BOM (Phase 64)"
+            >
+              <PackageSearch size={12} className="inline mr-1" />BOM
+            </button>
+            {userRole === 'ADMIN' && (
+              <button
+                onClick={() => setActiveTab('admin')}
+                className={activeTab === 'admin' ? 'active' : ''}
+                title="Dashboard Executivo Multi-Tenant (Phase 43)"
+              >
+                <Building2 size={12} className="inline mr-1" />Admin
+              </button>
+            )}
             {selectedPole && userRole !== 'VIEWER' && (
               <button
                 onClick={() => setActiveTab('video')}
@@ -256,7 +381,19 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
           )}
 
           {activeTab === 'history' && (
-            <InspectionHistory history={history} apiBase={apiBase} />
+            <>
+              <InspectionHistory history={history} apiBase={apiBase} />
+              {selectedPole && userRole !== 'VIEWER' && (
+                <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', marginTop: 8, paddingTop: 8 }}>
+                  <ManualInspectionForm
+                    pole={selectedPole}
+                    onSaved={() => {
+                      /* parent will refresh history on next mount or user interaction */
+                    }}
+                  />
+                </div>
+              )}
+            </>
           )}
 
           {activeTab === 'video' && selectedPole && (
@@ -270,6 +407,49 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
 
           {activeTab === 'bim' && selectedPole && (
             <BimStructureEditor pole={selectedPole} />
+          )}
+
+          {activeTab === 'conductors' && selectedPole && (
+            <ConductorPanel pole={selectedPole} allPoles={poles} />
+          )}
+
+          {activeTab === 'equipment' && selectedPole && (
+            <EquipmentPanel pole={selectedPole} />
+          )}
+
+          {activeTab === 'topology' && (
+            <TopologyPanel tenantId={activeTenantId || undefined} onSelectPole={onSelectPole} />
+          )}
+
+          {activeTab === 'validation' && (
+            <ValidationPanel tenantId={activeTenantId || undefined} />
+          )}
+
+          {activeTab === 'kpi' && (
+            <ExecutiveDashboard
+              apiBase={`${apiBase}`}
+              tenantId={activeTenantId ?? undefined}
+            />
+          )}
+
+          {activeTab === 'admin' && userRole === 'ADMIN' && (
+            <AdminOverview apiBase={`${apiBase}`} />
+          )}
+
+          {activeTab === 'drone' && (
+            <DroneRoutePanel tenantId={activeTenantId} />
+          )}
+
+          {activeTab === 'wizard' && userRole !== 'VIEWER' && (
+            <InspectionWizard
+              tenantId={activeTenantId ?? 1}
+              onSuccess={() => setActiveTab('details')}
+              onCancel={() => setActiveTab('details')}
+            />
+          )}
+
+          {activeTab === 'bom' && (
+            <BomPanel tenantId={activeTenantId ?? 1} />
           )}
 
           {activeTab === 'eng' && activeSpan && (
@@ -326,6 +506,12 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
           </div>
         </div>
       </div>
+
+      <ImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onSuccess={(imported) => showToast(`${imported} poste${imported > 1 ? 's' : ''} importado${imported > 1 ? 's' : ''} com sucesso!`, 'success')}
+      />
     </div>
   );
 };
