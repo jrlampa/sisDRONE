@@ -25,8 +25,10 @@ import adminRouter from './routes/adminRoutes';
 import kpiRouter from './routes/kpiRoutes';
 import offlineBundleRouter from './routes/offlineBundle';
 import swaggerRouter from './routes/swaggerRoutes';
+import geoMeasureRouter from './routes/geoMeasure';
 import { checkPermission } from './middleware/auth';
 import { rateLimit } from './middleware/rateLimit';
+import { auditLog } from './middleware/auditLog';
 import { getDb } from './db';
 
 dotenv.config();
@@ -39,6 +41,7 @@ const app = express();
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
+app.use(auditLog);
 
 app.get('/health', rateLimit(60, 60_000), async (_req, res) => {
   try {
@@ -82,6 +85,7 @@ app.use('/api/admin', adminRouter);
 app.use('/api/kpis', kpiRouter);
 app.use('/api/offline-bundle', offlineBundleRouter);
 app.use('/api/docs', swaggerRouter);
+app.use('/api/geo', geoMeasureRouter);
 
 // Legacy inspect routes: /api/analyze, /api/feedback, /api/:id/history
 // MUST be last: /:id wildcard would shadow all /api/* routes if registered earlier

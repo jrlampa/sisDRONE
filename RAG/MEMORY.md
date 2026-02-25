@@ -505,3 +505,17 @@ Testes existentes (Phase 9):
 - Rate limiting em todos os endpoints (custom middleware `rateLimit.ts`)
 - Input sanitization: enum whitelists, length caps, parseInt/parseFloat guards
 - Nota: CodeQL `js/missing-rate-limiting` detecta falsos positivos pois não reconhece o custom middleware. Todos os alertas de Phase 9–11 são falsos positivos — `rateLimit()` é aplicado em todos os handlers indicados.
+- [x] ~~`audit_log` table: (user_id FK SET NULL, user_role, action, entity_type, entity_id, payload_json MAX 2000 chars, ip, created_at) — 3 indexes (entity, user, created_at)~~ — Phase 50
+- [x] ~~`middleware/auditLog.ts`: fire-and-forget POST/PUT/PATCH/DELETE logging; logs only 2xx; extracts entity_type from URL regex `/^\/api\/([^/?]+)/`, entity_id from 3rd path segment; IP from X-Forwarded-For~~ — Phase 50
+- [x] ~~`GET /api/admin/audit-log?entity_type=&action=&user_id=&limit=&offset=` (ADMIN-only; max 200 rows; validates action whitelist CREATE/UPDATE/DELETE; paginado total+limit+offset+rows)~~ — Phase 50
+- [x] ~~`AuditLogPanel.tsx`: tabela com filtros entity_type/action, paginação por PAGE_SIZE=25, badges coloridos por ação, somente ADMIN~~ — Phase 50
+- [x] ~~GET /api/gis/export/geojson: aprimorado com filtros tenant_id/circuit_id/ahi_max; inclui condutores como LineString features; metadata block (generated_at, total_poles, total_conductors, filters)~~ — Phase 51
+- [x] ~~GET /api/gis/export/kml?tenant_id=: exporta postes como KML para Google Earth Pro; placemarks coloridos por AHI (verde/amarelo/laranja/vermelho/cinza); escapeXml em todos campos user-supplied~~ — Phase 51
+- [x] ~~gis.test.ts: atualizado para aceitar geometria Point+LineString (Phase 51 adiciona condutores como LineString)~~ — Phase 51
+- [x] ~~POST /api/geo/measure: recebe array de [lat,lng] waypoints (min 2, max 100); retorna segments (from/to/distance_m) + total_m/total_km via Haversine; montado em /api/geo~~ — Phase 52
+- [x] ~~`useMeasurement.ts`: state machine (active, points, result, addPoint, clearMeasurement) — usa pointsRef para evitar stale closure em addPoint (dep-array vazio)~~ — Phase 52
+- [x] ~~`MeasurementToolbar.tsx`: overlay flutuante com toggle, lista de pontos, segmentos por distância, total em m/km~~ — Phase 52
+- [x] ~~api.ts: exportGeoJSON, getKmlUrl, getAdminAuditLog, measureDistance adicionados; AuditLogEntry + MeasurementResult importados de types.ts~~ — Phase 50/51/52
+- [x] ~~types.ts client: AuditLogEntry, GeoJSONExportMetadata, MeasurementSegment, MeasurementResult adicionados~~ — Phase 50/51/52
+- [x] ~~CodeQL: 3 alertas = falsos positivos (rateLimit() aplicado em adminRoutes:/audit-log, gis:/export/geojson e gis:/export/kml — padrão pré-existente)~~ — Phase 50/51/52
+- [x] ~~Total: 581 testes (580 passing + 1 pre-existing flaky polesSort localeCompare) ✅~~ — Phase 50/51/52

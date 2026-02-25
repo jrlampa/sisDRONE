@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Tenant, User, WorkOrder, Pole, AnalysisResult, PoleSummary } from '../types';
+import type { Tenant, User, WorkOrder, Pole, AnalysisResult, PoleSummary, AuditLogEntry, MeasurementResult } from '../types';
 import type { Prediction } from '../types/prediction';
 import { addToQueue } from '../utils/offlineQueue';
 
@@ -274,4 +274,32 @@ export const api = {
       params: tenantId ? { tenant_id: tenantId } : {},
       responseType: 'arraybuffer',
     }),
+
+  // GIS Export Aprimorado (Phase 51)
+  exportGeoJSON: (params?: { tenant_id?: number; circuit_id?: number; ahi_max?: number }) =>
+    axios.get<object>(`${API_BASE}/api/gis/export/geojson`, { params }),
+  getKmlUrl: (tenantId?: number): string =>
+    `${API_BASE}/api/gis/export/kml${tenantId ? `?tenant_id=${tenantId}` : ''}`,
+
+  // Audit Log (Phase 50)
+  getAdminAuditLog: (params?: {
+    entity_type?: string;
+    action?: string;
+    user_id?: number;
+    limit?: number;
+    offset?: number;
+  }) =>
+    axios.get<{ total: number; limit: number; offset: number; rows: AuditLogEntry[] }>(
+      `${API_BASE}/api/admin/audit-log`,
+      { params }
+    ).then(r => r.data),
+
+  // Medição Geoespacial (Phase 52)
+  measureDistance: (points: [number, number][]) =>
+    axios.post<MeasurementResult>(`${API_BASE}/api/geo/measure`, { points })
+      .then(r => r.data),
 };
+
+// Named exports for direct import in hooks/components
+export const { getAdminAuditLog, measureDistance, exportGeoJSON, getKmlUrl } = api;
+export type { AuditLogEntry, MeasurementResult };

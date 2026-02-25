@@ -247,3 +247,36 @@ export interface GeoAddress {
   postcode?: string;
   country?: string;
 }
+
+// Phase 50 — Audit Log
+export interface AuditLogEntry {
+  id: number;
+  user_id: number | null;
+  user_role: string | null;
+  action: 'CREATE' | 'UPDATE' | 'DELETE';
+  entity_type: string;
+  entity_id: number | null;
+  ip: string | null;
+  created_at: string;
+}
+
+// Phase 51 — GIS Export
+export interface GeoJSONExportMetadata {
+  generated_at: string;
+  total_poles: number;
+  total_conductors: number;
+  filters: { tenant_id: number | null; circuit_id: number | null; ahi_max: number | null };
+}
+
+// Phase 52 — Medição Geoespacial
+export interface MeasurementSegment {
+  from: [number, number];
+  to: [number, number];
+  distance_m: number;
+}
+
+export interface MeasurementResult {
+  segments: MeasurementSegment[];
+  total_m: number;
+  total_km: number;
+}

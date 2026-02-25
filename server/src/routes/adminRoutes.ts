@@ -1,11 +1,13 @@
 /**
  * adminRoutes.ts — Dashboard Executivo Multi-Tenant (Phase 43)
+ *                  Audit Log de Ações (Phase 50)
  *
  * Endpoints de visão consolidada cross-tenant para administradores globais.
  * Requer header x-user-role: ADMIN.
  *
  *   GET /api/admin/overview        — dados agregados por tenant (ADMIN only)
  *   GET /api/admin/tenants/stats   — tabela comparativa entre tenants (ADMIN only)
+ *   GET /api/admin/audit-log       — histórico de ações auditadas (ADMIN only)
  */
 import { Router, Request, Response } from 'express';
 import { getDb } from '../db';
@@ -114,6 +116,73 @@ router.get('/tenants/stats', rateLimit(30, 60_000), async (req: Request, res: Re
   } catch (err) {
     console.error('Erro ao gerar estatísticas por tenant:', err);
     res.status(500).json({ error: 'Erro ao gerar estatísticas por tenant' });
+  }
+});
+
+// ── Phase 50: Audit Log ──────────────────────────────────────────────────────
+
+/** Número máximo de registros retornados por consulta de audit log */
+const MAX_AUDIT_LIMIT = 200;
+
+/**
+ * GET /api/admin/audit-log?entity_type=poles&action=CREATE&limit=50&offset=0
+ * Retorna o histórico auditado de ações de escrita na plataforma.
+ * Filtros opcionais: entity_type, action (CREATE/UPDATE/DELETE), user_id, limit, offset.
+ */
+router.get('/audit-log', rateLimit(30, 60_000), async (req: Request, res: Response) => {
+  if (!requireAdmin(req, res)) return;
+
+  const entityType = req.query.entity_type ? String(req.query.entity_type).slice(0, 50) : null;
+  const action     = req.query.action       ? String(req.query.action).toUpperCase() : null;
+  const userId     = req.query.user_id      ? parseInt(String(req.query.user_id), 10) : null;
+
+  const rawLimit  = parseInt(String(req.query.limit  ?? '50'), 10);
+  const rawOffset = parseInt(String(req.query.offset ?? '0'),  10);
+  const limit     = isNaN(rawLimit)  || rawLimit  <= 0 ? 50 : Math.min(rawLimit,  MAX_AUDIT_LIMIT);
+  const offset    = isNaN(rawOffset) || rawOffset <  0 ? 0  : rawOffset;
+
+  if (action && !['CREATE', 'UPDATE', 'DELETE'].includes(action)) {
+    return res.status(400).json({ error: 'Ação inválida. Use CREATE, UPDATE ou DELETE.' });
+  }
+
+  try {
+    const db = await getDb();
+
+    const conditions: string[] = [];
+    const params: (string | number)[] = [];
+
+    if (entityType) { conditions.push('entity_type = ?'); params.push(entityType); }
+    if (action)     { conditions.push('action = ?');       params.push(action);     }
+    if (userId && !isNaN(userId) && userId > 0) {
+      conditions.push('user_id = ?');
+      params.push(userId);
+    }
+
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const rows = await db.all(
+      `SELECT id, user_id, user_role, action, entity_type, entity_id, ip, created_at
+         FROM audit_log
+        ${where}
+        ORDER BY created_at DESC
+        LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
+    );
+
+    const total = await db.get(
+      `SELECT COUNT(*) AS count FROM audit_log ${where}`,
+      params
+    );
+
+    res.json({
+      total: total?.count ?? 0,
+      limit,
+      offset,
+      rows,
+    });
+  } catch (err) {
+    console.error('Erro ao consultar audit log:', err);
+    res.status(500).json({ error: 'Erro ao consultar audit log' });
   }
 });
 
