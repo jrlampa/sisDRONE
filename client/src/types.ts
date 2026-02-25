@@ -215,3 +215,35 @@ export interface KpiData {
   inspected_poles: number;
   total_poles: number;
 }
+
+// Phase 45 — Timeline de Inspeções por Poste
+export interface TimelineInspectionEntry {
+  type: 'inspection';
+  id: number;
+  date: string;
+  label: string;
+  confidence: number;
+  source: string;
+  file_path: string | null;
+}
+
+export interface TimelineAhiEntry {
+  type: 'ahi_snapshot';
+  id: number;
+  date: string;
+  ahi_score: number;
+  delta_ahi: number | null;
+}
+
+export type TimelineEntry = TimelineInspectionEntry | TimelineAhiEntry;
+
+// Phase 46 — Geocodificação Reversa (Nominatim)
+export interface GeoAddress {
+  display_name: string;
+  road?: string;
+  suburb?: string;
+  city?: string;
+  state?: string;
+  postcode?: string;
+  country?: string;
+}

@@ -3,6 +3,7 @@ import { getDb } from '../db';
 import { rateLimit } from '../middleware/rateLimit';
 import { haversineMeters } from '../utils/geo';
 import { cache } from '../utils/cache';
+import { reverseGeocode } from '../services/geocodeService';
 
 const router = Router();
 
@@ -265,6 +266,77 @@ router.get('/:id/work-orders', rateLimit(60, 60_000), async (req: Request, res: 
   } catch (err) {
     console.error('Erro ao buscar ordens de serviço do poste:', err);
     res.status(500).json({ error: 'Erro ao buscar ordens de serviço do poste' });
+  }
+});
+
+// GET timeline of events for a pole (Phase 45 — inspections + AHI snapshots, sorted by date DESC)
+router.get('/:id/timeline', rateLimit(60, 60_000), async (req: Request, res: Response) => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json({ error: 'ID de poste inválido' });
+  }
+  try {
+    const db = await getDb();
+    const pole = await db.get('SELECT id FROM poles WHERE id = ?', [id]);
+    if (!pole) return res.status(404).json({ error: 'Poste não encontrado' });
+
+    const inspections = await db.all(
+      `SELECT l.id, 'inspection' as type, l.label, l.confidence, l.source,
+              l.created_at as date, i.file_path
+       FROM labels l LEFT JOIN images i ON l.image_id = i.id
+       WHERE l.pole_id = ? ORDER BY l.created_at DESC`,
+      [id]
+    );
+
+    const ahiRows = await db.all(
+      `SELECT id, ahi_score, recorded_at as date
+       FROM ahi_history WHERE pole_id = ? ORDER BY recorded_at DESC`,
+      [id]
+    );
+
+    // Compute delta_ahi = current - previous (positive = improvement)
+    const ahiEntries = ahiRows.map((row, idx) => {
+      const older = ahiRows[idx + 1];
+      return {
+        type: 'ahi_snapshot' as const,
+        date: row.date,
+        id: row.id,
+        ahi_score: row.ahi_score,
+        delta_ahi: older != null ? (row.ahi_score - older.ahi_score) : null,
+      };
+    });
+
+    const timeline = [...inspections, ...ahiEntries]
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    res.json({ pole_id: id, count: timeline.length, timeline });
+  } catch (err) {
+    console.error('Erro ao buscar timeline do poste:', err);
+    res.status(500).json({ error: 'Erro ao buscar timeline do poste' });
+  }
+});
+
+// GET reverse-geocoded address for a pole (Phase 46 — Nominatim, cached in address_cache)
+router.get('/:id/address', rateLimit(10, 60_000), async (req: Request, res: Response) => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json({ error: 'ID de poste inválido' });
+  }
+  try {
+    const db = await getDb();
+    const pole = await db.get('SELECT id, lat, lng, address_cache FROM poles WHERE id = ?', [id]);
+    if (!pole) return res.status(404).json({ error: 'Poste não encontrado' });
+
+    if (pole.address_cache) {
+      return res.json({ pole_id: id, address: JSON.parse(pole.address_cache), cached: true });
+    }
+
+    const address = await reverseGeocode(pole.lat, pole.lng);
+    await db.run('UPDATE poles SET address_cache = ? WHERE id = ?', [JSON.stringify(address), id]);
+    res.json({ pole_id: id, address, cached: false });
+  } catch (err) {
+    console.error('Erro ao geocodificar poste:', err);
+    res.status(502).json({ error: 'Erro ao buscar endereço: serviço externo indisponível' });
   }
 });
 

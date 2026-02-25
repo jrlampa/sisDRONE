@@ -1,6 +1,6 @@
 # sisDRONE – RAG / Memória de Trabalho
 
-> Última atualização: 2026-02-24 (Phase 38/37/44) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
+> Última atualização: 2026-02-25 (Phase 45/46/48-backend) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
 
 ---
 
@@ -188,7 +188,7 @@ sisDRONE/
 
 **Meta**: >= 80% de cobertura em código de lógica de negócio
 
-**Situação atual** (Phase 38/37/44): 516 server + 11 client = **527 testes no total** ✅ | Coverage: **100% stmts + 100% branches** 🎯
+**Situação atual** (Phase 45/46/48-backend): 534 server + 11 client = **545 testes no total** ✅ | Coverage: **100% stmts + 100% branches** 🎯
 
 **Coverage Threshold** configurado em `server/vitest.config.ts`:
 - Lines/Functions/Statements: ≥ 80%
@@ -460,6 +460,19 @@ Testes existentes (Phase 9):
 - [x] ~~tests/circuitReport.test.ts: 5 testes (400 abc, 400/0, 404, content-type pdf, content-disposition filename)~~ — Phase 44
 - [x] ~~CodeQL: 3 alertas = falsos positivos (rateLimit aplicado em reportRoutes:/circuit/:circuitId e users:/:id/permissions GET+PUT)~~ — Phase 38/37/44
 - [x] ~~Total: 516 server + 11 client = **527 testes** ✅ | Coverage: **100% stmts + 100% branches** 🎯 (mantido)~~ — Phase 38/37/44
+- [x] ~~`geocodeService.ts`: reverseGeocode (Nominatim, throttle 1req/s, retry exponencial até MAX_RETRIES=2, exported _resetThrottleForTest)~~ — Phase 46
+- [x] ~~`address_cache TEXT`: migration segura em db.ts (ALTER TABLE poles ADD COLUMN, try/catch)~~ — Phase 46
+- [x] ~~GET /api/poles/:id/address: retorna endereço do cache ou chama Nominatim → persiste cache; 400/404/502~~ — Phase 46
+- [x] ~~GET /api/poles/:id/timeline: merge de labels (inspeção) + ahi_history (snapshot), sorted by date DESC, delta_ahi calculado por par consecutivo~~ — Phase 45
+- [x] ~~`InspectionTimeline.tsx`: componente vertical com dot + linha guia, inspection em roxo-dinâmico, ahi_snapshot em azul, TrendingUp/Down badge~~ — Phase 45
+- [x] ~~PoleDetails.tsx: seção "Timeline de Eventos" com InspectionTimeline abaixo do AhiHistoryChart~~ — Phase 45
+- [x] ~~`offlineBundle.ts`: GET /api/offline-bundle?tenant_id= retorna snapshot JSON comprimido gzip (postes + condutores + circuitos, MAX 5000 cada)~~ — Phase 48
+- [x] ~~types.ts client: TimelineInspectionEntry, TimelineAhiEntry, TimelineEntry (union), GeoAddress adicionados~~ — Phase 45/46
+- [x] ~~api.ts client: getPoleTimeline, getPoleAddress, getOfflineBundle adicionados~~ — Phase 45/46/48
+- [x] ~~tests/poleTimeline.test.ts: 7 testes (400 abc/0, 404, 200+count, campos inspection, delta_ahi, vazio)~~ — Phase 45
+- [x] ~~tests/geocoding.test.ts: 6 testes (3 unit geocodeService mock axios + 3 HTTP cache hit/400/404)~~ — Phase 46
+- [x] ~~tests/offlineBundle.test.ts: 5 testes (400 string/0, 200+gzip header, campos JSON, sem tenant_id)~~ — Phase 48
+- [x] ~~Total: 534 server + 11 client = **545 testes** ✅ | Coverage: **100% stmts + 100% branches** 🎯 (mantido)~~ — Phase 45/46/48
 
 ## 11. Modos de Captura de Vídeo (Phase 4)
 

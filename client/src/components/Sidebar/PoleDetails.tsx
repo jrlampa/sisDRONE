@@ -9,6 +9,7 @@ import PoleAnalysisResult from './PoleAnalysisResult';
 import PoleEditForm from './PoleEditForm';
 import PoleImages from './PoleImages';
 import AhiHistoryChart from './AhiHistoryChart';
+import InspectionTimeline from './InspectionTimeline';
 import { useToast } from '../../hooks/useToast';
 import { useConfirm } from '../../hooks/useConfirm';
 import { usePoleSummary } from '../../hooks/usePoleSummary';
@@ -229,6 +230,12 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
           {/* AHI History (Phase 34) */}
           <div className="mt-3">
             <AhiHistoryChart poleId={pole.id} limit={10} />
+          </div>
+
+          {/* Timeline de Inspeções (Phase 45) */}
+          <div className="mt-4 pt-3 border-t border-light/10">
+            <p className="text-xs uppercase tracking-wider text-muted font-bold mb-3">Timeline de Eventos</p>
+            <InspectionTimeline poleId={pole.id} />
           </div>
         </div>
 

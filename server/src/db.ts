@@ -213,6 +213,7 @@ async function initDb(database: Database) {
   `);
   try { await database.exec(`ALTER TABLE poles ADD COLUMN circuit_id INTEGER REFERENCES circuits(id) ON DELETE SET NULL`); } catch {}
   try { await database.exec(`ALTER TABLE conductors ADD COLUMN circuit_id INTEGER REFERENCES circuits(id) ON DELETE SET NULL`); } catch {}
+  try { await database.exec(`ALTER TABLE poles ADD COLUMN address_cache TEXT`); } catch {}
 
   // permissions table (Phase 37) — RBAC Granular por recurso/ação
   await database.exec(`

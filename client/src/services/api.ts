@@ -255,4 +255,23 @@ export const api = {
   // KPIs Executivos (Phase 49)
   getKpis: (params?: { tenant_id?: number; period_days?: number }) =>
     axios.get<import('../types').KpiData>(`${API_BASE}/api/kpis`, { params }),
+
+  // Timeline de Inspeções (Phase 45)
+  getPoleTimeline: (poleId: number) =>
+    axios.get<{ pole_id: number; count: number; timeline: import('../types').TimelineEntry[] }>(
+      `${API_BASE}/api/poles/${poleId}/timeline`
+    ),
+
+  // Geocodificação Reversa (Phase 46)
+  getPoleAddress: (poleId: number) =>
+    axios.get<{ pole_id: number; address: import('../types').GeoAddress; cached: boolean }>(
+      `${API_BASE}/api/poles/${poleId}/address`
+    ),
+
+  // Bundle Offline (Phase 48 backend)
+  getOfflineBundle: (tenantId?: number) =>
+    axios.get(`${API_BASE}/api/offline-bundle`, {
+      params: tenantId ? { tenant_id: tenantId } : {},
+      responseType: 'arraybuffer',
+    }),
 };
