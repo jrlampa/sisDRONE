@@ -88,6 +88,10 @@ export const api = {
   deleteInspection: (id: number) => axios.delete<{ message: string; id: number }>(`${API_BASE}/api/inspections/${id}`),
   getInspections: (poleId?: number, page = 1, limit = 50, source?: string) =>
     axios.get(`${API_BASE}/api/inspections`, { params: { ...(poleId ? { pole_id: poleId } : {}), page, limit, ...(source ? { source } : {}) } }),
+  createManualInspection: (data: {
+    pole_id: number; condition: string; notes?: string; inspector_name?: string;
+    network_level?: string; structure_config?: string; phase_config?: string; num_arms?: number;
+  }) => axios.post(`${API_BASE}/api/inspections/manual`, data),
   getPoleWorkOrders: (poleId: number) =>
     axios.get<{ pole_id: number; count: number; work_orders: WorkOrder[] }>(`${API_BASE}/api/poles/${poleId}/work-orders`),
   createPole: (data: { lat: number, lng: number, name: string, utm_x: string, utm_y: string, tenant_id: number }) =>

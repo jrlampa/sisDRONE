@@ -1,6 +1,6 @@
 # sisDRONE – RAG / Memória de Trabalho
 
-> Última atualização: 2026-02-25 (Phase 53/54 — Equipamentos por Poste + Estruturas MT/BT) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
+> Última atualização: 2026-02-25 (Phase 58/59/60 — Draw Conductor + Inspeção Manual + Layer Controls) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
 
 ---
 
@@ -562,3 +562,25 @@ Testes existentes (Phase 9):
 - [x] api.ts: getDroneRoute, getDroneRouteKmlUrl, uploadPolePhoto, getProjectSummaryUrl adicionados
 - [x] types.ts: RouteWaypoint, DroneRoute, FieldPhoto adicionados
 - [x] Total: **633 testes** (632 passing + 1 pre-existing flaky polesSort localeCompare) ✅
+
+### Phase 58 — Modo Desenho de Condutores no Mapa (2026-02-25)
+- [x] `DrawConductorModal.tsx`: modal de confirmação para criação de condutor; campos: network_type (obrigatório), cable_type, voltage_kv, length_m; submit → POST /api/conductors → fetchConductors
+- [x] `Map.tsx`: novas props `drawMode`, `drawFromPoleId`, `onDrawPoleSelect`, `poleVisible`, `conductorVisible`; quando drawMode=true, clique em poste chama onDrawPoleSelect em vez de onMarkerClick; poste origem recebe ícone azul pulsante (getDrawFromIcon); clique no mapa suprimido durante drawMode; visiblePoles e visibleConductors filtrados pelas predicatas de camada
+- [x] `App.tsx`: estado `conductorDrawMode`, `drawFromPole`, `drawToPole`, `showDrawModal`; handler `handleDrawPoleSelect` (1º clique = origem, 2º clique ≠ origem = abre modal); `handleCancelDraw` e `handleConductorCreated`; overlay banner de instrução durante drawMode; botão flutuante GitBranch (ENGINEER+) bottom-right do mapa
+- [x] `DrawConductorModal` renderizado no App.tsx logo acima do closing tag do app-container
+
+### Phase 59 — Inspeção Manual Estruturada de Campo (2026-02-25)
+- [x] `routes/inspections.ts`: nova rota `POST /api/inspections/manual` (adicionada ANTES das rotas /:id para evitar conflito de path); campos: pole_id, condition (bom/atenção/crítico/desconhecido), notes, inspector_name, network_level (MT/BT/AT), structure_config, phase_config (M/B/T), num_arms; insere em labels com source='manual'; opcionalmente atualiza poles com campos MT/BT se fornecidos
+- [x] `ManualInspectionForm.tsx`: formulário estruturado com dropdowns para condition/network_level/structure_config/phase_config, campo num_arms, textarea notes, input inspector_name; feedback visual de sucesso/erro em pt-BR
+- [x] `Sidebar.tsx`: aba 'history' exibe ManualInspectionForm abaixo do InspectionHistory para ENGINEER+ quando selectedPole existe
+- [x] `api.ts`: `createManualInspection(data)` → POST /api/inspections/manual
+- [x] `tests/manualInspection.test.ts`: **10 testes** (400 pole_id inválido, 400 zero, 400 sem condition, 400 condition inválido, 400 network_level inválido, 400 phase_config inválido, 404 poste inexistente, 201 completo, 201 mínimo, GET inspections com source=manual)
+
+### Phase 60 — Controles de Camada do Mapa (MT/BT/AT) (2026-02-25)
+- [x] `MapLayerControls.tsx`: painel flutuante bottom-right com 6 toggles (polesMT/BT/AT, conductorMT/BT/Ramal); badge colorido por tipo; DEFAULT_LAYER_VISIBILITY exportado; LayerVisibility interface exportada
+- [x] `App.tsx`: estado `layerVisibility` (DEFAULT_LAYER_VISIBILITY), `showLayerControls`; predicatas `poleVisible` e `conductorVisible` via useCallback; passadas para Map.tsx; MapLayerControls renderizado como overlay dentro da div do mapa (position: absolute, bottom: 80, right: 16, zIndex: 1000)
+- [x] `Map.tsx`: recebe poleVisible/conductorVisible opcionais; visiblePoles e visibleConductors filtrados antes de renderizar; heatmap usa visiblePoles; condutores renderizados de visibleConductors
+- [x] Sidebar.tsx: tipos activeTab e setActiveTab atualizados para incluir 'drone'
+- [x] useAppHandlers.ts: tipo setActiveTab atualizado para incluir 'drone'
+- [x] Total: **643 testes** (642 passing + 1 pre-existing flaky polesSort localeCompare) ✅
+- [x] TypeScript: 0 erros (./node_modules/.bin/tsc --noEmit no client) ✅

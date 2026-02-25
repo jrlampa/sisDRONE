@@ -232,6 +232,73 @@ router.delete('/:id', rateLimit(30, 60_000), async (req: Request, res: Response)
   }
 });
 
+// POST structured manual inspection (source='manual') — Phase 59
+router.post('/manual', rateLimit(30, 60_000), async (req: Request, res: Response) => {
+  const { pole_id, condition, notes, inspector_name, network_level, structure_config, phase_config, num_arms } = req.body;
+
+  const VALID_CONDITIONS = ['bom', 'atenção', 'crítico', 'desconhecido'];
+  const VALID_NETWORK_LEVELS = ['MT', 'BT', 'AT'];
+  const VALID_STRUCTURE_CONFIGS = ['tangente', 'angulo', 'derivacao', 'seccionamento', 'terminal', 'passagem'];
+  const VALID_PHASE_CONFIGS = ['M', 'B', 'T'];
+
+  const safePoleId = parseInt(String(pole_id), 10);
+  if (isNaN(safePoleId) || safePoleId <= 0) {
+    return res.status(400).json({ error: 'pole_id inválido' });
+  }
+  if (!condition) {
+    return res.status(400).json({ error: 'condition é obrigatório' });
+  }
+  if (!VALID_CONDITIONS.includes(String(condition))) {
+    return res.status(400).json({ error: `condition inválido. Use: ${VALID_CONDITIONS.join(', ')}` });
+  }
+  if (network_level !== undefined && !VALID_NETWORK_LEVELS.includes(String(network_level))) {
+    return res.status(400).json({ error: `network_level inválido. Use: ${VALID_NETWORK_LEVELS.join(', ')}` });
+  }
+  if (structure_config !== undefined && !VALID_STRUCTURE_CONFIGS.includes(String(structure_config))) {
+    return res.status(400).json({ error: `structure_config inválido` });
+  }
+  if (phase_config !== undefined && !VALID_PHASE_CONFIGS.includes(String(phase_config))) {
+    return res.status(400).json({ error: `phase_config inválido. Use: M, B, T` });
+  }
+
+  try {
+    const db = await getDb();
+    const pole = await db.get('SELECT id FROM poles WHERE id = ?', [safePoleId]);
+    if (!pole) return res.status(404).json({ error: 'Poste não encontrado' });
+
+    const safeNotes = notes ? String(notes).slice(0, 1000) : '';
+    const safeInspector = inspector_name ? String(inspector_name).slice(0, 200) : 'campo';
+    const labelText = `Inspeção manual por ${safeInspector}: ${condition}${safeNotes ? '. ' + safeNotes : ''}`;
+
+    const result = await db.run(
+      'INSERT INTO labels (pole_id, label, confidence, source) VALUES (?, ?, ?, ?)',
+      [safePoleId, labelText, 1.0, 'manual']
+    );
+
+    // Update pole structural fields if provided
+    const poleUpdates: string[] = [];
+    const poleParams: (string | number)[] = [];
+    if (network_level) { poleUpdates.push('network_level = ?'); poleParams.push(String(network_level)); }
+    if (structure_config) { poleUpdates.push('structure_config = ?'); poleParams.push(String(structure_config)); }
+    if (phase_config) { poleUpdates.push('phase_config = ?'); poleParams.push(String(phase_config)); }
+    if (num_arms !== undefined) {
+      const safeArms = parseInt(String(num_arms), 10);
+      if (!isNaN(safeArms) && safeArms >= 0) {
+        poleUpdates.push('num_arms = ?'); poleParams.push(safeArms);
+      }
+    }
+    if (poleUpdates.length > 0) {
+      poleParams.push(safePoleId);
+      await db.run(`UPDATE poles SET ${poleUpdates.join(', ')} WHERE id = ?`, poleParams);
+    }
+
+    const label = await db.get('SELECT * FROM labels WHERE id = ?', [result.lastID]);
+    res.status(201).json(label);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao registrar inspeção manual' });
+  }
+});
+
 // POST feedback
 router.post('/feedback', rateLimit(30, 60_000), async (req: Request, res: Response) => {
   const { labelId, poleId, isCorrect, correction } = req.body;

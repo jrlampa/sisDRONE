@@ -6,8 +6,10 @@ import LoginPage from './components/LoginPage';
 import AneelSearchPanel from './components/AneelSearchPanel';
 import AlertBanner from './components/AlertBanner';
 import NotificationBanner from './components/NotificationBanner';
+import DrawConductorModal from './components/DrawConductorModal';
+import MapLayerControls, { DEFAULT_LAYER_VISIBILITY, type LayerVisibility } from './components/MapLayerControls';
 import { useNotifications } from './hooks/useNotifications';
-import { Zap, Menu, Building, LogOut } from 'lucide-react';
+import { Zap, Menu, Building, LogOut, GitBranch } from 'lucide-react';
 import { api } from './services/api';
 import { useNetwork } from './hooks/useNetwork';
 import { useAppHandlers } from './hooks/useAppHandlers';
@@ -59,6 +61,16 @@ const App: React.FC = () => {
   const [showAneelPanel, setShowAneelPanel] = useState(false);
   const [conductors, setConductors] = useState<Conductor[]>([]);
 
+  // ── Phase 58: Draw Conductor mode ──
+  const [conductorDrawMode, setConductorDrawMode] = useState(false);
+  const [drawFromPole, setDrawFromPole] = useState<Pole | null>(null);
+  const [drawToPole, setDrawToPole] = useState<Pole | null>(null);
+  const [showDrawModal, setShowDrawModal] = useState(false);
+
+  // ── Phase 60: Layer visibility ──
+  const [layerVisibility, setLayerVisibility] = useState<LayerVisibility>(DEFAULT_LAYER_VISIBILITY);
+  const [showLayerControls, setShowLayerControls] = useState(false);
+
   const gisInputRef = useRef<HTMLInputElement>(null!);
 
   const showNotification = useCallback((msg: string) => {
@@ -84,6 +96,29 @@ const App: React.FC = () => {
     fetchAlerts();
     fetchConductors();
   }, [setCurrentUser, setActiveTenantId, fetchPoles, fetchStats, fetchAlerts, fetchConductors]);
+
+  /** Phase 58: handle pole click in draw conductor mode */
+  const handleDrawPoleSelect = useCallback((pole: Pole) => {
+    if (!drawFromPole) {
+      setDrawFromPole(pole);
+    } else if (pole.id !== drawFromPole.id) {
+      setDrawToPole(pole);
+      setShowDrawModal(true);
+    }
+  }, [drawFromPole]);
+
+  const handleCancelDraw = useCallback(() => {
+    setConductorDrawMode(false);
+    setDrawFromPole(null);
+    setDrawToPole(null);
+    setShowDrawModal(false);
+  }, []);
+
+  const handleConductorCreated = useCallback(() => {
+    fetchConductors();
+    handleCancelDraw();
+    showNotification('Condutor criado com sucesso');
+  }, [fetchConductors, handleCancelDraw, showNotification]);
 
   const handleLogout = useCallback(() => {
     localStorage.removeItem('sisdrone_jwt');
@@ -139,6 +174,20 @@ const App: React.FC = () => {
 
   // ── Filtered poles (via usePoleSearch hook — SRP) ──
   const filteredPoles = usePoleSearch(poles, searchQuery, filterCondition);
+
+  // ── Phase 60: Layer visibility predicates ──
+  const poleVisible = useCallback((p: Pole) => {
+    const lvl = p.network_level ?? 'BT';
+    if (lvl === 'MT') return layerVisibility.polesMT;
+    if (lvl === 'AT') return layerVisibility.polesAT;
+    return layerVisibility.polesBT;
+  }, [layerVisibility]);
+
+  const conductorVisible = useCallback((c: Conductor) => {
+    if (c.network_type === 'MT') return layerVisibility.conductorMT;
+    if (c.network_type === 'ramal') return layerVisibility.conductorRamal;
+    return layerVisibility.conductorBT;
+  }, [layerVisibility]);
 
   // ── Real-time push notifications via WebSocket ──
   const { notifications, dismiss } = useNotifications(activeTenantId);
@@ -270,7 +319,7 @@ const App: React.FC = () => {
           }}
         />
 
-        <div className="map-container glass-panel">
+        <div className="map-container glass-panel" style={{ position: 'relative' }}>
           <AlertBanner alerts={alerts} onSelectPole={handleMarkerClick} />
           {notification && (
             <div className="notification-overlay animate-fade-in">
@@ -279,17 +328,66 @@ const App: React.FC = () => {
           )}
 
           {viewMode === 'MAP' ? (
-            <Map
-              poles={filteredPoles}
-              onMapClick={handleMapClick}
-              onMarkerClick={handleMarkerClick}
-              selectedPole={selectedPole}
-              isMeasuring={isMeasuring}
-              activeSpan={activeSpan}
-              userRole={currentUser?.role || 'VIEWER'}
-              showHeatmap={showHeatmap}
-              conductors={conductors}
-            />
+            <>
+              {/* Phase 58: Draw conductor overlay banner */}
+              {conductorDrawMode && (
+                <div style={{
+                  position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)',
+                  zIndex: 1000, background: 'rgba(59,130,246,0.92)', color: '#fff',
+                  borderRadius: 8, padding: '6px 16px', fontSize: '0.85rem', fontWeight: 600,
+                  display: 'flex', alignItems: 'center', gap: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                }}>
+                  <GitBranch size={16} />
+                  {drawFromPole
+                    ? `✓ ${drawFromPole.name || `Poste ${drawFromPole.id}`} — clique no 2º poste`
+                    : 'Modo Desenho: clique no 1º poste'}
+                  <button onClick={handleCancelDraw} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.5)', color: '#fff', borderRadius: 4, padding: '1px 6px', cursor: 'pointer', fontSize: '0.8rem' }}>
+                    Cancelar
+                  </button>
+                </div>
+              )}
+
+              <Map
+                poles={filteredPoles}
+                onMapClick={handleMapClick}
+                onMarkerClick={handleMarkerClick}
+                selectedPole={selectedPole}
+                isMeasuring={isMeasuring}
+                activeSpan={activeSpan}
+                userRole={currentUser?.role || 'VIEWER'}
+                showHeatmap={showHeatmap}
+                conductors={conductors}
+                drawMode={conductorDrawMode}
+                drawFromPoleId={drawFromPole?.id ?? null}
+                onDrawPoleSelect={handleDrawPoleSelect}
+                poleVisible={poleVisible}
+                conductorVisible={conductorVisible}
+              />
+
+              {/* Phase 60: Layer controls */}
+              <MapLayerControls
+                visibility={layerVisibility}
+                onChange={setLayerVisibility}
+                open={showLayerControls}
+                onToggle={() => setShowLayerControls(v => !v)}
+              />
+
+              {/* Phase 58: Draw conductor toggle button (ENGINEER+) */}
+              {currentUser && currentUser.role !== 'VIEWER' && (
+                <button
+                  className={`btn btn-sm ${conductorDrawMode ? 'btn-primary' : 'btn-outline'}`}
+                  onClick={() => {
+                    if (conductorDrawMode) { handleCancelDraw(); }
+                    else { setConductorDrawMode(true); setDrawFromPole(null); }
+                  }}
+                  title="Desenhar Condutor (clique em 2 postes)"
+                  style={{ position: 'absolute', bottom: 120, right: 16, zIndex: 1000, width: 36, height: 36, padding: 0, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  aria-label="Modo Desenho de Condutor"
+                >
+                  <GitBranch size={18} />
+                </button>
+              )}
+            </>
           ) : viewMode === 'ANALYTICS' ? (
             <Suspense fallback={<div className="p-8 text-center">Carregando Analytics...</div>}>
               <AnalyticsDashboard />
@@ -319,6 +417,17 @@ const App: React.FC = () => {
         onDismiss={dismiss}
         onPoleClick={handleMarkerClick}
       />
+      {/* Phase 58: Draw Conductor confirmation modal */}
+      {showDrawModal && drawFromPole && drawToPole && (
+        <DrawConductorModal
+          fromPole={drawFromPole}
+          toPole={drawToPole}
+          open={showDrawModal}
+          onClose={handleCancelDraw}
+          onCreated={handleConductorCreated}
+          tenantId={activeTenantId}
+        />
+      )}
     </div>
     )}
     </TenantProvider>

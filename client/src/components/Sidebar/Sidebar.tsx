@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, FileJson, Globe, FileText, Ruler, LayoutDashboard, Download, X, Zap, ClipboardList, Video, Building2, Cable, Network, Upload, ShieldCheck, BarChart2, Wrench, Navigation } from 'lucide-react';
+import { Search, FileJson, Globe, FileText, Ruler, LayoutDashboard, Download, X, Zap, ClipboardList, Video, Building2, Cable, Network, Upload, ShieldCheck, BarChart2, Wrench, Navigation, ClipboardCheck } from 'lucide-react';
 import PoleDetails from './PoleDetails';
 import { generateInspectionReport } from '../../utils/pdfGenerator';
 import { api } from '../../services/api';
@@ -13,6 +13,7 @@ import ValidationPanel from './ValidationPanel';
 import EquipmentPanel from './EquipmentPanel';
 import AdminOverview from '../Dashboard/AdminOverview';
 import ExecutiveDashboard from '../Dashboard/ExecutiveDashboard';
+import ManualInspectionForm from './ManualInspectionForm';
 import ImportModal from '../ImportModal';
 import NearbySearchPanel from './NearbySearchPanel';
 import FilterChips from '../FilterChips';
@@ -35,8 +36,8 @@ interface SidebarProps {
   setFilterCondition: (c: 'All' | 'Critical' | 'Warning' | 'Good') => void;
   selectedPole: Pole | null;
   activeSpan: Span | null;
-  activeTab: 'details' | 'history' | 'eng' | 'video' | 'bim' | 'conductors' | 'topology' | 'validation' | 'kpi' | 'admin' | 'equipment';
-  setActiveTab: (t: 'details' | 'history' | 'eng' | 'video' | 'bim' | 'conductors' | 'topology' | 'validation' | 'kpi' | 'admin' | 'equipment') => void;
+  activeTab: 'details' | 'history' | 'eng' | 'video' | 'bim' | 'conductors' | 'topology' | 'validation' | 'kpi' | 'admin' | 'equipment' | 'drone';
+  setActiveTab: (t: 'details' | 'history' | 'eng' | 'video' | 'bim' | 'conductors' | 'topology' | 'validation' | 'kpi' | 'admin' | 'equipment' | 'drone') => void;
   isCapturing: boolean;
   onAnalyze: () => void;
   analysis: AnalysisResult | null;
@@ -351,7 +352,19 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
           )}
 
           {activeTab === 'history' && (
-            <InspectionHistory history={history} apiBase={apiBase} />
+            <>
+              <InspectionHistory history={history} apiBase={apiBase} />
+              {selectedPole && userRole !== 'VIEWER' && (
+                <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', marginTop: 8, paddingTop: 8 }}>
+                  <ManualInspectionForm
+                    pole={selectedPole}
+                    onSaved={() => {
+                      /* parent will refresh history on next mount or user interaction */
+                    }}
+                  />
+                </div>
+              )}
+            </>
           )}
 
           {activeTab === 'video' && selectedPole && (
