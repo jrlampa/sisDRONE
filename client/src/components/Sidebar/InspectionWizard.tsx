@@ -146,8 +146,9 @@ const InspectionWizard: React.FC<InspectionWizardProps> = ({ tenantId, onSuccess
       const res = await api.createInspectionWizard(payload);
       setResult(res.data);
       onSuccess?.(res.data);
-    } catch (err: any) {
-      setError(err?.response?.data?.error ?? 'Erro ao registrar levantamento');
+    } catch (err) {
+      const e = err as { response?: { data?: { error?: string } } };
+      setError(e?.response?.data?.error ?? 'Erro ao registrar levantamento');
     } finally {
       setSubmitting(false);
     }

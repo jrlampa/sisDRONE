@@ -5,7 +5,7 @@
  *        e resumo de queda de tensão (Phase 33).
  */
 import React, { useEffect, useState, useCallback } from 'react';
-import { Network, RefreshCw, Loader, AlertTriangle, GitBranch, Zap } from 'lucide-react';
+import { RefreshCw, Loader, AlertTriangle, GitBranch, Zap } from 'lucide-react';
 import { api } from '../../services/api';
 import type { NetworkSegment, Pole } from '../../types';
 
@@ -67,6 +67,7 @@ const TopologyPanel: React.FC<TopologyPanelProps> = ({ tenantId, onSelectPole })
     }
   }, [tenantId]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, [load]);
 
   if (stats.loading) {

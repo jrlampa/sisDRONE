@@ -409,3 +409,23 @@ export interface PoleClusters {
   radius_m: number;
   clusters: PoleCluster[];
 }
+
+// ── Map Layer Controls (Phase 60) ──────────────────────────────────────────────
+
+export interface LayerVisibility {
+  polesMT: boolean;
+  polesBT: boolean;
+  polesAT: boolean;
+  conductorMT: boolean;
+  conductorBT: boolean;
+  conductorRamal: boolean;
+}
+
+export const DEFAULT_LAYER_VISIBILITY: LayerVisibility = {
+  polesMT: true,
+  polesBT: true,
+  polesAT: true,
+  conductorMT: true,
+  conductorBT: true,
+  conductorRamal: true,
+};

@@ -54,6 +54,7 @@ const VideoCapturePanel: React.FC<VideoCaptureProps> = ({
   // Sync videoRef with DOM element
   useEffect(() => {
     if (videoElRef.current) {
+  // eslint-disable-next-line react-hooks/immutability
       (videoRef as React.MutableRefObject<HTMLVideoElement | null>).current = videoElRef.current;
     }
   }, [videoRef]);

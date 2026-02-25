@@ -46,7 +46,7 @@ const DroneLiveView: React.FC<DroneLiveViewProps> = ({ apiBase }) => {
           if (data.type === 'telemetry') {
             setTelemetry(data);
           }
-        } catch {}
+        } catch { /* ignore malformed WS messages */ }
       };
     };
 

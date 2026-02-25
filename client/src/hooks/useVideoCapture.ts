@@ -89,8 +89,9 @@ export function useVideoCapture({
     try {
       const res = await api.analyzeVideoFrame(poleId, base64, sessionId, seq);
       onFrameAnalyzed?.(res.data);
-    } catch (err: any) {
-      if (!isOnline || err?.message === 'Network Error') {
+    } catch (err) {
+      const e = err as { message?: string };
+      if (!isOnline || e?.message === 'Network Error') {
         // Queue for later upload
         await addToQueue({
           url: '/api/video/frame',
@@ -229,7 +230,7 @@ export function useVideoCapture({
 
     // Mark session complete
     if (sessionId) {
-      try { await api.completeVideoSession(sessionId); } catch {}
+      try { await api.completeVideoSession(sessionId); } catch { /* ignore session completion errors */ }
     }
 
     stopStream();

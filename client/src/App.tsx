@@ -7,7 +7,7 @@ import AneelSearchPanel from './components/AneelSearchPanel';
 import AlertBanner from './components/AlertBanner';
 import NotificationBanner from './components/NotificationBanner';
 import DrawConductorModal from './components/DrawConductorModal';
-import MapLayerControls, { DEFAULT_LAYER_VISIBILITY, type LayerVisibility } from './components/MapLayerControls';
+import MapLayerControls from './components/MapLayerControls';
 import { useNotifications } from './hooks/useNotifications';
 import { Zap, Menu, Building, LogOut, GitBranch } from 'lucide-react';
 import { api } from './services/api';
@@ -16,7 +16,8 @@ import { useAppHandlers } from './hooks/useAppHandlers';
 import { usePoleSearch } from './hooks/usePoleSearch';
 import { TenantProvider } from './context/TenantContext';
 import { WifiOff, RefreshCw } from 'lucide-react';
-import type { Pole, Span, Inspection, AnalysisResult, Tenant, User, Conductor } from './types';
+import type { Pole, Span, Inspection, AnalysisResult, Tenant, User, Conductor, LayerVisibility } from './types';
+import { DEFAULT_LAYER_VISIBILITY } from './types';
 
 // Lazy-load heavy view components to reduce initial bundle size
 const AnalyticsDashboard = lazy(() => import('./components/Dashboard/AnalyticsDashboard'));
@@ -162,6 +163,7 @@ const App: React.FC = () => {
       document.documentElement.style.setProperty('--accent', activeTenant.accent_color);
       document.documentElement.style.setProperty('--accent-hover', activeTenant.primary_color);
       fetchPoles();
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchConductors();
     }
   }, [activeTenant, fetchPoles, fetchConductors]);

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MapPin, Upload, FileText, Loader, Download, Edit2, Trash2, X } from 'lucide-react';
+import { MapPin, Upload, FileText, Download, Edit2, Trash2, X } from 'lucide-react';
 import { api } from '../../services/api';
 import type { Pole, AnalysisResult, User } from '../../types';
 import WorkOrderModal from '../WorkOrders/WorkOrderModal';

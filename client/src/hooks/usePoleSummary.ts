@@ -35,6 +35,8 @@ export function usePoleSummary(poleId: number): UsePoleSummaryReturn {
   useEffect(() => {
     let cancelled = false;
 
+    // Reset state on poleId change (valid loading pattern — eslint-disable below is intentional)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSummary(null);
     setPrediction(null);
     setHistory([]);

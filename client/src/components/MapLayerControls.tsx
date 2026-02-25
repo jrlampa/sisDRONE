@@ -5,24 +5,7 @@
  */
 import React from 'react';
 import { Layers, X } from 'lucide-react';
-
-export interface LayerVisibility {
-  polesMT: boolean;
-  polesBT: boolean;
-  polesAT: boolean;
-  conductorMT: boolean;
-  conductorBT: boolean;
-  conductorRamal: boolean;
-}
-
-export const DEFAULT_LAYER_VISIBILITY: LayerVisibility = {
-  polesMT: true,
-  polesBT: true,
-  polesAT: true,
-  conductorMT: true,
-  conductorBT: true,
-  conductorRamal: true,
-};
+import type { LayerVisibility } from '../types';
 
 interface MapLayerControlsProps {
   visibility: LayerVisibility;

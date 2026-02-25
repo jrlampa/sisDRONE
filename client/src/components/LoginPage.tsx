@@ -62,8 +62,9 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
       localStorage.setItem('sisdrone_user', JSON.stringify(user));
       localStorage.setItem('sisdrone_mock_role', user.role);
       onLogin(user);
-    } catch (err: any) {
-      const msg = err?.response?.data?.error;
+    } catch (err) {
+      const e = err as { response?: { data?: { error?: string } } };
+      const msg = e?.response?.data?.error;
       setRegError(msg ?? 'Erro ao registrar. Tente outro nome de usuário.');
     } finally {
       setRegLoading(false);

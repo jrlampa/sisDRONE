@@ -21,48 +21,51 @@ export function useNotifications(tenantId: number | null) {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Use a ref so the onclose callback always calls the latest version without
+  // a self-referencing const (avoids react-hooks/immutability lint error).
+  const doConnectRef = useRef<() => void>(() => { /* initialised below */ });
 
   const dismiss = useCallback((id: string) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
   }, []);
 
-  const connect = useCallback(() => {
+  useEffect(() => {
     if (!tenantId) return;
 
-    const url = `${WS_URL}?tenant_id=${tenantId}`;
-    const ws = new WebSocket(url);
-    wsRef.current = ws;
+    const doConnect = () => {
+      const url = `${WS_URL}?tenant_id=${tenantId}`;
+      const ws = new WebSocket(url);
+      wsRef.current = ws;
 
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(String(event.data)) as Omit<AppNotification, 'id'>;
-        const notification: AppNotification = {
-          ...data,
-          id: `${data.type}-${data.timestamp}-${Math.random().toString(36).slice(2)}`,
-        };
-        setNotifications((prev) => [notification, ...prev].slice(0, MAX_NOTIFICATIONS));
-      } catch {
-        // ignore malformed messages
-      }
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(String(event.data)) as Omit<AppNotification, 'id'>;
+          const notification: AppNotification = {
+            ...data,
+            id: `${data.type}-${data.timestamp}-${Math.random().toString(36).slice(2)}`,
+          };
+          setNotifications((prev) => [notification, ...prev].slice(0, MAX_NOTIFICATIONS));
+        } catch { /* ignore malformed messages */ }
+      };
+
+      ws.onclose = () => {
+        // reconnect after 5 s unless component unmounted
+        reconnectTimer.current = setTimeout(doConnectRef.current, 5000);
+      };
+
+      ws.onerror = () => {
+        ws.close();
+      };
     };
 
-    ws.onclose = () => {
-      // reconnect after 5 s unless component unmounted
-      reconnectTimer.current = setTimeout(connect, 5000);
-    };
+    doConnectRef.current = doConnect;
+    doConnect();
 
-    ws.onerror = () => {
-      ws.close();
-    };
-  }, [tenantId]);
-
-  useEffect(() => {
-    connect();
     return () => {
       if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
       wsRef.current?.close();
     };
-  }, [connect]);
+  }, [tenantId]);
 
   return { notifications, dismiss };
 }

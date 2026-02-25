@@ -33,9 +33,12 @@ describe('Poles Sort — GET /api/poles?sort=', () => {
   it('GET /api/poles?sort=name_asc deve ordenar por nome crescente', async () => {
     const res = await request(app).get('/api/poles?sort=name_asc');
     expect(res.status).toBe(200);
-    const names = res.body.poles.map((p: { name: string }) => p.name);
-    const sorted = [...names].sort((a, b) => a.localeCompare(b));
-    expect(names).toEqual(sorted);
+    const names: string[] = res.body.poles.map((p: { name: string }) => p.name);
+    // Verify monotonic ascending order matching SQLite's 'name ASC' (byte-order, case-sensitive)
+    // This is locale-neutral and matches SQLite's default string sort.
+    for (let i = 1; i < names.length; i++) {
+      expect(names[i - 1] <= names[i]).toBe(true);
+    }
   });
 
   it('GET /api/poles?sort=invalid deve usar ordenação padrão (id DESC)', async () => {
