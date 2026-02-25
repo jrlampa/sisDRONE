@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, FileJson, Globe, FileText, Ruler, LayoutDashboard, Download, X, Zap, ClipboardList, Video, Building2, Cable, Network, Upload, ShieldCheck, BarChart2, Wrench, Navigation, ClipboardCheck, Clipboard } from 'lucide-react';
+import { Search, FileJson, Globe, FileText, Ruler, LayoutDashboard, Download, X, Zap, ClipboardList, Video, Building2, Cable, Network, Upload, ShieldCheck, BarChart2, Wrench, Navigation, ClipboardCheck, Clipboard, PackageSearch } from 'lucide-react';
 import PoleDetails from './PoleDetails';
 import { generateInspectionReport } from '../../utils/pdfGenerator';
 import { api } from '../../services/api';
@@ -21,6 +21,7 @@ import { useTenant } from '../../context/TenantContext';
 import ToastBanner from '../ToastBanner';
 import DroneRoutePanel from './DroneRoutePanel';
 import InspectionWizard from './InspectionWizard';
+import BomPanel from './BomPanel';
 import { useToast } from '../../hooks/useToast';
 import type { Pole, Span, Inspection, AnalysisResult, Stats, Tenant, User } from '../../types';
 import type { FrameAnalysis } from '../../hooks/useVideoCapture';
@@ -37,8 +38,8 @@ interface SidebarProps {
   setFilterCondition: (c: 'All' | 'Critical' | 'Warning' | 'Good') => void;
   selectedPole: Pole | null;
   activeSpan: Span | null;
-  activeTab: 'details' | 'history' | 'eng' | 'video' | 'bim' | 'conductors' | 'topology' | 'validation' | 'kpi' | 'admin' | 'equipment' | 'drone' | 'wizard';
-  setActiveTab: (t: 'details' | 'history' | 'eng' | 'video' | 'bim' | 'conductors' | 'topology' | 'validation' | 'kpi' | 'admin' | 'equipment' | 'drone' | 'wizard') => void;
+  activeTab: 'details' | 'history' | 'eng' | 'video' | 'bim' | 'conductors' | 'topology' | 'validation' | 'kpi' | 'admin' | 'equipment' | 'drone' | 'wizard' | 'bom';
+  setActiveTab: (t: 'details' | 'history' | 'eng' | 'video' | 'bim' | 'conductors' | 'topology' | 'validation' | 'kpi' | 'admin' | 'equipment' | 'drone' | 'wizard' | 'bom') => void;
   isCapturing: boolean;
   onAnalyze: () => void;
   analysis: AnalysisResult | null;
@@ -330,6 +331,13 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
                 <Clipboard size={12} className="inline mr-1" />Wizard
               </button>
             )}
+            <button
+              onClick={() => setActiveTab('bom')}
+              className={activeTab === 'bom' ? 'active' : ''}
+              title="Relação de Materiais / BOM (Phase 64)"
+            >
+              <PackageSearch size={12} className="inline mr-1" />BOM
+            </button>
             {userRole === 'ADMIN' && (
               <button
                 onClick={() => setActiveTab('admin')}
@@ -438,6 +446,10 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
               onSuccess={() => setActiveTab('details')}
               onCancel={() => setActiveTab('details')}
             />
+          )}
+
+          {activeTab === 'bom' && (
+            <BomPanel tenantId={activeTenantId ?? 1} />
           )}
 
           {activeTab === 'eng' && activeSpan && (

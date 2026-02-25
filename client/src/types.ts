@@ -338,3 +338,74 @@ export interface FieldPhoto {
   label: string | null;
   captured_at: string;
 }
+
+// ── Phase 64: Relação de Materiais (BOM) ─────────────────────────────────────
+
+export interface BomReport {
+  tenant_id: number | null;
+  circuit_id: number | null;
+  generated_at: string;
+  poles: {
+    by_material: Record<string, number>;
+    by_network_level: Record<string, number>;
+    by_structure_config: Record<string, number>;
+    total: number;
+  };
+  conductors: {
+    by_network_type: Record<string, number>;
+    by_cable_type: Record<string, number>;
+    total_conductors: number;
+    total_length_km: number;
+  };
+  equipment: {
+    by_type: Record<string, number>;
+    total: number;
+  };
+}
+
+// ── Phase 65: Saúde de Circuito ───────────────────────────────────────────────
+
+export interface CircuitHealthReport {
+  circuit_id: number;
+  circuit_name: string;
+  generated_at: string;
+  summary: {
+    total_poles: number;
+    critical_poles: number;
+    avg_ahi: number | null;
+    total_conductors: number;
+    total_length_km: number;
+    is_topology_valid: boolean;
+  };
+  ahi_distribution: Record<string, number>;
+  voltage_drop: { total: number; critical: number; warning: number; ok: number };
+  topology: {
+    loops_count: number;
+    dead_ends_count: number;
+    isolated_count: number;
+    duplicates_count: number;
+    is_valid: boolean;
+    loops: number[][];
+  };
+  equipment: Record<string, number>;
+}
+
+// ── Phase 66: Agrupamento Espacial de Postes ──────────────────────────────────
+
+export interface PoleCluster {
+  cluster_id: number;
+  centroid_lat: number;
+  centroid_lng: number;
+  pole_count: number;
+  avg_ahi: number | null;
+  critical_count: number;
+  network_levels: string[];
+  pole_ids: number[];
+}
+
+export interface PoleClusters {
+  cluster_count: number;
+  total_poles: number;
+  radius_m: number;
+  clusters: PoleCluster[];
+}

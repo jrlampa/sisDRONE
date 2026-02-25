@@ -1,6 +1,6 @@
 # sisDRONE – RAG / Memória de Trabalho
 
-> Última atualização: 2026-02-25 (Phase 58/59/60 — Draw Conductor + Inspeção Manual + Layer Controls) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
+> Última atualização: 2026-02-25 (Phase 64/65/66 — BOM Report + Circuit Health + Pole Clustering) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
 
 ---
 
@@ -82,6 +82,11 @@ sisDRONE/
 | **KPIs Executivos** | KpiData | `GET /api/kpis?tenant_id=&period_days=30` (Phase 49) — MTTR, taxa inspeção, custo, AHI delta, postes recuperados |
 | **Equipamentos** | Equipment | `GET /api/equipment` (filtros: pole_id/tenant_id/type/status), `POST /api/equipment`, `GET/PUT/DELETE /api/equipment/:id` — Phase 53; 11 tipos, 4 status, ON DELETE CASCADE do poste |
 | **Infraestrutura MT/BT** | Pole.network_level/structure_config | Campos `network_level` (MT/BT/AT), `structure_config` (tangente/angulo/derivacao/seccionamento/terminal/passagem), `phase_config` (M/B/T), `num_arms` em postes — Phase 54; aceitos em POST/PUT /api/poles |
+| **Roteiro Drone TSP** | DroneRoute, RouteWaypoint | `GET /api/drones/route?tenant_id=`, `GET /api/drones/route/kml?tenant_id=` — Phase 55; nearest-neighbor TSP, começa pelo menor AHI, Google Earth KML |
+| **Upload Fotos Campo** | FieldPhoto | `POST /api/poles/:id/photos` (base64 JPEG/PNG/WebP, max 5MB, valida MIME) — Phase 56; persiste em /uploads/photos/, insere na tabela images |
+| **Relação de Materiais (BOM)** | BomReport | `GET /api/report/bom?tenant_id=&circuit_id=&format=json\|csv` — Phase 64; quantitativos por material/nível/estrutura/condutor/equipamento; CSV UTF-8 BOM para Excel |
+| **Saúde de Circuito** | CircuitHealthReport | `GET /api/circuits/:id/health` — Phase 65; consolida AHI stats + distribuição + voltage drop NBR5410 + topologia + equipamentos em 1 chamada |
+| **Agrupamento Espacial** | PoleCluster, PoleClusters | `GET /api/poles/clusters?tenant_id=&radius_m=` — Phase 66; clusterService.ts (grid-cell O(n)); centróide, AHI médio, críticos, níveis de rede por cluster |
 
 ---
 
@@ -192,7 +197,7 @@ sisDRONE/
 
 **Meta**: >= 80% de cobertura em código de lógica de negócio
 
-**Situação atual** (Phase 53/54 — Equipamentos por Poste + Estruturas MT/BT): 608 server + 1 client flaky = **609 testes no total** ✅ | Coverage: **≥ 80% stmts + branches** 🎯
+**Situação atual** (Phase 64/65/66 — BOM + Circuit Health + Pole Clustering): **686 testes** (685 passing + 1 pre-existing flaky polesSort localeCompare) ✅ | Coverage: **≥ 80% stmts + branches** 🎯
 
 **Coverage Threshold** configurado em `server/vitest.config.ts`:
 - Lines/Functions/Statements: ≥ 80%

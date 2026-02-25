@@ -367,6 +367,24 @@ export const api = {
       `${API_BASE}/api/inspection/wizard`,
       data,
     ),
+
+  // Relação de Materiais / BOM (Phase 64)
+  getBom: (params: { tenant_id?: number; circuit_id?: number }) =>
+    axios.get<import('../types').BomReport>(`${API_BASE}/api/report/bom`, { params }),
+
+  getBomCsvUrl: (tenantId: number, circuitId?: number) => {
+    const p = new URLSearchParams({ tenant_id: String(tenantId), format: 'csv' });
+    if (circuitId) p.set('circuit_id', String(circuitId));
+    return `${API_BASE}/api/report/bom?${p.toString()}`;
+  },
+
+  // Saúde de Circuito (Phase 65)
+  getCircuitHealth: (circuitId: number) =>
+    axios.get<import('../types').CircuitHealthReport>(`${API_BASE}/api/circuits/${circuitId}/health`),
+
+  // Agrupamento Espacial de Postes (Phase 66)
+  getPoleClusters: (params: { tenant_id?: number; radius_m: number }) =>
+    axios.get<import('../types').PoleClusters>(`${API_BASE}/api/poles/clusters`, { params }),
 };
 
 // Named exports for direct import in hooks/components

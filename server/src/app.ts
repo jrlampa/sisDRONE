@@ -31,6 +31,8 @@ import droneRouter from './routes/droneRoutes';
 import photoRouter from './routes/photoRoutes';
 import projectSummaryRouter from './routes/projectSummaryReport';
 import levantamentoRouter from './routes/levantamento';
+import bomReportRouter from './routes/bomReport';
+import circuitHealthRouter from './routes/circuitHealth';
 import inspectionWizardRouter from './routes/inspectionWizard';
 import { checkPermission } from './middleware/auth';
 import { rateLimit } from './middleware/rateLimit';
@@ -97,6 +99,8 @@ app.use('/api/drones', droneRouter);
 app.use('/api/poles', photoRouter);
 app.use('/api/report', projectSummaryRouter);
 app.use('/api/report/levantamento', levantamentoRouter);
+app.use('/api/report/bom', bomReportRouter);
+app.use('/api/circuits', circuitHealthRouter);
 app.use('/api/inspection/wizard', inspectionWizardRouter);
 
 // Legacy inspect routes: /api/analyze, /api/feedback, /api/:id/history

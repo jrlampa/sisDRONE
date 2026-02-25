@@ -2,6 +2,7 @@ import express, { Router, Request, Response } from 'express';
 import { getDb } from '../db';
 import { rateLimit } from '../middleware/rateLimit';
 import { cache } from '../utils/cache';
+import { clusterPoles, type ClusterPole } from '../services/clusterService';
 
 const router = Router();
 
@@ -297,5 +298,52 @@ router.post(
     }
   }
 );
+
+/**
+ * GET /api/poles/clusters?tenant_id=&radius_m=  (Phase 66)
+ *
+ * Agrupa postes próximos usando células de grade (O(n)).
+ * Parâmetros:
+ *   - tenant_id (opcional): filtro de tenant
+ *   - radius_m  (obrigatório): raio de célula em metros (10–5000)
+ * Resposta: { cluster_count, total_poles, radius_m, clusters[] }
+ */
+const MIN_RADIUS_M = 10;
+const MAX_RADIUS_M = 5000;
+
+router.get('/clusters', rateLimit(30, 60_000), async (req: Request, res: Response) => {
+  const tenantId  = req.query.tenant_id ? parseInt(String(req.query.tenant_id), 10) : null;
+  const radiusRaw = parseFloat(String(req.query.radius_m ?? ''));
+
+  if (req.query.tenant_id !== undefined && req.query.tenant_id !== '' && (isNaN(tenantId!) || tenantId! <= 0)) {
+    return res.status(400).json({ error: 'tenant_id inválido' });
+  }
+  if (isNaN(radiusRaw) || radiusRaw < MIN_RADIUS_M || radiusRaw > MAX_RADIUS_M) {
+    return res.status(400).json({ error: `radius_m é obrigatório e deve estar entre ${MIN_RADIUS_M} e ${MAX_RADIUS_M}` });
+  }
+
+  try {
+    const db = await getDb();
+    const where = tenantId && !isNaN(tenantId) && tenantId > 0 ? 'WHERE tenant_id = ?' : '';
+    const params = tenantId && !isNaN(tenantId) && tenantId > 0 ? [tenantId] : [];
+
+    const rows = await db.all<ClusterPole[]>(
+      `SELECT id, lat, lng, ahi_score, network_level FROM poles ${where} ORDER BY id ASC`,
+      params
+    );
+
+    const clusters = clusterPoles(rows, radiusRaw);
+
+    res.json({
+      cluster_count: clusters.length,
+      total_poles:   rows.length,
+      radius_m:      radiusRaw,
+      clusters,
+    });
+  } catch (err) {
+    console.error('Erro ao agrupar postes:', err);
+    res.status(500).json({ error: 'Erro ao agrupar postes por proximidade' });
+  }
+});
 
 export default router;
