@@ -540,3 +540,25 @@ Testes existentes (Phase 9):
 - [x] `PoleDetails.tsx`: seção "Classificação Estrutural" mostra network_level (MT=orange, BT=green), structure_config, phase_config (M/B/T → pt-BR), num_arms
 - [x] `tests/poleMtBtStructure.test.ts`: 8 testes (POST com MT tangente trifásico, BT plain, validações 400, PUT com todos configs, 400 por level inválido)
 - [x] Total: **609 testes** (608 passing + 1 pre-existing flaky polesSort localeCompare) ✅
+
+### Phase 55 — Roteiro de Inspeção por Drone (2026-02-25)
+- [x] `routeService.ts`: planInspectionRoute (TSP nearest-neighbor O(n²), começa por menor AHI, suporte start_lat/lng, filtra postes sem coords, estimated_flight_minutes @10m/s)
+- [x] `routes/droneRoutes.ts`: GET /api/drones/route (JSON: total_poles, total_distance_km, estimated_flight_minutes, waypoints[]) + GET /api/drones/route/kml (KML c/ LineString + Placemarks coloridos por AHI)
+- [x] `DroneRoutePanel.tsx`: painel de roteamento, ponto de partida opcional, KPIs (postes, km, minutos), lista de waypoints com badge AHI colorido
+- [x] `tests/droneRoute.test.ts`: 13 testes (6 unit planInspectionRoute + 4 GET /route + 3 GET /route/kml)
+
+### Phase 56 — Upload de Fotos de Campo por Poste (2026-02-25)
+- [x] `routes/photoRoutes.ts`: POST /api/poles/:id/photos (base64, whitelist JPEG/PNG/WebP, max 5MB, persiste em /uploads/photos/, insere em images table)
+- [x] `PhotoUploadForm.tsx`: drag-and-drop ou clique, preview, label opcional, envia base64 ao backend
+- [x] `PoleImages.tsx`: integrado PhotoUploadForm na seção "Enviar Foto de Campo" (aparece quando imagens expandidas); loadImages agora recarrega após upload
+- [x] `tests/polePhotoUpload.test.ts`: 6 testes (400 ID inválido, 400 sem image, 415 mime inválido, 404 poste inexistente, 201 sucesso, GET images mostra foto)
+
+### Phase 57 — Resumo Executivo do Projeto PDF (2026-02-25)
+- [x] `routes/projectSummaryReport.ts`: GET /api/report/project-summary?tenant_id= (PDF: KPI cards, AHI distribution visual, tabelas por material/status/network_level/tipo condutor/tipo equipamento)
+- [x] Extraído de reportRoutes.ts para respeitar regra ≤500 linhas (renderTable helper como função pura)
+- [x] Botão "Resumo" em Sidebar.tsx (ENGINEER+, link direto ao PDF)
+- [x] `tests/projectSummaryReport.test.ts`: 5 testes (400 string, 400 zero, 404, 200+pdf, content-disposition)
+- [x] Tab "Drone" em Sidebar.tsx com DroneRoutePanel
+- [x] api.ts: getDroneRoute, getDroneRouteKmlUrl, uploadPolePhoto, getProjectSummaryUrl adicionados
+- [x] types.ts: RouteWaypoint, DroneRoute, FieldPhoto adicionados
+- [x] Total: **633 testes** (632 passing + 1 pre-existing flaky polesSort localeCompare) ✅

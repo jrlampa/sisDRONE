@@ -308,3 +308,33 @@ export interface Equipment {
   created_at: string;
   pole_name?: string;
 }
+
+// ── Phase 55: Roteiro de Inspeção por Drone ──────────────────────────────────
+
+export interface RouteWaypoint {
+  pole_id: number;
+  name: string | null;
+  lat: number;
+  lng: number;
+  ahi_score: number | null;
+  order: number;
+  distance_from_prev_m: number;
+}
+
+export interface DroneRoute {
+  total_poles: number;
+  total_distance_m: number;
+  total_distance_km: number;
+  estimated_flight_minutes: number;
+  waypoints: RouteWaypoint[];
+}
+
+// ── Phase 56: Upload de Fotos de Campo ───────────────────────────────────────
+
+export interface FieldPhoto {
+  id: number;
+  pole_id: number;
+  file_path: string;
+  label: string | null;
+  captured_at: string;
+}

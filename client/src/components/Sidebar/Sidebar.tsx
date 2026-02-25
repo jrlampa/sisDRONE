@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, FileJson, Globe, FileText, Ruler, LayoutDashboard, Download, X, Zap, ClipboardList, Video, Building2, Cable, Network, Upload, ShieldCheck, BarChart2, Wrench } from 'lucide-react';
+import { Search, FileJson, Globe, FileText, Ruler, LayoutDashboard, Download, X, Zap, ClipboardList, Video, Building2, Cable, Network, Upload, ShieldCheck, BarChart2, Wrench, Navigation } from 'lucide-react';
 import PoleDetails from './PoleDetails';
 import { generateInspectionReport } from '../../utils/pdfGenerator';
 import { api } from '../../services/api';
@@ -18,6 +18,7 @@ import NearbySearchPanel from './NearbySearchPanel';
 import FilterChips from '../FilterChips';
 import { useTenant } from '../../context/TenantContext';
 import ToastBanner from '../ToastBanner';
+import DroneRoutePanel from './DroneRoutePanel';
 import { useToast } from '../../hooks/useToast';
 import type { Pole, Span, Inspection, AnalysisResult, Stats, Tenant, User } from '../../types';
 import type { FrameAnalysis } from '../../hooks/useVideoCapture';
@@ -192,6 +193,17 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
               <Network size={14} /> Croqui
             </a>
           )}
+          {activeTenant && userRole !== 'VIEWER' && (
+            <a
+              href={api.getProjectSummaryUrl(activeTenant.id)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-outline"
+              title="Resumo Executivo do Projeto (PDF)"
+            >
+              <FileText size={14} /> Resumo
+            </a>
+          )}
           <button
             className={`btn btn-outline ${viewMode === 'WORK_ORDERS' ? 'active' : ''}`}
             onClick={() => setViewMode(viewMode === 'WORK_ORDERS' ? 'MAP' : 'WORK_ORDERS')}
@@ -289,6 +301,13 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
             >
               <BarChart2 size={12} className="inline mr-1" />KPIs
             </button>
+            <button
+              onClick={() => setActiveTab('drone')}
+              className={activeTab === 'drone' ? 'active' : ''}
+              title="Roteiro de Inspeção por Drone (Phase 55)"
+            >
+              <Navigation size={12} className="inline mr-1" />Drone
+            </button>
             {userRole === 'ADMIN' && (
               <button
                 onClick={() => setActiveTab('admin')}
@@ -373,6 +392,10 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
 
           {activeTab === 'admin' && userRole === 'ADMIN' && (
             <AdminOverview apiBase={`${apiBase}`} />
+          )}
+
+          {activeTab === 'drone' && (
+            <DroneRoutePanel tenantId={activeTenantId} />
           )}
 
           {activeTab === 'eng' && activeSpan && (

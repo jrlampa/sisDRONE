@@ -27,6 +27,9 @@ import offlineBundleRouter from './routes/offlineBundle';
 import swaggerRouter from './routes/swaggerRoutes';
 import geoMeasureRouter from './routes/geoMeasure';
 import equipmentRouter from './routes/equipmentRoutes';
+import droneRouter from './routes/droneRoutes';
+import photoRouter from './routes/photoRoutes';
+import projectSummaryRouter from './routes/projectSummaryReport';
 import { checkPermission } from './middleware/auth';
 import { rateLimit } from './middleware/rateLimit';
 import { auditLog } from './middleware/auditLog';
@@ -88,6 +91,9 @@ app.use('/api/offline-bundle', offlineBundleRouter);
 app.use('/api/docs', swaggerRouter);
 app.use('/api/geo', geoMeasureRouter);
 app.use('/api/equipment', equipmentRouter);
+app.use('/api/drones', droneRouter);
+app.use('/api/poles', photoRouter);
+app.use('/api/report', projectSummaryRouter);
 
 // Legacy inspect routes: /api/analyze, /api/feedback, /api/:id/history
 // MUST be last: /:id wildcard would shadow all /api/* routes if registered earlier

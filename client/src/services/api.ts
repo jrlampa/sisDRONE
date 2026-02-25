@@ -314,6 +314,26 @@ export const api = {
   }) => axios.put<import('../types').Equipment>(`${API_BASE}/api/equipment/${id}`, data),
   deleteEquipment: (id: number) =>
     axios.delete<{ message: string; id: number }>(`${API_BASE}/api/equipment/${id}`),
+
+  // Roteiro de Inspeção Drone (Phase 55)
+  getDroneRoute: (tenantId: number, startLat?: number, startLng?: number) =>
+    axios.get<import('../types').DroneRoute>(`${API_BASE}/api/drones/route`, {
+      params: { tenant_id: tenantId, start_lat: startLat, start_lng: startLng },
+    }),
+  getDroneRouteKmlUrl: (tenantId: number) =>
+    `${API_BASE}/api/drones/route/kml?tenant_id=${tenantId}`,
+
+  // Upload de Fotos de Campo (Phase 56)
+  uploadPolePhoto: (poleId: number, image: string, mimeType: string, label?: string) =>
+    axios.post<import('../types').FieldPhoto>(`${API_BASE}/api/poles/${poleId}/photos`, {
+      image,
+      mime_type: mimeType,
+      label,
+    }),
+
+  // Resumo Executivo do Projeto (Phase 57)
+  getProjectSummaryUrl: (tenantId: number) =>
+    `${API_BASE}/api/report/project-summary?tenant_id=${tenantId}`,
 };
 
 // Named exports for direct import in hooks/components
