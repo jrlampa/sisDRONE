@@ -298,6 +298,22 @@ export const api = {
   measureDistance: (points: [number, number][]) =>
     axios.post<MeasurementResult>(`${API_BASE}/api/geo/measure`, { points })
       .then(r => r.data),
+
+  // Equipamentos por Poste (Phase 53)
+  getEquipment: (params?: { pole_id?: number; tenant_id?: number; type?: string; status?: string }) =>
+    axios.get<{ count: number; equipment: import('../types').Equipment[] }>(`${API_BASE}/api/equipment`, { params }),
+  createEquipment: (data: {
+    pole_id: number; tenant_id?: number; type: import('../types').EquipmentType;
+    brand?: string; model?: string; serial_number?: string;
+    installation_date?: string; status?: import('../types').EquipmentStatus; notes?: string;
+  }) => axios.post<import('../types').Equipment>(`${API_BASE}/api/equipment`, data),
+  updateEquipment: (id: number, data: {
+    type?: import('../types').EquipmentType; brand?: string; model?: string;
+    serial_number?: string; installation_date?: string;
+    status?: import('../types').EquipmentStatus; notes?: string;
+  }) => axios.put<import('../types').Equipment>(`${API_BASE}/api/equipment/${id}`, data),
+  deleteEquipment: (id: number) =>
+    axios.delete<{ message: string; id: number }>(`${API_BASE}/api/equipment/${id}`),
 };
 
 // Named exports for direct import in hooks/components

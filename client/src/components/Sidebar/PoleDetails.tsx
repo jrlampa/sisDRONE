@@ -188,6 +188,43 @@ const PoleDetails: React.FC<PoleDetailsProps> = ({
               </div>
             </div>
             <div className="utm-line"><strong>UTM:</strong> {pole.utm_x}, {pole.utm_y}</div>
+
+            {/* Classificação MT/BT (Phase 54) */}
+            {(pole.network_level || pole.structure_config || pole.phase_config) && (
+              <div className="mt-2 pt-2 border-t border-light/10">
+                <p className="text-xs uppercase tracking-wider text-muted font-bold mb-1">Classificação Estrutural</p>
+                <div className="stats-row">
+                  {pole.network_level && (
+                    <div className="stat-item">
+                      <span className="stat-label">Nível</span>
+                      <span className={`stat-value font-bold ${pole.network_level === 'MT' ? 'text-warning' : 'text-accent'}`}>
+                        {pole.network_level}
+                      </span>
+                    </div>
+                  )}
+                  {pole.structure_config && (
+                    <div className="stat-item">
+                      <span className="stat-label">Configuração</span>
+                      <span className="stat-value text-xs capitalize">{pole.structure_config}</span>
+                    </div>
+                  )}
+                  {pole.phase_config && (
+                    <div className="stat-item">
+                      <span className="stat-label">Fase</span>
+                      <span className="stat-value">
+                        {pole.phase_config === 'M' ? 'Monofásico' : pole.phase_config === 'B' ? 'Bifásico' : 'Trifásico'}
+                      </span>
+                    </div>
+                  )}
+                  {pole.num_arms !== undefined && pole.num_arms > 0 && (
+                    <div className="stat-item">
+                      <span className="stat-label">Braços</span>
+                      <span className="stat-value">{pole.num_arms}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </>
         )}
 

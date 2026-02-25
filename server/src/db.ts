@@ -214,6 +214,11 @@ async function initDb(database: Database) {
   try { await database.exec(`ALTER TABLE poles ADD COLUMN circuit_id INTEGER REFERENCES circuits(id) ON DELETE SET NULL`); } catch {}
   try { await database.exec(`ALTER TABLE conductors ADD COLUMN circuit_id INTEGER REFERENCES circuits(id) ON DELETE SET NULL`); } catch {}
   try { await database.exec(`ALTER TABLE poles ADD COLUMN address_cache TEXT`); } catch {}
+  // Phase 54 — MT/BT Structure Classification
+  try { await database.exec(`ALTER TABLE poles ADD COLUMN network_level TEXT DEFAULT 'BT'`); } catch {}
+  try { await database.exec(`ALTER TABLE poles ADD COLUMN structure_config TEXT`); } catch {}
+  try { await database.exec(`ALTER TABLE poles ADD COLUMN phase_config TEXT`); } catch {}
+  try { await database.exec(`ALTER TABLE poles ADD COLUMN num_arms INTEGER DEFAULT 0`); } catch {}
 
   // permissions table (Phase 37) — RBAC Granular por recurso/ação
   await database.exec(`
@@ -242,6 +247,28 @@ async function initDb(database: Database) {
     CREATE INDEX IF NOT EXISTS idx_audit_entity  ON audit_log(entity_type, entity_id);
     CREATE INDEX IF NOT EXISTS idx_audit_user    ON audit_log(user_id);
     CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_log(created_at);
+  `);
+
+  // equipment table (Phase 53) — Equipamentos por Poste (transformador, fusível, religador, etc.)
+  await database.exec(`
+    CREATE TABLE IF NOT EXISTS equipment (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      pole_id INTEGER NOT NULL,
+      tenant_id INTEGER NOT NULL DEFAULT 1,
+      type TEXT NOT NULL,
+      brand TEXT,
+      model TEXT,
+      serial_number TEXT,
+      installation_date DATE,
+      status TEXT DEFAULT 'active',
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (pole_id) REFERENCES poles(id) ON DELETE CASCADE,
+      FOREIGN KEY (tenant_id) REFERENCES tenants(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_equipment_pole ON equipment(pole_id);
+    CREATE INDEX IF NOT EXISTS idx_equipment_tenant ON equipment(tenant_id);
+    CREATE INDEX IF NOT EXISTS idx_equipment_type ON equipment(type);
   `);
 
   // ── Seeds ──

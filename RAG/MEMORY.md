@@ -1,6 +1,6 @@
 # sisDRONE – RAG / Memória de Trabalho
 
-> Última atualização: 2026-02-25 (Phase 35/39 — Notificações WS + Swagger OpenAPI) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
+> Última atualização: 2026-02-25 (Phase 53/54 — Equipamentos por Poste + Estruturas MT/BT) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
 
 ---
 
@@ -80,6 +80,8 @@ sisDRONE/
 | **API Docs** | OpenAPI 3.0 | `GET /api/docs` (Swagger UI), `GET /api/docs/json` (spec JSON) — Phase 39; `swaggerRoutes.ts` com spec completa de postes, condutores, circuitos, OS, rede, KPIs |
 | **Admin Overview** | AdminOverviewData | `GET /api/admin/overview` + `GET /api/admin/tenants/stats` (Phase 43) — ADMIN-only; visão cross-tenant |
 | **KPIs Executivos** | KpiData | `GET /api/kpis?tenant_id=&period_days=30` (Phase 49) — MTTR, taxa inspeção, custo, AHI delta, postes recuperados |
+| **Equipamentos** | Equipment | `GET /api/equipment` (filtros: pole_id/tenant_id/type/status), `POST /api/equipment`, `GET/PUT/DELETE /api/equipment/:id` — Phase 53; 11 tipos, 4 status, ON DELETE CASCADE do poste |
+| **Infraestrutura MT/BT** | Pole.network_level/structure_config | Campos `network_level` (MT/BT/AT), `structure_config` (tangente/angulo/derivacao/seccionamento/terminal/passagem), `phase_config` (M/B/T), `num_arms` em postes — Phase 54; aceitos em POST/PUT /api/poles |
 
 ---
 
@@ -190,7 +192,7 @@ sisDRONE/
 
 **Meta**: >= 80% de cobertura em código de lógica de negócio
 
-**Situação atual** (Phase 35/39 — Notificações WS + Swagger OpenAPI): 544 server + 11 client = **555 testes no total** ✅ | Coverage: **≥ 80% stmts + branches** 🎯
+**Situação atual** (Phase 53/54 — Equipamentos por Poste + Estruturas MT/BT): 608 server + 1 client flaky = **609 testes no total** ✅ | Coverage: **≥ 80% stmts + branches** 🎯
 
 **Coverage Threshold** configurado em `server/vitest.config.ts`:
 - Lines/Functions/Statements: ≥ 80%
@@ -519,3 +521,22 @@ Testes existentes (Phase 9):
 - [x] ~~types.ts client: AuditLogEntry, GeoJSONExportMetadata, MeasurementSegment, MeasurementResult adicionados~~ — Phase 50/51/52
 - [x] ~~CodeQL: 3 alertas = falsos positivos (rateLimit() aplicado em adminRoutes:/audit-log, gis:/export/geojson e gis:/export/kml — padrão pré-existente)~~ — Phase 50/51/52
 - [x] ~~Total: 581 testes (580 passing + 1 pre-existing flaky polesSort localeCompare) ✅~~ — Phase 50/51/52
+
+### Phase 53 — Equipamentos por Poste (2026-02-25)
+- [x] `equipment` table: (pole_id FK CASCADE, tenant_id FK, type, brand, model, serial_number, installation_date, status, notes, created_at) — 3 indexes (pole, tenant, type)
+- [x] `routes/equipmentRoutes.ts`: GET /api/equipment (filtros: pole_id/tenant_id/type/status), POST /api/equipment (type obrigatório, pole_id obrigatório, 404 para poste inexistente), GET/PUT/DELETE /api/equipment/:id; whitelist de 11 tipos e 4 status
+- [x] `EquipmentPanel.tsx`: lista de equipamentos colapsável por expandedId, formulário inline de cadastro, delete com confirm, labels em pt-BR para tipo/status
+- [x] Sidebar: tab "Equip." (Wrench icon) visível quando `selectedPole` existe; activeTab union expandido com 'equipment'
+- [x] api.ts: getEquipment, createEquipment, updateEquipment, deleteEquipment adicionados
+- [x] types.ts: EquipmentType (11 values), EquipmentStatus (4 values), Equipment interface adicionados
+- [x] `tests/equipment.test.ts`: 20 testes (GET list/filters, POST validations, GET/:id, PUT validations, DELETE cycle)
+- [x] Corrigido: auditLog.test.ts — 3º teste agora aguarda 300ms antes de ler before.c (fire-and-forget settling from previous tests)
+
+### Phase 54 — Estruturas MT/BT Específicas (2026-02-25)
+- [x] `db.ts migrations`: 4 novas colunas em poles — `network_level TEXT DEFAULT 'BT'`, `structure_config TEXT`, `phase_config TEXT`, `num_arms INTEGER DEFAULT 0`
+- [x] `routes/poles.ts POST`: aceita network_level (MT/BT/AT), structure_config (6 configs), phase_config (M/B/T), num_arms; validação whitelist; INSERT atualizado com novos campos
+- [x] `routes/poles.ts PUT`: aceita e valida os 4 novos campos; UPDATE dinâmico por campo
+- [x] `types.ts client`: interface Pole extendida com network_level, structure_config, phase_config, num_arms
+- [x] `PoleDetails.tsx`: seção "Classificação Estrutural" mostra network_level (MT=orange, BT=green), structure_config, phase_config (M/B/T → pt-BR), num_arms
+- [x] `tests/poleMtBtStructure.test.ts`: 8 testes (POST com MT tangente trifásico, BT plain, validações 400, PUT com todos configs, 400 por level inválido)
+- [x] Total: **609 testes** (608 passing + 1 pre-existing flaky polesSort localeCompare) ✅

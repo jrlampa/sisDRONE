@@ -26,6 +26,7 @@ import kpiRouter from './routes/kpiRoutes';
 import offlineBundleRouter from './routes/offlineBundle';
 import swaggerRouter from './routes/swaggerRoutes';
 import geoMeasureRouter from './routes/geoMeasure';
+import equipmentRouter from './routes/equipmentRoutes';
 import { checkPermission } from './middleware/auth';
 import { rateLimit } from './middleware/rateLimit';
 import { auditLog } from './middleware/auditLog';
@@ -86,6 +87,7 @@ app.use('/api/kpis', kpiRouter);
 app.use('/api/offline-bundle', offlineBundleRouter);
 app.use('/api/docs', swaggerRouter);
 app.use('/api/geo', geoMeasureRouter);
+app.use('/api/equipment', equipmentRouter);
 
 // Legacy inspect routes: /api/analyze, /api/feedback, /api/:id/history
 // MUST be last: /:id wildcard would shadow all /api/* routes if registered earlier

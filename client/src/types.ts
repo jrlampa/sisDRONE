@@ -10,6 +10,11 @@ export interface Pole {
   ahi_score?: number;
   installation_date?: string;
   material?: string;
+  // Phase 54 — MT/BT Structure Classification
+  network_level?: 'MT' | 'BT' | 'AT';
+  structure_config?: 'tangente' | 'angulo' | 'derivacao' | 'seccionamento' | 'terminal' | 'passagem';
+  phase_config?: 'M' | 'B' | 'T';
+  num_arms?: number;
 }
 
 export interface Span {
@@ -279,4 +284,27 @@ export interface MeasurementResult {
   segments: MeasurementSegment[];
   total_m: number;
   total_km: number;
+}
+
+// Phase 53 — Equipamentos por Poste
+export type EquipmentType =
+  | 'transformer' | 'fuse' | 'recloser' | 'lightning_rod' | 'insulator'
+  | 'surge_arrester' | 'capacitor_bank' | 'voltage_regulator'
+  | 'disconnect_switch' | 'meter' | 'other';
+
+export type EquipmentStatus = 'active' | 'inactive' | 'defective' | 'scheduled_maintenance';
+
+export interface Equipment {
+  id: number;
+  pole_id: number;
+  tenant_id: number;
+  type: EquipmentType;
+  brand: string | null;
+  model: string | null;
+  serial_number: string | null;
+  installation_date: string | null;
+  status: EquipmentStatus;
+  notes: string | null;
+  created_at: string;
+  pole_name?: string;
 }

@@ -37,6 +37,8 @@ describe('Phase 50 — Middleware auditLog (comportamento)', () => {
   });
 
   it('não bloqueia requisições com erro (não audita 4xx)', async () => {
+    // Aguarda fire-and-forget pendentes de testes anteriores para não contaminar a contagem
+    await new Promise(r => setTimeout(r, 300));
     const before = await (await getDb()).get('SELECT COUNT(*) AS c FROM audit_log');
     const res = await request(app)
       .post('/api/poles')

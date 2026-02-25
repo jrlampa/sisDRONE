@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, FileJson, Globe, FileText, Ruler, LayoutDashboard, Download, X, Zap, ClipboardList, Video, Building2, Cable, Network, Upload, ShieldCheck, BarChart2 } from 'lucide-react';
+import { Search, FileJson, Globe, FileText, Ruler, LayoutDashboard, Download, X, Zap, ClipboardList, Video, Building2, Cable, Network, Upload, ShieldCheck, BarChart2, Wrench } from 'lucide-react';
 import PoleDetails from './PoleDetails';
 import { generateInspectionReport } from '../../utils/pdfGenerator';
 import { api } from '../../services/api';
@@ -10,6 +10,7 @@ import BimStructureEditor from './BimStructureEditor';
 import ConductorPanel from './ConductorPanel';
 import TopologyPanel from './TopologyPanel';
 import ValidationPanel from './ValidationPanel';
+import EquipmentPanel from './EquipmentPanel';
 import AdminOverview from '../Dashboard/AdminOverview';
 import ExecutiveDashboard from '../Dashboard/ExecutiveDashboard';
 import ImportModal from '../ImportModal';
@@ -33,8 +34,8 @@ interface SidebarProps {
   setFilterCondition: (c: 'All' | 'Critical' | 'Warning' | 'Good') => void;
   selectedPole: Pole | null;
   activeSpan: Span | null;
-  activeTab: 'details' | 'history' | 'eng' | 'video' | 'bim' | 'conductors' | 'topology' | 'validation' | 'kpi' | 'admin';
-  setActiveTab: (t: 'details' | 'history' | 'eng' | 'video' | 'bim' | 'conductors' | 'topology' | 'validation' | 'kpi' | 'admin') => void;
+  activeTab: 'details' | 'history' | 'eng' | 'video' | 'bim' | 'conductors' | 'topology' | 'validation' | 'kpi' | 'admin' | 'equipment';
+  setActiveTab: (t: 'details' | 'history' | 'eng' | 'video' | 'bim' | 'conductors' | 'topology' | 'validation' | 'kpi' | 'admin' | 'equipment') => void;
   isCapturing: boolean;
   onAnalyze: () => void;
   analysis: AnalysisResult | null;
@@ -258,6 +259,15 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
                 <Cable size={12} className="inline mr-1" />Condutores
               </button>
             )}
+            {selectedPole && (
+              <button
+                onClick={() => setActiveTab('equipment')}
+                className={activeTab === 'equipment' ? 'active' : ''}
+                title="Equipamentos do Poste (Phase 53)"
+              >
+                <Wrench size={12} className="inline mr-1" />Equip.
+              </button>
+            )}
             <button
               onClick={() => setActiveTab('topology')}
               className={activeTab === 'topology' ? 'active' : ''}
@@ -340,6 +350,10 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
 
           {activeTab === 'conductors' && selectedPole && (
             <ConductorPanel pole={selectedPole} allPoles={poles} />
+          )}
+
+          {activeTab === 'equipment' && selectedPole && (
+            <EquipmentPanel pole={selectedPole} />
           )}
 
           {activeTab === 'topology' && (
