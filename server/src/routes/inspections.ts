@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { getDb } from '../db';
 import { analyzeImage } from '../services/groqService';
 import { rateLimit } from '../middleware/rateLimit';
+import { broadcast } from '../services/notificationService';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -92,6 +93,22 @@ router.post('/analyze', rateLimit(20, 60_000), async (req: Request, res: Respons
       'INSERT INTO labels (pole_id, image_id, label, confidence, source) VALUES (?, ?, ?, ?, ?)',
       [safePoleId, imageId, analysis.analysis_summary, analysis.confidence, 'ai']
     );
+
+    // Notify all tenant clients if the inspection result is critical
+    const condition = String(analysis.condition ?? '').toLowerCase();
+    if (condition.includes('crítica') || condition.includes('critical')) {
+      const pole = await db.get<{ tenant_id: number }>('SELECT tenant_id FROM poles WHERE id = ?', [safePoleId]);
+      if (pole?.tenant_id) {
+        broadcast({
+          type: 'inspection_critical',
+          title: 'Inspeção Crítica Detectada',
+          message: `Poste ${safePoleId}: condição crítica identificada pela IA`,
+          pole_id: safePoleId,
+          tenant_id: pole.tenant_id,
+          timestamp: Date.now(),
+        });
+      }
+    }
 
     res.json({
       ...analysis,

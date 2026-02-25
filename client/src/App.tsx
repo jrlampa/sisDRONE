@@ -5,6 +5,8 @@ import MobileFab from './components/MobileFab';
 import LoginPage from './components/LoginPage';
 import AneelSearchPanel from './components/AneelSearchPanel';
 import AlertBanner from './components/AlertBanner';
+import NotificationBanner from './components/NotificationBanner';
+import { useNotifications } from './hooks/useNotifications';
 import { Zap, Menu, Building, LogOut } from 'lucide-react';
 import { api } from './services/api';
 import { useNetwork } from './hooks/useNetwork';
@@ -137,6 +139,9 @@ const App: React.FC = () => {
 
   // ── Filtered poles (via usePoleSearch hook — SRP) ──
   const filteredPoles = usePoleSearch(poles, searchQuery, filterCondition);
+
+  // ── Real-time push notifications via WebSocket ──
+  const { notifications, dismiss } = useNotifications(activeTenantId);
 
   return (
     <TenantProvider value={{ activeTenantId, setActiveTenantId, currentUser, setCurrentUser, isOnline }}>
@@ -309,6 +314,11 @@ const App: React.FC = () => {
       <Suspense fallback={null}>
         <ChatAssistant selectedPole={selectedPole} analysis={analysis} />
       </Suspense>
+      <NotificationBanner
+        notifications={notifications}
+        onDismiss={dismiss}
+        onPoleClick={handleMarkerClick}
+      />
     </div>
     )}
     </TenantProvider>

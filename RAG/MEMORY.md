@@ -1,6 +1,6 @@
 # sisDRONE – RAG / Memória de Trabalho
 
-> Última atualização: 2026-02-25 (Phase 45/46/48-backend) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
+> Última atualização: 2026-02-25 (Phase 35/39 — Notificações WS + Swagger OpenAPI) | Responsável: Copilot (Tech Lead / Dev Fullstack Sênior)
 
 ---
 
@@ -76,6 +76,8 @@ sisDRONE/
 | **Importação** | CSV Bulk | `POST /api/poles/import/csv` (Phase 36) — CSV com validação, transação atômica, max 1000 linhas |
 | **Validação Topológica** | ValidationReport | `GET /api/network/validate` (Phase 42) — loops (DFS), dead_ends, isolados, duplicate_spans; is_valid flag |
 | **Simulação de Falha** | FailureSimulationResult | `GET /api/network/simulate-failure?pole_id=|conductor_id=` (Phase 47) — BFS sem nó/aresta; partições + postes afetados + estimativa clientes |
+| **Notificações WS** | NotificationEvent | `ws://host/ws/notifications?tenant_id=` (Phase 35) — push em tempo real para inspeções e OS críticas; `notificationService.ts` gerencia conexões por tenant |
+| **API Docs** | OpenAPI 3.0 | `GET /api/docs` (Swagger UI), `GET /api/docs/json` (spec JSON) — Phase 39; `swaggerRoutes.ts` com spec completa de postes, condutores, circuitos, OS, rede, KPIs |
 | **Admin Overview** | AdminOverviewData | `GET /api/admin/overview` + `GET /api/admin/tenants/stats` (Phase 43) — ADMIN-only; visão cross-tenant |
 | **KPIs Executivos** | KpiData | `GET /api/kpis?tenant_id=&period_days=30` (Phase 49) — MTTR, taxa inspeção, custo, AHI delta, postes recuperados |
 
@@ -188,7 +190,7 @@ sisDRONE/
 
 **Meta**: >= 80% de cobertura em código de lógica de negócio
 
-**Situação atual** (Phase 45/46/48-backend): 534 server + 11 client = **545 testes no total** ✅ | Coverage: **100% stmts + 100% branches** 🎯
+**Situação atual** (Phase 35/39 — Notificações WS + Swagger OpenAPI): 544 server + 11 client = **555 testes no total** ✅ | Coverage: **≥ 80% stmts + branches** 🎯
 
 **Coverage Threshold** configurado em `server/vitest.config.ts`:
 - Lines/Functions/Statements: ≥ 80%

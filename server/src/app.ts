@@ -24,6 +24,7 @@ import circuitsRouter from './routes/circuitsRoutes';
 import adminRouter from './routes/adminRoutes';
 import kpiRouter from './routes/kpiRoutes';
 import offlineBundleRouter from './routes/offlineBundle';
+import swaggerRouter from './routes/swaggerRoutes';
 import { checkPermission } from './middleware/auth';
 import { rateLimit } from './middleware/rateLimit';
 import { getDb } from './db';
@@ -80,6 +81,7 @@ app.use('/api/circuits', circuitsRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/kpis', kpiRouter);
 app.use('/api/offline-bundle', offlineBundleRouter);
+app.use('/api/docs', swaggerRouter);
 
 // Legacy inspect routes: /api/analyze, /api/feedback, /api/:id/history
 // MUST be last: /:id wildcard would shadow all /api/* routes if registered earlier
