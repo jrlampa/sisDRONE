@@ -584,3 +584,32 @@ Testes existentes (Phase 9):
 - [x] useAppHandlers.ts: tipo setActiveTab atualizado para incluir 'drone'
 - [x] Total: **643 testes** (642 passing + 1 pre-existing flaky polesSort localeCompare) ✅
 - [x] TypeScript: 0 erros (./node_modules/.bin/tsc --noEmit no client) ✅
+
+### Phase 61 — Levantamento Estruturado de Rede CSV (2026-02-25)
+- [x] `routes/levantamento.ts`: GET /api/report/levantamento?tenant_id=&circuit_id= — CSV UTF-8 BOM (Excel pt-BR), colunas: ID, Nome, Lat, Lng, UTM_X/Y, Altura_m, Material, Tipo_Estrutura, Nível_Rede, Config_Estrutural, Fase, Braços, AHI, Status, Data_Instalação, Qtd_Equipamentos, Tipos_Equipamentos, Qtd_Condutores, Tipos_Condutores, Comprimento_Total_m
+- [x] Agregação server-side: GROUP_CONCAT(DISTINCT type) para equipamentos e condutores por poste em single SQL
+- [x] Botão "Levantamento" em Sidebar.tsx (ENGINEER+, link direto ao CSV)
+- [x] `tests/levantamento.test.ts`: 6 testes (400 string, 400 zero, 400 circuit_id inválido, 404 tenant, 200+csv+BOM, campos header+dados)
+- [x] Montagem: app.use('/api/report/levantamento', levantamentoRouter) — evita conflito com /api/report/:tenantId
+
+### Phase 62 — Croqui Digital Aprimorado (2026-02-25)
+- [x] `services/croquiService.ts` aprimorado:
+  - `<defs>` SVG com `<marker>` arrowhead para condutores MT (`id="arrow-mt"`) e BT (`id="arrow-bt"`)
+  - Seta Norte no canto superior direito (compass rose com círculo branco, triângulo N/S, texto "N")
+  - Barra de escala visual (linha horizontal + graduações + label "X m") na área inferior esquerda
+  - Badge de `network_level` (MT/BT/AT) colorido em cada poste (laranja/azul/violeta)
+  - Símbolo de equipamentos: círculo amarelo (#fbbf24) com contador sobre postes que têm equipamentos
+  - `buildCroquiSvg` aceita 4º argumento opcional `equipmentByPole: Map<number, number>` (sem breaking change)
+- [x] `routes/reportRoutes.ts`: query equipment por poste antes de buildCroquiSvg; SELECT network_level adicionado ao SELECT de poles
+- [x] `tests/croquiAprimorado.test.ts`: 5 testes (N arrow, scale bar, arrow-mt marker, MT badge, equipment badge amarelo)
+
+### Phase 63 — Wizard de Levantamento em Campo (2026-02-25)
+- [x] `routes/inspectionWizard.ts`: POST /api/inspection/wizard — cria poste + equipamentos[] + label em ÚNICA TRANSAÇÃO atômica (BEGIN/COMMIT/ROLLBACK); validação completa: tenant_id, lat/lng bounds, condition whitelist, material, network_level, structure_config, phase_config, num_arms (0–20), equipment types (11 tipos), MAX_EQUIPMENT=10
+- [x] `InspectionWizard.tsx`: wizard 4 passos mobile-first (Localização → Estrutura → Equipamentos → Condição); progress bar com ícones; botão Confirmar cria tudo em 1 chamada HTTP; feedback de sucesso com pole_id/label_id
+- [x] Sidebar.tsx: aba "Wizard" (Clipboard icon, ENGINEER+); botão "Levantamento" no tools-grid (link CSV)
+- [x] api.ts: createInspectionWizard(data) → POST /api/inspection/wizard; getLevantamentoUrl(tenantId, circuitId?) → URL CSV
+- [x] App.tsx + useAppHandlers.ts: activeTab union expandido para incluir 'wizard'
+- [x] Montagem: app.use('/api/inspection/wizard', inspectionWizardRouter) — evita conflito com /api/inspections/manual
+- [x] `tests/inspectionWizard.test.ts`: 9 testes (400 tenant/lat/lng/condition/equip-type, 404 tenant, 201 sem equip, 201 com equip x2, label source=manual+condition+inspector)
+- [x] Total: **663 testes** (662 passing + 1 pre-existing flaky polesSort localeCompare) ✅
+- [x] TypeScript: 0 erros (./node_modules/.bin/tsc --noEmit no client) ✅

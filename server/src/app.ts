@@ -30,6 +30,8 @@ import equipmentRouter from './routes/equipmentRoutes';
 import droneRouter from './routes/droneRoutes';
 import photoRouter from './routes/photoRoutes';
 import projectSummaryRouter from './routes/projectSummaryReport';
+import levantamentoRouter from './routes/levantamento';
+import inspectionWizardRouter from './routes/inspectionWizard';
 import { checkPermission } from './middleware/auth';
 import { rateLimit } from './middleware/rateLimit';
 import { auditLog } from './middleware/auditLog';
@@ -94,6 +96,8 @@ app.use('/api/equipment', equipmentRouter);
 app.use('/api/drones', droneRouter);
 app.use('/api/poles', photoRouter);
 app.use('/api/report', projectSummaryRouter);
+app.use('/api/report/levantamento', levantamentoRouter);
+app.use('/api/inspection/wizard', inspectionWizardRouter);
 
 // Legacy inspect routes: /api/analyze, /api/feedback, /api/:id/history
 // MUST be last: /:id wildcard would shadow all /api/* routes if registered earlier

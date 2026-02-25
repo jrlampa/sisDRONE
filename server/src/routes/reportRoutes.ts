@@ -205,7 +205,7 @@ router.get('/croqui/:tenantId', rateLimit(20, 60_000), async (req: Request, res:
     if (!tenant) return res.status(404).json({ error: 'Concessionária não encontrada' });
 
     const poles = await db.all(
-      `SELECT id, name, lat, lng, ahi_score, status FROM poles WHERE tenant_id = ? ORDER BY id`,
+      `SELECT id, name, lat, lng, ahi_score, status, network_level FROM poles WHERE tenant_id = ? ORDER BY id`,
       [tenantId]
     );
 
@@ -226,7 +226,17 @@ router.get('/croqui/:tenantId', rateLimit(20, 60_000), async (req: Request, res:
       [tenantId]
     );
 
-    const svg = buildCroquiSvg(poles, conductors, tenant.name);
+    // Phase 62: query equipment counts per pole for croqui symbols
+    const poleIds: number[] = poles.map((p: { id: number }) => p.id);
+    const eqRows = poleIds.length ? await db.all(
+      `SELECT pole_id, COUNT(*) AS qty FROM equipment WHERE pole_id IN (${poleIds.map(() => '?').join(',')}) GROUP BY pole_id`,
+      poleIds,
+    ) : [];
+    const eqByPole = new Map<number, number>(
+      eqRows.map((e: { pole_id: number; qty: number }) => [e.pole_id, e.qty]),
+    );
+
+    const svg = buildCroquiSvg(poles, conductors, tenant.name, eqByPole);
 
     res.setHeader('Content-Type', 'text/xml; charset=utf-8');
     res.setHeader('Content-Disposition', `inline; filename="croqui_tenant${tenantId}.svg"`);

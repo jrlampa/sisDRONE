@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, FileJson, Globe, FileText, Ruler, LayoutDashboard, Download, X, Zap, ClipboardList, Video, Building2, Cable, Network, Upload, ShieldCheck, BarChart2, Wrench, Navigation, ClipboardCheck } from 'lucide-react';
+import { Search, FileJson, Globe, FileText, Ruler, LayoutDashboard, Download, X, Zap, ClipboardList, Video, Building2, Cable, Network, Upload, ShieldCheck, BarChart2, Wrench, Navigation, ClipboardCheck, Clipboard } from 'lucide-react';
 import PoleDetails from './PoleDetails';
 import { generateInspectionReport } from '../../utils/pdfGenerator';
 import { api } from '../../services/api';
@@ -20,6 +20,7 @@ import FilterChips from '../FilterChips';
 import { useTenant } from '../../context/TenantContext';
 import ToastBanner from '../ToastBanner';
 import DroneRoutePanel from './DroneRoutePanel';
+import InspectionWizard from './InspectionWizard';
 import { useToast } from '../../hooks/useToast';
 import type { Pole, Span, Inspection, AnalysisResult, Stats, Tenant, User } from '../../types';
 import type { FrameAnalysis } from '../../hooks/useVideoCapture';
@@ -36,8 +37,8 @@ interface SidebarProps {
   setFilterCondition: (c: 'All' | 'Critical' | 'Warning' | 'Good') => void;
   selectedPole: Pole | null;
   activeSpan: Span | null;
-  activeTab: 'details' | 'history' | 'eng' | 'video' | 'bim' | 'conductors' | 'topology' | 'validation' | 'kpi' | 'admin' | 'equipment' | 'drone';
-  setActiveTab: (t: 'details' | 'history' | 'eng' | 'video' | 'bim' | 'conductors' | 'topology' | 'validation' | 'kpi' | 'admin' | 'equipment' | 'drone') => void;
+  activeTab: 'details' | 'history' | 'eng' | 'video' | 'bim' | 'conductors' | 'topology' | 'validation' | 'kpi' | 'admin' | 'equipment' | 'drone' | 'wizard';
+  setActiveTab: (t: 'details' | 'history' | 'eng' | 'video' | 'bim' | 'conductors' | 'topology' | 'validation' | 'kpi' | 'admin' | 'equipment' | 'drone' | 'wizard') => void;
   isCapturing: boolean;
   onAnalyze: () => void;
   analysis: AnalysisResult | null;
@@ -205,6 +206,17 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
               <FileText size={14} /> Resumo
             </a>
           )}
+          {activeTenant && userRole !== 'VIEWER' && (
+            <a
+              href={api.getLevantamentoUrl(activeTenant.id)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-outline"
+              title="Exportar Levantamento de Campo (CSV)"
+            >
+              <Download size={14} /> Levantamento
+            </a>
+          )}
           <button
             className={`btn btn-outline ${viewMode === 'WORK_ORDERS' ? 'active' : ''}`}
             onClick={() => setViewMode(viewMode === 'WORK_ORDERS' ? 'MAP' : 'WORK_ORDERS')}
@@ -309,6 +321,15 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
             >
               <Navigation size={12} className="inline mr-1" />Drone
             </button>
+            {userRole !== 'VIEWER' && (
+              <button
+                onClick={() => setActiveTab('wizard')}
+                className={activeTab === 'wizard' ? 'active' : ''}
+                title="Wizard de Levantamento em Campo (Phase 63)"
+              >
+                <Clipboard size={12} className="inline mr-1" />Wizard
+              </button>
+            )}
             {userRole === 'ADMIN' && (
               <button
                 onClick={() => setActiveTab('admin')}
@@ -409,6 +430,14 @@ const Sidebar: React.FC<SidebarProps> = (props) => {
 
           {activeTab === 'drone' && (
             <DroneRoutePanel tenantId={activeTenantId} />
+          )}
+
+          {activeTab === 'wizard' && userRole !== 'VIEWER' && (
+            <InspectionWizard
+              tenantId={activeTenantId ?? 1}
+              onSuccess={() => setActiveTab('details')}
+              onCancel={() => setActiveTab('details')}
+            />
           )}
 
           {activeTab === 'eng' && activeSpan && (

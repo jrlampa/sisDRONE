@@ -338,6 +338,35 @@ export const api = {
   // Resumo Executivo do Projeto (Phase 57)
   getProjectSummaryUrl: (tenantId: number) =>
     `${API_BASE}/api/report/project-summary?tenant_id=${tenantId}`,
+
+  // Levantamento Estruturado CSV (Phase 61)
+  getLevantamentoUrl: (tenantId: number, circuitId?: number) => {
+    const params = new URLSearchParams({ tenant_id: String(tenantId) });
+    if (circuitId) params.set('circuit_id', String(circuitId));
+    return `${API_BASE}/api/report/levantamento?${params.toString()}`;
+  },
+
+  // Wizard de Levantamento em Campo (Phase 63)
+  createInspectionWizard: (data: {
+    tenant_id: number;
+    lat: number;
+    lng: number;
+    name?: string;
+    material?: string;
+    network_level?: string;
+    structure_config?: string;
+    phase_config?: string;
+    num_arms?: number;
+    height?: number;
+    condition: string;
+    notes?: string;
+    inspector_name?: string;
+    equipment?: { type: string; brand?: string; model?: string; serial_number?: string }[];
+  }) =>
+    axios.post<{ pole_id: number; label_id: number; equipment_ids: number[]; message: string }>(
+      `${API_BASE}/api/inspection/wizard`,
+      data,
+    ),
 };
 
 // Named exports for direct import in hooks/components
